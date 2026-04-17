@@ -1,0 +1,99 @@
+@import "tailwindcss";
+
+@theme inline {
+  --color-background: var(--bg);
+  --color-foreground: var(--text-primary);
+  --color-surface: var(--surface);
+  --color-surface-elevated: var(--surface-elevated);
+  --color-border: var(--border);
+  --color-text-primary: var(--text-primary);
+  --color-text-secondary: var(--text-secondary);
+  --color-text-muted: var(--text-muted);
+  --color-accent: var(--accent);
+  --color-accent-light: var(--accent-light);
+  --color-accent-subtle: var(--accent-subtle);
+  --color-score-high: var(--score-high);
+  --color-score-medium: var(--score-medium);
+  --color-score-low: var(--score-low);
+  --color-success: var(--success);
+  --color-warning: var(--warning);
+  --color-danger: var(--danger);
+
+  --font-display: var(--font-dm-serif);
+  --font-body: var(--font-dm-sans);
+  --font-mono: var(--font-jetbrains);
+}
+
+:root {
+  --bg: #FAFAF8;
+  --surface: #FFFFFF;
+  --surface-elevated: #F5F3F0;
+  --border: #E8E5E0;
+  --text-primary: #1A1A1A;
+  --text-secondary: #6B6660;
+  --text-muted: #A39E97;
+  --accent: #2D6A4F;
+  --accent-light: #40916C;
+  --accent-subtle: #D8F3DC;
+  --score-high: #2D6A4F;
+  --score-medium: #D4A574;
+  --score-low: #A39E97;
+  --success: #2D6A4F;
+  --warning: #D4A574;
+  --danger: #B8615A;
+}
+
+body {
+  background: var(--bg);
+  color: var(--text-primary);
+  font-family: var(--font-body), -apple-system, sans-serif;
+}
+
+/* Score badge colors */
+.score-high { color: var(--score-high); }
+.score-medium { color: var(--score-medium); }
+.score-low { color: var(--score-low); }
+
+/* Sidebar nav prefix style */
+.nav-prefix {
+  font-family: var(--font-mono), monospace;
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+/* Section prefix (editorial style from 100se) */
+.section-prefix {
+  font-family: var(--font-mono), monospace;
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+/* Live pulse indicator */
+@keyframes pulse-live {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
+.pulse-live {
+  animation: pulse-live 2s ease-in-out infinite;
+}
+
+/* Scrollbar styling */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--text-muted);
+}
