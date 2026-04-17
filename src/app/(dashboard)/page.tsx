@@ -3,6 +3,7 @@ import { KpiCards } from "@/components/dashboard/kpi-cards";
 import { HotLeads } from "@/components/dashboard/hot-leads";
 import { AiSuggestions } from "@/components/dashboard/ai-suggestions";
 import { LiveFeed } from "@/components/dashboard/live-feed";
+import { ChannelFlow } from "@/components/dashboard/channel-flow";
 
 export default function OverviewPage() {
   return (
@@ -15,6 +16,9 @@ export default function OverviewPage() {
 
       {/* Hot Leads */}
       <HotLeads />
+
+      {/* Channel Flow */}
+      <ChannelFlow />
 
       {/* Two-column: Live Feed + AI Suggestions */}
       <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">

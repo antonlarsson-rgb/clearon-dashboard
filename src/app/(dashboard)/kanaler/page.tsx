@@ -1,9 +1,9 @@
-import { adCampaigns } from "@/lib/mock-data";
+import { adCampaigns, channelFlows, landingPageStats } from "@/lib/mock-data";
 import { products } from "@/lib/products";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { formatNumber, formatCurrency } from "@/lib/utils";
-import { Sparkles } from "lucide-react";
+import { Sparkles, ExternalLink, ArrowRight, Eye, Users, Target, TrendingUp } from "lucide-react";
 
 type ChannelData = {
   label: string;
@@ -98,6 +98,10 @@ function getProductName(slug: string) {
   return products.find((p) => p.slug === slug)?.name ?? slug;
 }
 
+function getProductColor(slug: string) {
+  return products.find((p) => p.slug === slug)?.color ?? "#6B7280";
+}
+
 export default function KanalerPage() {
   const channels = aggregateChannels();
 
@@ -120,9 +124,138 @@ export default function KanalerPage() {
         <span className="section-prefix">/ Kanaler</span>
         <h1 className="font-display text-2xl mt-1">Kanaloversikt</h1>
         <p className="text-text-secondary text-sm mt-1">
-          Prestanda per marknadsforingskanal
+          Flode fran kanal till landningssida till lead till konvertering
         </p>
       </div>
+
+      {/* Channel flow funnel */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Kanalflode</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-border text-left text-xs text-text-muted uppercase tracking-wide">
+                  <th className="pb-2 pr-4">Kanal</th>
+                  <th className="pb-2 pr-4 text-right">Besokare</th>
+                  <th className="pb-2 pr-4 text-center"></th>
+                  <th className="pb-2 pr-4 text-right">Leads</th>
+                  <th className="pb-2 pr-4 text-center"></th>
+                  <th className="pb-2 pr-4 text-right">Kvalificerade</th>
+                  <th className="pb-2 pr-4 text-center"></th>
+                  <th className="pb-2 pr-4 text-right">Mojligheter</th>
+                  <th className="pb-2 pr-4 text-center"></th>
+                  <th className="pb-2 pr-4 text-right">Deals</th>
+                  <th className="pb-2 pr-4">Top landningssida</th>
+                  <th className="pb-2">Top produkt</th>
+                </tr>
+              </thead>
+              <tbody>
+                {channelFlows.map((flow) => (
+                  <tr key={flow.channel} className="border-b border-border/50 last:border-0">
+                    <td className="py-3 pr-4 font-medium">{flow.channel}</td>
+                    <td className="py-3 pr-4 text-right font-mono text-xs">{formatNumber(flow.visitors)}</td>
+                    <td className="py-3 pr-4 text-center text-text-muted"><ArrowRight className="h-3 w-3 inline" /></td>
+                    <td className="py-3 pr-4 text-right font-mono text-xs">{flow.leads}</td>
+                    <td className="py-3 pr-4 text-center text-text-muted"><ArrowRight className="h-3 w-3 inline" /></td>
+                    <td className="py-3 pr-4 text-right font-mono text-xs">{flow.qualified}</td>
+                    <td className="py-3 pr-4 text-center text-text-muted"><ArrowRight className="h-3 w-3 inline" /></td>
+                    <td className="py-3 pr-4 text-right font-mono text-xs">{flow.opportunities}</td>
+                    <td className="py-3 pr-4 text-center text-text-muted"><ArrowRight className="h-3 w-3 inline" /></td>
+                    <td className="py-3 pr-4 text-right font-mono text-xs font-medium text-accent">{flow.deals}</td>
+                    <td className="py-3 pr-4">
+                      <span className="text-xs text-text-secondary font-mono">{flow.topLandingPage}</span>
+                    </td>
+                    <td className="py-3">
+                      <span className="text-xs text-text-secondary">{flow.topProduct}</span>
+                    </td>
+                  </tr>
+                ))}
+                {/* Totals */}
+                <tr className="border-t-2 border-border font-medium">
+                  <td className="py-3 pr-4 text-xs uppercase tracking-wide">Totalt</td>
+                  <td className="py-3 pr-4 text-right font-mono text-xs">{formatNumber(channelFlows.reduce((s, f) => s + f.visitors, 0))}</td>
+                  <td className="py-3 pr-4"></td>
+                  <td className="py-3 pr-4 text-right font-mono text-xs">{channelFlows.reduce((s, f) => s + f.leads, 0)}</td>
+                  <td className="py-3 pr-4"></td>
+                  <td className="py-3 pr-4 text-right font-mono text-xs">{channelFlows.reduce((s, f) => s + f.qualified, 0)}</td>
+                  <td className="py-3 pr-4"></td>
+                  <td className="py-3 pr-4 text-right font-mono text-xs">{channelFlows.reduce((s, f) => s + f.opportunities, 0)}</td>
+                  <td className="py-3 pr-4"></td>
+                  <td className="py-3 pr-4 text-right font-mono text-xs text-accent">{channelFlows.reduce((s, f) => s + f.deals, 0)}</td>
+                  <td className="py-3 pr-4"></td>
+                  <td className="py-3"></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Landing page performance */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Landningssidor per produkt</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+            {landingPageStats.map((lp) => {
+              const product = products.find((p) => p.slug === lp.product_slug);
+              return (
+                <div key={lp.path} className="border border-border rounded-lg p-4 hover:border-accent/30 transition-colors">
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="flex items-center gap-2">
+                      <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: getProductColor(lp.product_slug) }} />
+                      <span className="text-sm font-medium">{product?.name}</span>
+                    </div>
+                    <a
+                      href={product?.landingPageUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center gap-1 text-xs text-text-muted hover:text-accent transition-colors"
+                    >
+                      <span className="font-mono">{lp.path}</span>
+                      <ExternalLink className="h-3 w-3" />
+                    </a>
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="flex items-center gap-2">
+                      <Eye className="h-3.5 w-3.5 text-text-muted" />
+                      <div>
+                        <p className="text-[10px] text-text-muted uppercase">Besokare</p>
+                        <p className="font-mono text-sm">{formatNumber(lp.visitors)}</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Users className="h-3.5 w-3.5 text-text-muted" />
+                      <div>
+                        <p className="text-[10px] text-text-muted uppercase">Leads</p>
+                        <p className="font-mono text-sm">{lp.leads}</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Target className="h-3.5 w-3.5 text-text-muted" />
+                      <div>
+                        <p className="text-[10px] text-text-muted uppercase">Conv. rate</p>
+                        <p className="font-mono text-sm">{lp.conversion_rate.toString().replace(".", ",")}%</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <TrendingUp className="h-3.5 w-3.5 text-text-muted" />
+                      <div>
+                        <p className="text-[10px] text-text-muted uppercase">Top kalla</p>
+                        <p className="text-xs">{lp.top_source}</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Channel cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
@@ -194,7 +327,8 @@ export default function KanalerPage() {
                           key={slug}
                           className="flex items-center justify-between text-xs"
                         >
-                          <span className="text-text-secondary">
+                          <span className="flex items-center gap-1.5 text-text-secondary">
+                            <span className="h-2 w-2 rounded-full" style={{ backgroundColor: getProductColor(slug) }} />
                             {getProductName(slug)}
                           </span>
                           <div className="flex gap-3 font-mono">
@@ -341,17 +475,24 @@ export default function KanalerPage() {
           </div>
         </CardHeader>
         <CardContent>
-          <p className="text-sm leading-relaxed">
-            Meta Ads levererar lagst CPL och hogst volym. Rekommendation: flytta
-            15% av LinkedIn-budgeten till Meta for att maximera lead-volym pa
-            kort sikt. LinkedIn ar dock starkast for B2B-beslutsfattare med
-            hogre konverteringsgrad per lead. For Organic: de 22 organiska
-            leadsen kostar ingenting men kravde SEO-investeringen i vecka 14/15.
-            Fortsatt content-satsning rekommenderas da CPL effektivt ar noll.
-            Email-kanalen visar 3 konverteringar pa 14 leads, hogsta
-            konverteringsgraden av alla kanaler, overvag att bygga ut
-            automationsflodena.
-          </p>
+          <div className="space-y-3 text-sm leading-relaxed">
+            <p>
+              <strong>Meta Ads</strong> levererar lagst CPL och hogst volym, sarskilt for Sales Promotion (Kupongguiden).
+              Rekommendation: oka budget med 30% och skapa lookalike-audience baserat pa konverterade leads.
+            </p>
+            <p>
+              <strong>LinkedIn Ads</strong> har hogre CPL men genererar mer kvalificerade leads, sarskilt for Interactive Engage och Customer Care.
+              B2B-beslutsfattare konverterar battre. Behall nuvarande budget men optimera targeting.
+            </p>
+            <p>
+              <strong>Google Ads</strong> gar stabilt med bra CPL for Sales Promotion. Send a Gift-kampanjen ar under uppbyggnad och behover
+              optimerad landningssida innan full lansering.
+            </p>
+            <p>
+              <strong>Email</strong> har hogsta konverteringsgraden per lead (21%) trots laga kostnader. Bygg ut automationsflodena.
+              <strong>Organic</strong> levererar 22 leads till noll kostnad tack vare SEO-satsningen. Fortsatt content-produktion rekommenderas.
+            </p>
+          </div>
         </CardContent>
       </Card>
     </div>

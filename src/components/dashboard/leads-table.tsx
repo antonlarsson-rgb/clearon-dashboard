@@ -10,6 +10,7 @@ import {
   contacts,
   leadScores,
   productScores,
+  shouldContactNow,
   type Contact,
   type LeadScore,
   type ProductScore,
@@ -24,6 +25,7 @@ import {
   Mail,
   ChevronDown,
   ArrowUpDown,
+  Zap,
 } from "lucide-react";
 import Link from "next/link";
 
@@ -505,6 +507,9 @@ export function LeadsTable() {
                   <th className="py-3 px-4 text-left text-text-muted font-mono text-xs uppercase">
                     Status
                   </th>
+                  <th className="py-3 px-4 text-center text-text-muted font-mono text-xs uppercase">
+                    Aktion
+                  </th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-border">
@@ -513,11 +518,12 @@ export function LeadsTable() {
                     ? getProduct(lead.topProduct.product_slug)
                     : null;
                   const status = getStatus(lead.score.total_score);
+                  const contactNow = shouldContactNow(lead.contact.id);
 
                   return (
                     <tr
                       key={lead.contact.id}
-                      className="hover:bg-surface-elevated transition-colors group"
+                      className={`hover:bg-surface-elevated transition-colors group ${contactNow.should ? "bg-amber-50/30" : ""}`}
                     >
                       <td className="py-3 px-4">
                         <input
@@ -583,6 +589,16 @@ export function LeadsTable() {
                         >
                           {status.label}
                         </Badge>
+                      </td>
+                      <td className="py-3 px-4 text-center">
+                        {contactNow.should ? (
+                          <span className="inline-flex items-center gap-1 text-[10px] font-medium text-amber-700 bg-amber-50 border border-amber-200 rounded-full px-2 py-0.5">
+                            <Zap className="h-2.5 w-2.5" />
+                            Kontakta nu
+                          </span>
+                        ) : (
+                          <span className="text-text-muted text-xs">-</span>
+                        )}
                       </td>
                     </tr>
                   );
