@@ -1,37 +1,42 @@
 import { NextResponse } from "next/server";
+import { getContacts, getKpis, getHotLeads } from "@/lib/dashboard-data";
 
 export async function GET() {
   const token = process.env.UPSALES_API_KEY || "";
   const hasToken = token.length > 0;
-  const tokenPreview = token ? token.slice(0, 8) + "..." : "MISSING";
 
-  let apiResult = "not tested";
-  let contactCount = 0;
+  let contacts: Awaited<ReturnType<typeof getContacts>> = [];
+  let kpis = null;
+  let hotLeads: Awaited<ReturnType<typeof getHotLeads>> = [];
+  let error = null;
 
-  if (hasToken) {
-    try {
-      const res = await fetch(
-        `https://power.upsales.com/api/v2/contacts?token=${token}&limit=3&sort=-score`,
-        { cache: "no-store" }
-      );
-      if (res.ok) {
-        const data = await res.json();
-        contactCount = data.metadata?.total || 0;
-        const names = (data.data || []).map((c: Record<string, unknown>) => c.name);
-        apiResult = `OK - ${contactCount} total contacts, top: ${names.join(", ")}`;
-      } else {
-        apiResult = `HTTP ${res.status}: ${await res.text()}`;
-      }
-    } catch (e) {
-      apiResult = `Error: ${e}`;
-    }
+  try {
+    contacts = await getContacts(50);
+    kpis = await getKpis();
+    hotLeads = await getHotLeads(5);
+  } catch (e) {
+    error = String(e);
   }
 
   return NextResponse.json({
     hasToken,
-    tokenPreview,
-    apiResult,
-    contactCount,
-    env: process.env.NODE_ENV,
+    error,
+    contactsCount: contacts.length,
+    contactsSample: contacts.slice(0, 5).map((c) => ({
+      name: c.name,
+      company: c.company,
+      score: c.score,
+      category: c.category,
+      categoryLabel: c.categoryLabel,
+      status: c.status,
+      contactNow: c.contactNow,
+    })),
+    kpis,
+    hotLeadsCount: hotLeads.length,
+    hotLeadsSample: hotLeads.slice(0, 3).map((l) => ({
+      name: l.name,
+      score: l.score,
+      category: l.category,
+    })),
   });
 }
