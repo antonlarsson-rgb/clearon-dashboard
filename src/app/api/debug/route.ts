@@ -56,7 +56,7 @@ export async function GET() {
     processed,
     getContactsCount: getContactsResult?.length ?? "error",
     getContactsError,
-    getContactsSample: (getContactsResult || []).slice(0, 3).map((c: Record<string, unknown>) => ({
+    getContactsSample: (getContactsResult || []).slice(0, 3).map((c) => ({
       name: c.name, company: c.company, category: c.category
     })),
   });
