@@ -11,14 +11,19 @@ const BASE = "https://power.upsales.com/api/v2";
 const cache = new Map<string, { data: unknown; ts: number }>();
 const CACHE_TTL = 5 * 60 * 1000;
 
-async function cachedFetch<T>(key: string, fetcher: () => Promise<T>): Promise<T> {
+async function cachedFetch<T>(key: string, fetcher: () => Promise<T>, fallback: T): Promise<T> {
   const cached = cache.get(key);
   if (cached && Date.now() - cached.ts < CACHE_TTL) {
     return cached.data as T;
   }
-  const data = await fetcher();
-  cache.set(key, { data, ts: Date.now() });
-  return data;
+  try {
+    const data = await fetcher();
+    cache.set(key, { data, ts: Date.now() });
+    return data;
+  } catch (e) {
+    console.error(`Dashboard data fetch error for ${key}:`, e);
+    return fallback;
+  }
 }
 
 async function upsalesGet(path: string, params?: Record<string, string>) {
@@ -27,8 +32,11 @@ async function upsalesGet(path: string, params?: Record<string, string>) {
   if (params) {
     for (const [k, v] of Object.entries(params)) u.searchParams.set(k, v);
   }
-  const res = await fetch(u.toString(), { next: { revalidate: 300 } });
-  if (!res.ok) throw new Error(`Upsales ${res.status}`);
+  const res = await fetch(u.toString(), { cache: "no-store" });
+  if (!res.ok) {
+    console.error(`Upsales API error: ${res.status} ${res.statusText} for ${path}`);
+    return { data: [], metadata: { total: 0 } };
+  }
   return res.json();
 }
 
@@ -149,6 +157,7 @@ function guessSourceChannel(contact: {
 
 export async function getContacts(limit = 100): Promise<DashboardContact[]> {
   return cachedFetch(`contacts-${limit}`, async () => {
+    if (!UPSALES_TOKEN) return [];
     const data = await upsalesGet("/contacts", {
       limit: String(limit),
       sort: "-score",
@@ -189,10 +198,16 @@ export async function getContacts(limit = 100): Promise<DashboardContact[]> {
         sourceChannel: guessSourceChannel({ hasVisit, hasMail, hasForm, segments }),
       };
     });
-  });
+  }, []);
 }
 
 export async function getKpis(): Promise<DashboardKpis> {
+  const fallbackKpis: DashboardKpis = {
+    activeLeads: { value: 0, change: 0, period: "-" },
+    hotLeads: { value: 0, change: 0, period: "-" },
+    pipelineValue: { value: 0, change: 0, period: "-" },
+    conversionRate: { value: 0, change: 0, period: "-" },
+  };
   return cachedFetch("kpis", async () => {
     // Fetch counts from Upsales
     const [contactsData, oppsData] = await Promise.all([
@@ -227,7 +242,7 @@ export async function getKpis(): Promise<DashboardKpis> {
       pipelineValue: { value: pipelineValue, change: 0, period: "totalt" },
       conversionRate: { value: Math.round(convRate * 10) / 10, change: 0, period: "besok till formularer" },
     };
-  });
+  }, fallbackKpis);
 }
 
 export async function getActivities(limit = 15): Promise<DashboardActivity[]> {
@@ -251,7 +266,7 @@ export async function getActivities(limit = 15): Promise<DashboardActivity[]> {
         company: (client.name as string) || "",
       };
     });
-  });
+  }, []);
 }
 
 export async function getHotLeads(limit = 10): Promise<DashboardContact[]> {

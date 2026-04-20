@@ -4,7 +4,12 @@ import { getContacts } from "@/lib/dashboard-data";
 export const dynamic = "force-dynamic";
 
 export default async function LeadsPage() {
-  const contacts = await getContacts(200);
+  let contacts: Awaited<ReturnType<typeof getContacts>> = [];
+  try {
+    contacts = await getContacts(200);
+  } catch (e) {
+    console.error("Leads data fetch error:", e);
+  }
 
   return (
     <div className="space-y-6">
