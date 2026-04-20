@@ -1,27 +1,22 @@
-// Real data layer for the dashboard
-// Fetches from Upsales CRM and combines with web tracking data
-// Scoring is designed to be extensible with Google Ads, Meta, LinkedIn data
-
-import { products } from "./products";
+// Real data layer - Upsales CRM
+// Scoring extensible for Google Ads, Meta, LinkedIn
 
 const UPSALES_TOKEN = process.env.UPSALES_API_KEY || "";
 const BASE = "https://power.upsales.com/api/v2";
 
-// ---- In-memory cache (5 min TTL) ----
+// ---- Cache (5 min) ----
 const cache = new Map<string, { data: unknown; ts: number }>();
 const CACHE_TTL = 5 * 60 * 1000;
 
 async function cachedFetch<T>(key: string, fetcher: () => Promise<T>, fallback: T): Promise<T> {
   const cached = cache.get(key);
-  if (cached && Date.now() - cached.ts < CACHE_TTL) {
-    return cached.data as T;
-  }
+  if (cached && Date.now() - cached.ts < CACHE_TTL) return cached.data as T;
   try {
     const data = await fetcher();
     cache.set(key, { data, ts: Date.now() });
     return data;
   } catch (e) {
-    console.error(`Dashboard data fetch error for ${key}:`, e);
+    console.error(`Dashboard fetch error [${key}]:`, e);
     return fallback;
   }
 }
@@ -29,16 +24,43 @@ async function cachedFetch<T>(key: string, fetcher: () => Promise<T>, fallback: 
 async function upsalesGet(path: string, params?: Record<string, string>) {
   const u = new URL(`${BASE}${path}`);
   u.searchParams.set("token", UPSALES_TOKEN);
-  if (params) {
-    for (const [k, v] of Object.entries(params)) u.searchParams.set(k, v);
-  }
+  if (params) for (const [k, v] of Object.entries(params)) u.searchParams.set(k, v);
   const res = await fetch(u.toString(), { cache: "no-store" });
   if (!res.ok) {
-    console.error(`Upsales API error: ${res.status} ${res.statusText} for ${path}`);
+    console.error(`Upsales ${res.status} for ${path}`);
     return { data: [], metadata: { total: 0 } };
   }
   return res.json();
 }
+
+// ---- Landing page project mapping ----
+// Maps Upsales project IDs to our product/page categories
+const LANDING_PAGE_PROJECTS: Record<number, { label: string; product: string | null }> = {
+  15: { label: "Retail / Handel", product: "sales-promotion" },
+  16: { label: "Kundvarvning", product: "interactive-engage" },
+  17: { label: "Telekom", product: "customer-care" },
+  18: { label: "Kundvard", product: "customer-care" },
+  19: { label: "Energi", product: null },
+  20: { label: "Personalbeloning", product: "send-a-gift" },
+  21: { label: "Huvudsida", product: null },
+  22: { label: "Finans / Forsakring", product: null },
+  23: { label: "E-handel", product: "kampanja" },
+};
+
+const FORM_PROJECT_ID = 28; // "CL-DK | B2B | LS-A eller -B Formulär = JA"
+const POPUP_PROJECT_ID = 26; // "CL-DK | B2B | LS-A Mail popup = JA"
+
+// ---- Lead categories ----
+export type LeadCategory =
+  | "glass_lead"       // From glass campaigns / Alva Frostander
+  | "landing_page"     // From our landing pages (identified)
+  | "mg_leverantor"    // MG leverantorslista (email)
+  | "event"            // ClearOn events
+  | "existing_customer" // Has orders
+  | "web_visitor"      // Has visited website
+  | "email_engaged"    // Opened/clicked emails
+  | "cold"             // No engagement
+  | "internal";        // ClearOn/Stellar internal
 
 // ---- Types ----
 
@@ -56,13 +78,17 @@ export interface DashboardContact {
   hasForm: boolean;
   hasMail: boolean;
   segments: string[];
+  projects: string[];
   regDate: string;
   modDate: string;
-  // Computed fields
+  // Computed
+  category: LeadCategory;
+  categoryLabel: string;
   status: "hot" | "warm" | "cold";
   contactNow: boolean;
   contactNowReason: string;
   topProduct: string | null;
+  landingPage: string | null;
   sourceChannel: string;
 }
 
@@ -82,175 +108,271 @@ export interface DashboardActivity {
   company: string;
 }
 
-// ---- Scoring logic ----
-// Designed to be extensible: each source adds points
-// Current: Upsales score (visits, forms, mail)
-// Future: + Google Ads clicks, + Meta engagement, + LinkedIn interactions
+// ---- Categorization ----
 
-function computeStatus(score: number): "hot" | "warm" | "cold" {
-  if (score >= 100) return "hot";
-  if (score >= 30) return "warm";
+const INTERNAL_DOMAINS = ["clearon.se", "wearestellar.se", "clearon-test.se", "stellar.se"];
+const INTERNAL_COMPANIES = ["clearon", "stellar", "testbolag", "test företag", "e2e test", "persisttest", "poangtest"];
+
+function categorizeContact(c: {
+  email: string;
+  company: string;
+  projects: string[];
+  segments: string[];
+  hasVisit: boolean;
+  hasMail: boolean;
+  hasForm: boolean;
+  score: number;
+}): { category: LeadCategory; label: string } {
+  const email = c.email.toLowerCase();
+  const company = c.company.toLowerCase();
+  const domain = email.split("@")[1] || "";
+
+  // Internal
+  if (INTERNAL_DOMAINS.some((d) => domain.includes(d)) || INTERNAL_COMPANIES.some((ic) => company.includes(ic))) {
+    return { category: "internal", label: "Intern" };
+  }
+
+  // Glass leads (from Alva's campaigns)
+  if (company === "glass leads") {
+    return { category: "glass_lead", label: "Glass-kampanj" };
+  }
+
+  // Landing page leads (identified via form or popup)
+  const hasLandingProject = c.projects.some((p) => p.startsWith("Landingpage"));
+  const hasFormProject = c.projects.some((p) => p.includes("Formulär"));
+  const hasPopupProject = c.projects.some((p) => p.includes("Mail popup"));
+  if (hasFormProject || hasPopupProject) {
+    return { category: "landing_page", label: "Landningssida (identifierad)" };
+  }
+
+  // MG Leverantorer
+  if (company.includes("emailadresser mg") || company.includes("mg matbutiker")) {
+    return { category: "mg_leverantor", label: "MG Leverantor" };
+  }
+
+  // Event
+  if (c.projects.some((p) => p.toLowerCase().includes("event"))) {
+    return { category: "event", label: "Event" };
+  }
+
+  // Web visitor with landing page
+  if (hasLandingProject && c.hasVisit) {
+    return { category: "landing_page", label: "Landningssida (besokare)" };
+  }
+
+  // Web visitor
+  if (c.hasVisit) {
+    return { category: "web_visitor", label: "Webbbesokare" };
+  }
+
+  // Email engaged
+  if (c.hasMail) {
+    return { category: "email_engaged", label: "Email-engagerad" };
+  }
+
+  // Has landing page project but no visit
+  if (hasLandingProject) {
+    return { category: "landing_page", label: "Landningssida" };
+  }
+
+  // Cold
+  return { category: "cold", label: "Kall" };
+}
+
+function computeStatus(score: number, hasVisit: boolean, hasForm: boolean): "hot" | "warm" | "cold" {
+  if (score >= 100 || hasForm) return "hot";
+  if (score >= 30 || hasVisit) return "warm";
   return "cold";
 }
 
-function computeContactNow(contact: {
+function computeContactNow(c: {
   score: number;
   hasVisit: boolean;
   hasForm: boolean;
+  hasMail: boolean;
+  category: LeadCategory;
   segments: string[];
 }): { should: boolean; reason: string } {
-  // Hot with recent visit
-  if (contact.score >= 100 && contact.hasVisit) {
-    return { should: true, reason: "Hog score + besökt webbplatsen" };
-  }
-  // Form submission = always contact
-  if (contact.hasForm) {
-    return { should: true, reason: "Skickade formularet" };
-  }
-  // High score warm lead
-  if (contact.score >= 50 && contact.hasVisit) {
-    return { should: true, reason: "Aktiv besokare med bra score" };
-  }
-  // Warm leads in sales segment
-  if (contact.score >= 30 && contact.segments.some((s) => s.toLowerCase().includes("varma"))) {
-    return { should: true, reason: "Varm lead i salj-segment" };
-  }
+  // Never contact internal
+  if (c.category === "internal") return { should: false, reason: "" };
+
+  // Form submissions = always
+  if (c.hasForm && c.score >= 20) return { should: true, reason: "Skickade formular" };
+
+  // Hot with visit
+  if (c.score >= 100 && c.hasVisit) return { should: true, reason: "Hog score + webbbesok" };
+
+  // Warm leads in "Stellar Varma" segment
+  if (c.segments.some((s) => s.includes("Varma"))) return { should: true, reason: "Varm lead (segment)" };
+
+  // High score glass leads
+  if (c.category === "glass_lead" && c.score >= 50) return { should: true, reason: "Glass-lead med hog score" };
+
+  // Landing page visitor with decent score
+  if (c.category === "landing_page" && c.score >= 40) return { should: true, reason: "Aktiv pa landningssida" };
+
+  // Email engaged + visit
+  if (c.hasMail && c.hasVisit && c.score >= 50) return { should: true, reason: "Email + webbbesok" };
+
   return { should: false, reason: "" };
 }
 
-function guessProduct(contact: {
-  title: string | null;
-  segments: string[];
-  company: string;
-}): string | null {
-  const t = (contact.title || "").toLowerCase();
-  const c = contact.company.toLowerCase();
+function resolveProduct(projects: string[], title: string | null): string | null {
+  // Check landing page projects first
+  for (const [pidStr, mapping] of Object.entries(LANDING_PAGE_PROJECTS)) {
+    const projectName = `Landingpage - ${mapping.label === "Huvudsida" ? "Huvudsida" : mapping.label}`;
+    // Match by label in project name
+    if (projects.some((p) => {
+      const pLower = p.toLowerCase();
+      return pLower.includes(mapping.label.toLowerCase()) && pLower.includes("landingpage");
+    }) && mapping.product) {
+      return mapping.product;
+    }
+  }
 
+  // Guess from title
+  const t = (title || "").toLowerCase();
   if (t.includes("hr") || t.includes("personal")) return "send-a-gift";
-  if (t.includes("kundtjanst") || t.includes("customer service") || t.includes("crm")) return "customer-care";
-  if (t.includes("trade marketing") || t.includes("category")) return "sales-promotion";
-  if (t.includes("brand") || t.includes("marknad") || t.includes("marketing")) return "sales-promotion";
-  if (t.includes("inkop") || t.includes("clearing")) return "clearing-solutions";
-  if (t.includes("digital") || t.includes("kampanj")) return "kampanja";
-
-  // Guess by company type
-  if (c.includes("hotel") || c.includes("scandic") || c.includes("restaurang")) return "send-a-gift";
+  if (t.includes("kundtjanst") || t.includes("customer")) return "customer-care";
+  if (t.includes("trade") || t.includes("brand") || t.includes("marknad")) return "sales-promotion";
 
   return null;
 }
 
-function guessSourceChannel(contact: {
+function resolveLandingPage(projects: string[]): string | null {
+  for (const p of projects) {
+    if (p.includes("Retail")) return "Retail / Handel";
+    if (p.includes("Kundvärvning") || p.includes("Kundvarvning")) return "Kundvarvning";
+    if (p.includes("Kundvård") || p.includes("Kundvard")) return "Kundvard";
+    if (p.includes("Telekom")) return "Telekom";
+    if (p.includes("Personalbelöning") || p.includes("Personalbeloning")) return "Personalbeloning";
+    if (p.includes("Energi")) return "Energi";
+    if (p.includes("Finans")) return "Finans";
+    if (p.includes("E-handel")) return "E-handel";
+    if (p.includes("Huvudsida")) return "Huvudsida";
+    if (p.includes("Demo")) return "Demo/Test";
+    if (p.includes("Resor")) return "Resor";
+  }
+  return null;
+}
+
+function resolveSourceChannel(c: {
+  category: LeadCategory;
   hasVisit: boolean;
   hasMail: boolean;
   hasForm: boolean;
-  segments: string[];
+  projects: string[];
 }): string {
-  if (contact.hasForm) return "Formularer";
-  if (contact.hasMail && contact.hasVisit) return "Email + Webb";
-  if (contact.hasMail) return "Email";
-  if (contact.hasVisit) return "Webb";
-  if (contact.segments.some((s) => s.includes("Kalla"))) return "Kalla leads";
-  return "CRM";
+  if (c.category === "glass_lead") return "Glass-kampanj";
+  if (c.projects.some((p) => p.includes("Formulär"))) return "Formular";
+  if (c.projects.some((p) => p.includes("Mail popup"))) return "Popup";
+  if (c.category === "mg_leverantor") return "MG Leverantorer";
+  if (c.category === "event") return "Event";
+  if (c.hasMail && c.hasVisit) return "Email + Webb";
+  if (c.hasMail) return "Email";
+  if (c.hasVisit) return "Webb";
+  if (c.projects.some((p) => p.includes("Landingpage"))) return "Landningssida";
+  return "Upsales CRM";
 }
 
 // ---- Data fetchers ----
 
-export async function getContacts(limit = 100): Promise<DashboardContact[]> {
+export async function getContacts(limit = 200): Promise<DashboardContact[]> {
   return cachedFetch(`contacts-${limit}`, async () => {
     if (!UPSALES_TOKEN) return [];
-    const data = await upsalesGet("/contacts", {
-      limit: String(limit),
-      sort: "-score",
-    });
+    const data = await upsalesGet("/contacts", { limit: String(limit), sort: "-score" });
 
-    return (data.data || []).map((c: Record<string, unknown>) => {
-      const client = (c.client as Record<string, unknown>) || {};
-      const segments = ((c.segments as Array<{ name: string }>) || []).map((s) => s.name);
-      const score = (c.score as number) || 0;
-      const hasVisit = !!(c.hasVisit);
-      const hasForm = !!(c.hasForm);
-      const hasMail = !!(c.hasMail);
-      const title = (c.title as string) || null;
-      const company = (client.name as string) || "";
+    return (data.data || [])
+      .map((c: Record<string, unknown>) => {
+        const client = (c.client as Record<string, unknown>) || {};
+        const segments = ((c.segments as Array<{ name: string }>) || []).map((s) => s.name);
+        const projects = ((c.projects as Array<{ name: string }>) || []).map((p) => p.name);
+        const score = (c.score as number) || 0;
+        const hasVisit = !!(c.hasVisit);
+        const hasForm = !!(c.hasForm);
+        const hasMail = !!(c.hasMail);
+        const title = (c.title as string) || null;
+        const company = (client.name as string) || "";
+        const email = (c.email as string) || "";
 
-      const cn = computeContactNow({ score, hasVisit, hasForm, segments });
+        const cat = categorizeContact({ email, company, projects, segments, hasVisit, hasMail, hasForm, score });
+        const status = computeStatus(score, hasVisit, hasForm);
+        const cn = computeContactNow({ score, hasVisit, hasForm, hasMail, category: cat.category, segments });
 
-      return {
-        id: c.id as number,
-        name: c.name as string,
-        email: (c.email as string) || "",
-        phone: (c.cellPhone as string) || (c.phone as string) || null,
-        title,
-        company,
-        companyId: (client.id as number) || null,
-        score,
-        journeyStep: (c.journeyStep as string) || "unknown",
-        hasVisit,
-        hasForm,
-        hasMail,
-        segments,
-        regDate: (c.regDate as string) || "",
-        modDate: (c.modDate as string) || "",
-        status: computeStatus(score),
-        contactNow: cn.should,
-        contactNowReason: cn.reason,
-        topProduct: guessProduct({ title, segments, company }),
-        sourceChannel: guessSourceChannel({ hasVisit, hasMail, hasForm, segments }),
-      };
-    });
+        return {
+          id: c.id as number,
+          name: c.name as string,
+          email,
+          phone: (c.cellPhone as string) || (c.phone as string) || null,
+          title,
+          company,
+          companyId: (client.id as number) || null,
+          score,
+          journeyStep: (c.journeyStep as string) || "unknown",
+          hasVisit,
+          hasForm,
+          hasMail,
+          segments,
+          projects,
+          regDate: (c.regDate as string) || "",
+          modDate: (c.modDate as string) || "",
+          category: cat.category,
+          categoryLabel: cat.label,
+          status,
+          contactNow: cn.should,
+          contactNowReason: cn.reason,
+          topProduct: resolveProduct(projects, title),
+          landingPage: resolveLandingPage(projects),
+          sourceChannel: resolveSourceChannel({ category: cat.category, hasVisit, hasMail, hasForm, projects }),
+        };
+      })
+      // Filter out internal contacts from the main view
+      .filter((c: DashboardContact) => c.category !== "internal");
   }, []);
 }
 
 export async function getKpis(): Promise<DashboardKpis> {
-  const fallbackKpis: DashboardKpis = {
+  const fallback: DashboardKpis = {
     activeLeads: { value: 0, change: 0, period: "-" },
     hotLeads: { value: 0, change: 0, period: "-" },
     pipelineValue: { value: 0, change: 0, period: "-" },
     conversionRate: { value: 0, change: 0, period: "-" },
   };
   return cachedFetch("kpis", async () => {
-    // Fetch counts from Upsales
-    const [contactsData, oppsData] = await Promise.all([
-      upsalesGet("/contacts", { limit: "1", sort: "-score" }),
-      upsalesGet("/opportunities", { limit: "1" }),
-    ]);
-
-    const totalContacts = contactsData.metadata?.total || 0;
-    const totalOpps = oppsData.metadata?.total || 0;
-
-    // Get hot leads count (score >= 100)
     const contacts = await getContacts(200);
+
     const hotLeads = contacts.filter((c) => c.status === "hot");
-    const activeLeads = contacts.filter((c) => c.score > 0);
-    const contactNowCount = contacts.filter((c) => c.contactNow);
+    const warmLeads = contacts.filter((c) => c.status === "warm");
+    const contactNow = contacts.filter((c) => c.contactNow);
+    const glassLeads = contacts.filter((c) => c.category === "glass_lead");
+    const landingLeads = contacts.filter((c) => c.category === "landing_page");
 
-    // Pipeline: sum of open opportunities (we'll estimate from top opps)
-    const topOpps = await upsalesGet("/opportunities", { limit: "50", sort: "-value" });
-    const pipelineValue = (topOpps.data || []).reduce(
-      (sum: number, o: Record<string, unknown>) => sum + ((o.value as number) || 0),
-      0
-    );
+    // Pipeline from opportunities
+    let pipelineValue = 0;
+    try {
+      const topOpps = await upsalesGet("/opportunities", { limit: "50", sort: "-value" });
+      pipelineValue = (topOpps.data || []).reduce(
+        (sum: number, o: Record<string, unknown>) => sum + ((o.value as number) || 0), 0
+      );
+    } catch { /* ignore */ }
 
-    // Conversion rate: contacts with form / contacts with visit
     const withVisit = contacts.filter((c) => c.hasVisit).length;
     const withForm = contacts.filter((c) => c.hasForm).length;
     const convRate = withVisit > 0 ? (withForm / withVisit) * 100 : 0;
 
     return {
-      activeLeads: { value: activeLeads.length, change: contactNowCount.length, period: "att kontakta nu" },
-      hotLeads: { value: hotLeads.length, change: hotLeads.filter((c) => c.contactNow).length, period: "att kontakta nu" },
-      pipelineValue: { value: pipelineValue, change: 0, period: "totalt" },
-      conversionRate: { value: Math.round(convRate * 10) / 10, change: 0, period: "besok till formularer" },
+      activeLeads: { value: contacts.length, change: contactNow.length, period: "att kontakta nu" },
+      hotLeads: { value: hotLeads.length + warmLeads.length, change: glassLeads.length + landingLeads.length, period: `varav ${glassLeads.length} glass + ${landingLeads.length} landing` },
+      pipelineValue: { value: pipelineValue, change: 0, period: "totalt ordervarde" },
+      conversionRate: { value: Math.round(convRate * 10) / 10, change: withForm, period: `av ${withVisit} besokare` },
     };
-  }, fallbackKpis);
+  }, fallback);
 }
 
 export async function getActivities(limit = 15): Promise<DashboardActivity[]> {
   return cachedFetch(`activities-${limit}`, async () => {
-    const data = await upsalesGet("/activities", {
-      limit: String(limit),
-      sort: "-date",
-    });
+    if (!UPSALES_TOKEN) return [];
+    const data = await upsalesGet("/activities", { limit: String(limit), sort: "-date" });
 
     return (data.data || []).map((a: Record<string, unknown>) => {
       const client = (a.client as Record<string, unknown>) || {};
@@ -274,7 +396,6 @@ export async function getHotLeads(limit = 10): Promise<DashboardContact[]> {
   return contacts
     .filter((c) => c.score > 0)
     .sort((a, b) => {
-      // Prioritize contactNow, then by score
       if (a.contactNow && !b.contactNow) return -1;
       if (!a.contactNow && b.contactNow) return 1;
       return b.score - a.score;
@@ -282,25 +403,17 @@ export async function getHotLeads(limit = 10): Promise<DashboardContact[]> {
     .slice(0, limit);
 }
 
-export async function getLeadsByProduct(): Promise<Record<string, DashboardContact[]>> {
+export async function getLeadsByCategory(): Promise<Record<LeadCategory, DashboardContact[]>> {
   const contacts = await getContacts(200);
-  const byProduct: Record<string, DashboardContact[]> = {};
-
-  for (const p of products) {
-    byProduct[p.slug] = contacts.filter((c) => c.topProduct === p.slug);
+  const result: Record<string, DashboardContact[]> = {};
+  for (const c of contacts) {
+    if (!result[c.category]) result[c.category] = [];
+    result[c.category].push(c);
   }
-
-  // Also include unassigned
-  byProduct["unassigned"] = contacts.filter((c) => !c.topProduct);
-
-  return byProduct;
+  return result as Record<LeadCategory, DashboardContact[]>;
 }
 
 // ---- Scoring sources (extensible) ----
-// Each source contributes to the total score
-// Currently only Upsales score is used
-// Future: add these functions and sum them
-
 export interface ScoreSource {
   source: string;
   score: number;
@@ -311,8 +424,7 @@ export function computeTotalScore(sources: ScoreSource[]): number {
   return sources.reduce((sum, s) => sum + s.score, 0);
 }
 
-// Ready for future integration:
+// Future:
 // export async function getGoogleAdsScore(email: string): Promise<ScoreSource>
 // export async function getMetaAdsScore(email: string): Promise<ScoreSource>
 // export async function getLinkedInScore(email: string): Promise<ScoreSource>
-// export async function getWebTrackingScore(sessionId: string): Promise<ScoreSource>

@@ -32,6 +32,7 @@ export function LeadsTable({ contacts }: LeadsTableProps) {
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
   const [channelFilter, setChannelFilter] = useState("");
+  const [categoryFilter, setCategoryFilter] = useState("");
   const [showFilters, setShowFilters] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
   const [sortField, setSortField] = useState<SortField>("score");
@@ -41,6 +42,12 @@ export function LeadsTable({ contacts }: LeadsTableProps) {
   const channels = useMemo(() => {
     const set = new Set(contacts.map((c) => c.sourceChannel));
     return Array.from(set).sort();
+  }, [contacts]);
+
+  const categories = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const c of contacts) map.set(c.category, c.categoryLabel);
+    return Array.from(map.entries()).sort((a, b) => a[1].localeCompare(b[1]));
   }, [contacts]);
 
   const filtered = useMemo(() => {
@@ -64,6 +71,10 @@ export function LeadsTable({ contacts }: LeadsTableProps) {
       leads = leads.filter((l) => l.sourceChannel === channelFilter);
     }
 
+    if (categoryFilter) {
+      leads = leads.filter((l) => l.category === categoryFilter);
+    }
+
     if (showOnlyContactNow) {
       leads = leads.filter((l) => l.contactNow);
     }
@@ -85,7 +96,7 @@ export function LeadsTable({ contacts }: LeadsTableProps) {
     });
 
     return leads;
-  }, [contacts, search, statusFilter, channelFilter, showOnlyContactNow, sortField, sortDir]);
+  }, [contacts, search, statusFilter, channelFilter, categoryFilter, showOnlyContactNow, sortField, sortDir]);
 
   function handleSort(field: SortField) {
     if (sortField === field) {
@@ -181,6 +192,19 @@ export function LeadsTable({ contacts }: LeadsTableProps) {
                 ))}
               </select>
             </div>
+            <div className="flex items-center gap-2">
+              <label className="text-xs text-text-muted font-mono uppercase">Kategori</label>
+              <select
+                value={categoryFilter}
+                onChange={(e) => setCategoryFilter(e.target.value)}
+                className="px-2 py-1 text-sm border border-border rounded-md bg-surface font-body"
+              >
+                <option value="">Alla</option>
+                {categories.map(([val, label]) => (
+                  <option key={val} value={val}>{label}</option>
+                ))}
+              </select>
+            </div>
           </div>
         </Card>
       )}
@@ -224,6 +248,7 @@ export function LeadsTable({ contacts }: LeadsTableProps) {
                 </th>
                 <th className="py-3 px-4 text-left text-text-muted font-mono text-xs uppercase">Titel</th>
                 <th className="py-3 px-4 text-left text-text-muted font-mono text-xs uppercase">Produkt</th>
+                <th className="py-3 px-4 text-left text-text-muted font-mono text-xs uppercase">Kategori</th>
                 <th className="py-3 px-4 text-left text-text-muted font-mono text-xs uppercase">Kalla</th>
                 <th className="py-3 px-4 text-left text-text-muted font-mono text-xs uppercase">Status</th>
                 <th className="py-3 px-4 text-center text-text-muted font-mono text-xs uppercase">Aktion</th>
@@ -270,6 +295,11 @@ export function LeadsTable({ contacts }: LeadsTableProps) {
                       ) : (
                         <span className="text-text-muted text-xs">-</span>
                       )}
+                    </td>
+                    <td className="py-3 px-4">
+                      <span className="text-[10px] bg-surface-elevated rounded-full px-2 py-0.5 text-text-secondary whitespace-nowrap">
+                        {lead.categoryLabel}
+                      </span>
                     </td>
                     <td className="py-3 px-4 text-text-secondary text-xs">{lead.sourceChannel}</td>
                     <td className="py-3 px-4">
