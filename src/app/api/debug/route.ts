@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getContacts, clearCache } from "@/lib/dashboard-data";
+import { getContacts, clearCache, lastFetchDebug } from "@/lib/dashboard-data";
 
 export const dynamic = "force-dynamic";
 
@@ -29,5 +29,6 @@ export async function GET() {
     getContactsLength: result?.length,
     getContactsError: error || null,
     first3: (result || []).slice(0, 3).map((c) => ({ name: c.name, company: c.company, score: c.score, category: c.category })),
+    lastFetchDebug,
   });
 }

@@ -23,21 +23,37 @@ async function cachedFetch<T>(key: string, fetcher: () => Promise<T>, _fallback:
   return data;
 }
 
+// Exported for debugging
+export let lastFetchDebug = { url: "", status: 0, dataLength: 0, error: "" };
+
 async function upsalesGet(path: string, params?: Record<string, string>) {
   const token = process.env.UPSALES_API_KEY || "";
   if (!token) {
-    console.error("UPSALES_API_KEY is not set!");
+    lastFetchDebug = { url: "", status: 0, dataLength: 0, error: "NO TOKEN" };
     return { data: [], metadata: { total: 0 } };
   }
   const u = new URL(`${BASE}${path}`);
   u.searchParams.set("token", token);
   if (params) for (const [k, v] of Object.entries(params)) u.searchParams.set(k, v);
-  const res = await fetch(u.toString(), { cache: "no-store" });
-  if (!res.ok) {
-    console.error(`Upsales ${res.status} for ${path}`);
+
+  const fetchUrl = u.toString();
+  try {
+    const res = await fetch(fetchUrl, { cache: "no-store" });
+    lastFetchDebug.url = fetchUrl.replace(token, "***");
+    lastFetchDebug.status = res.status;
+
+    if (!res.ok) {
+      lastFetchDebug.error = `HTTP ${res.status}`;
+      return { data: [], metadata: { total: 0 } };
+    }
+    const json = await res.json();
+    lastFetchDebug.dataLength = json.data?.length || 0;
+    lastFetchDebug.error = "";
+    return json;
+  } catch (e) {
+    lastFetchDebug.error = String(e);
     return { data: [], metadata: { total: 0 } };
   }
-  return res.json();
 }
 
 // ---- Landing page project mapping ----
