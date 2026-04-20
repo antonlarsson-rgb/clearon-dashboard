@@ -7,8 +7,8 @@ export async function GET() {
   clearCache();
 
   // Direct test of getContacts
-  let result;
-  let error;
+  let result: Awaited<ReturnType<typeof getContacts>> = [];
+  let error: string | null = null;
   try {
     result = await getContacts(10);
   } catch (e) {
