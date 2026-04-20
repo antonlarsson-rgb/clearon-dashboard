@@ -1,101 +1,63 @@
 import { NextResponse } from "next/server";
-import { getContacts, getKpis, getHotLeads, clearCache } from "@/lib/dashboard-data";
 
 export async function GET() {
   const token = process.env.UPSALES_API_KEY || "";
-  const hasToken = token.length > 0;
 
-  let contacts: Awaited<ReturnType<typeof getContacts>> = [];
-  let kpis = null;
-  let hotLeads: Awaited<ReturnType<typeof getHotLeads>> = [];
-  let error = null;
+  // Fetch 10 contacts directly
+  const res = await fetch(
+    `https://power.upsales.com/api/v2/contacts?token=${token}&limit=10&sort=-score`,
+    { cache: "no-store" }
+  );
+  const raw = await res.json();
+  const rawContacts = raw.data || [];
 
-  // Test raw API first
-  let rawCount = 0;
-  let rawSample: string[] = [];
-  try {
-    const rawRes = await fetch(
-      `https://power.upsales.com/api/v2/contacts?token=${token}&limit=5&sort=-score`,
-      { cache: "no-store" }
-    );
-    const rawData = await rawRes.json();
-    rawCount = rawData.metadata?.total || 0;
-    rawSample = (rawData.data || []).map((c: Record<string, unknown>) => {
-      const cl = (c.client as Record<string, unknown>) || {};
-      return `${c.name} | ${(cl.name as string) || "no-company"} | score:${c.score}`;
+  // Process them inline - same logic as dashboard-data.ts
+  const INTERNAL_DOMAINS = ["clearon.se", "wearestellar.se", "clearon-test.se"];
+  const INTERNAL_COMPANIES = ["testbolag", "test företag", "e2e test", "persisttest", "poangtest"];
+
+  const processed = [];
+  for (const c of rawContacts) {
+    const client = c.client || {};
+    const email = c.email || "";
+    const company = (client.name as string) || "";
+    const domain = email.split("@")[1] || "";
+
+    const isInternalDomain = INTERNAL_DOMAINS.some(d => domain.includes(d));
+    const isInternalCompany = INTERNAL_COMPANIES.some(ic => company.toLowerCase().includes(ic));
+    const isInternal = isInternalDomain || isInternalCompany;
+
+    processed.push({
+      name: c.name,
+      email,
+      company,
+      domain,
+      score: c.score,
+      isInternalDomain,
+      isInternalCompany,
+      isInternal,
+      filtered: isInternal ? "YES - REMOVED" : "NO - KEPT",
     });
-  } catch (e) {
-    error = `Raw API error: ${e}`;
   }
 
-  // Test raw processing of first contact
-  let processError = null;
-  try {
-    const rawRes2 = await fetch(
-      `https://power.upsales.com/api/v2/contacts?token=${token}&limit=10&sort=-score`,
-      { cache: "no-store" }
-    );
-    const rawData2 = await rawRes2.json();
-    const firstContact = rawData2.data?.[1]; // skip first (internal), use second
-    if (firstContact) {
-      const client = firstContact.client || {};
-      const segments = (firstContact.segments || []).map((s: {name: string}) => s.name);
-      const projects = (firstContact.projects || []).map((p: {name: string}) => p.name);
-      processError = JSON.stringify({
-        name: firstContact.name,
-        company: client.name,
-        email: firstContact.email,
-        segments,
-        projects,
-        score: firstContact.score,
-      });
-    }
-  } catch (e) {
-    processError = `Processing error: ${e}`;
-  }
+  // Now test getContacts
+  const { getContacts, clearCache } = await import("@/lib/dashboard-data");
+  clearCache();
 
-  // Test through data layer with explicit error capture
-  let dataLayerError = null;
+  let getContactsResult;
+  let getContactsError;
   try {
-    clearCache();
-    contacts = await getContacts(50);
+    getContactsResult = await getContacts(10);
   } catch (e) {
-    dataLayerError = `getContacts threw: ${e instanceof Error ? e.message + '\n' + e.stack : String(e)}`;
-  }
-  try {
-    kpis = await getKpis();
-  } catch (e) {
-    // ignore
-  }
-  try {
-    hotLeads = await getHotLeads(5);
-  } catch (e) {
-    // ignore
+    getContactsError = e instanceof Error ? { msg: e.message, stack: e.stack } : String(e);
   }
 
   return NextResponse.json({
-    hasToken,
-    rawApiCount: rawCount,
-    rawApiSample: rawSample,
-    processError,
-    dataLayerError,
-    error,
-    contactsCount: contacts.length,
-    contactsSample: contacts.slice(0, 5).map((c) => ({
-      name: c.name,
-      company: c.company,
-      score: c.score,
-      category: c.category,
-      categoryLabel: c.categoryLabel,
-      status: c.status,
-      contactNow: c.contactNow,
-    })),
-    kpis,
-    hotLeadsCount: hotLeads.length,
-    hotLeadsSample: hotLeads.slice(0, 3).map((l) => ({
-      name: l.name,
-      score: l.score,
-      category: l.category,
+    rawCount: raw.metadata?.total,
+    processed,
+    getContactsCount: getContactsResult?.length ?? "error",
+    getContactsError,
+    getContactsSample: (getContactsResult || []).slice(0, 3).map((c: Record<string, unknown>) => ({
+      name: c.name, company: c.company, category: c.category
     })),
   });
 }
