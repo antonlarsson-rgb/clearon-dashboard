@@ -43,8 +43,8 @@ export async function GET() {
   const { getContacts, clearCache } = await import("@/lib/dashboard-data");
   clearCache();
 
-  let getContactsResult;
-  let getContactsError;
+  let getContactsResult: Awaited<ReturnType<typeof getContacts>> | undefined;
+  let getContactsError: unknown;
   try {
     getContactsResult = await getContacts(10);
   } catch (e) {
