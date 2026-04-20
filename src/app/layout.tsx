@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { DM_Serif_Display, DM_Sans, JetBrains_Mono } from "next/font/google";
+import { DM_Serif_Display, DM_Sans, JetBrains_Mono, Open_Sans } from "next/font/google";
 import "./globals.css";
 
 const dmSerif = DM_Serif_Display({
@@ -21,6 +21,12 @@ const jetbrainsMono = JetBrains_Mono({
   display: "swap",
 });
 
+const openSans = Open_Sans({
+  subsets: ["latin"],
+  variable: "--font-open-sans",
+  display: "swap",
+});
+
 export const metadata: Metadata = {
   title: "ClearOn Intelligence",
   description: "Lead scoring och sales intelligence for ClearOn AB",
@@ -34,7 +40,7 @@ export default function RootLayout({
   return (
     <html
       lang="sv"
-      className={`${dmSerif.variable} ${dmSans.variable} ${jetbrainsMono.variable} h-full antialiased`}
+      className={`${dmSerif.variable} ${dmSans.variable} ${jetbrainsMono.variable} ${openSans.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col font-body">{children}</body>
     </html>

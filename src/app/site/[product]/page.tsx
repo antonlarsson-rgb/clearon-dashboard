@@ -1,30 +1,30 @@
-import { notFound } from "next/navigation";
-import { products } from "@/lib/products";
 import ProductLandingClient from "./product-landing-client";
 
-// Map URL slugs to product slugs
-function resolveProductSlug(urlSlug: string): string {
-  if (urlSlug === "clearing") return "clearing-solutions";
-  return urlSlug;
-}
+const ALL_PRODUCT_SLUGS = [
+  "sales-promotion",
+  "customer-care",
+  "interactive-engage",
+  "kampanja",
+  "send-a-gift",
+  "clearing",
+  "engage",
+  "personalbeloning",
+  "kuponger",
+  "mobila-presentkort",
+  "sverigechecken",
+];
 
-// Generate static params for all products
 export function generateStaticParams() {
-  return [
-    ...products.map((p) => ({
-      product: p.slug === "clearing-solutions" ? "clearing" : p.slug,
-    })),
-  ];
+  return ALL_PRODUCT_SLUGS.map((slug) => ({ product: slug }));
 }
 
 export default async function ProductLandingPage(
   props: { params: Promise<{ product: string }> }
 ) {
   const { product: urlSlug } = await props.params;
-  const productSlug = resolveProductSlug(urlSlug);
-  const product = products.find((p) => p.slug === productSlug);
 
-  if (!product) notFound();
+  // Map URL slug to product slug for lookup
+  const productSlug = urlSlug === "clearing" ? "clearing-solutions" : urlSlug;
 
   return <ProductLandingClient productSlug={productSlug} />;
 }

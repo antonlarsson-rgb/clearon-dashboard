@@ -8,6 +8,11 @@ const productSlugs = new Set([
   "kampanja",
   "send-a-gift",
   "clearing",
+  "engage",
+  "personalbeloning",
+  "kuponger",
+  "mobila-presentkort",
+  "sverigechecken",
 ]);
 
 // Dashboard routes

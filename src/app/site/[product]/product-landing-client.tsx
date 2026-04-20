@@ -1,169 +1,353 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import { motion } from "framer-motion";
-import { products } from "@/lib/products";
 import { useTracking } from "@/hooks/use-tracking";
 import { trackClick, trackLead } from "@/lib/meta-pixel";
-import { ConsentBanner } from "@/components/landing/ConsentBanner";
-import { IceCreamPopup } from "@/components/landing/IceCreamPopup";
-import {
-  ArrowRight,
-  Check,
-  Store,
-  Wallet,
-  Clock,
-  Send,
-  CreditCard,
-  BarChart3,
-  Gift,
-  Ticket,
-  HeartHandshake,
-  Gamepad2,
-  Megaphone,
-  Award,
-  ArrowLeftRight,
-  IceCream,
-} from "lucide-react";
-import { Input } from "@/components/ui/input";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Footer } from "@/components/landing/Footer";
-import confetti from "canvas-confetti";
+import { SiteNav } from "@/components/landing-v2/SiteNav";
+import { CtaFooter } from "@/components/landing-v2/CtaFooter";
+import { SignalProvider } from "@/components/landing-v2/SignalProvider";
 
-const iconMap: Record<string, React.ElementType> = {
-  ticket: Ticket,
-  "heart-handshake": HeartHandshake,
-  "gamepad-2": Gamepad2,
-  megaphone: Megaphone,
-  gift: Gift,
-  "arrow-left-right": ArrowLeftRight,
-};
-
-const productBenefits: Record<string, { benefits: string[]; stats: string; cta: string; useCases: string[] }> = {
+const PRODUCT_DETAILS: Record<
+  string,
+  {
+    name: string;
+    tagline: string;
+    desc: string;
+    color: string;
+    icon: string;
+    metrics: { value: string; label: string }[];
+    features: { title: string; desc: string }[];
+    useCases: { title: string; desc: string }[];
+    relatedSlugs: string[];
+  }
+> = {
   "sales-promotion": {
-    benefits: [
-      "Fysiska kuponger som los in i kassan, 20 000 anslutna kassor",
-      "+15% forsaljningsokning pa etablerade produkter",
-      "+46% forsaljningsokning vid nylansering",
-      "Full sparbarhet och rapportering i realtid",
-      "Fungerar i 5 000+ butiker i hela Sverige",
+    name: "Sales Promotion",
+    tagline: "Fysiska kuponger som driver kop i butik",
+    desc: "Lansera nya produkter eller oka forsaljning pa etablerade varumarken med kuponger som loseses in direkt i kassan. Full sparbarhet fran plan till resultat.",
+    color: "#2D6A4F",
+    icon: "🎫",
+    metrics: [
+      { value: "+46%", label: "Forsaljningslyft nylansering" },
+      { value: "+15%", label: "Etablerade produkter" },
+      { value: "20 000", label: "Anslutna kassor" },
+      { value: "5 000+", label: "Butiker" },
     ],
-    stats: "Foretag som anvander ClearOn Sales Promotion ser i snitt 15-46% forsaljningsokning beroende pa produktens mognad.",
-    cta: "Boka en demo av Sales Promotion",
+    features: [
+      { title: "Kassaintegration", desc: "Kopplat till 20 000 kassor i hela Sverige. Kupongen scannas direkt." },
+      { title: "Realtidsdata", desc: "Se vilka butiker, regioner och tidsperioder som presterar bast." },
+      { title: "Flexibla kampanjer", desc: "Kronor-av, procent, kop 2 betala for 1, och fler kampanjtyper." },
+      { title: "Full clearing", desc: "Automatisk avrakning och rapportering. Ni far faktura, inte pappersarbete." },
+    ],
     useCases: [
-      "FMCG-bolag som lanserar nya produkter i dagligvaruhandeln",
-      "Varumarken som vill oka forsaljning pa etablerade produkter",
-      "Trade Marketing-team som behover matbara kampanjresultat",
+      { title: "FMCG-lansering", desc: "Lansera nya produkter med garanterad exponering i butik." },
+      { title: "Trade Marketing", desc: "Ge ert field sales-team matbara verktyg." },
+      { title: "Sasongskapanjer", desc: "Tidsbestamda erbjudanden med full kontroll." },
     ],
+    relatedSlugs: ["interactive-engage", "kampanja", "kuponger"],
   },
   "customer-care": {
-    benefits: [
-      "Skicka digital kompensation via SMS pa sekunder",
-      "70% av kompenserade kunder forblir lojala",
-      "Ersatt fysiska vardeavier med digitala checkar",
-      "Fullt sparbart for kundtjanst-teamet",
-      "Integration med befintliga CRM-system",
+    name: "Customer Care",
+    tagline: "Digital kompensation som vandermisnoje till lojalitet",
+    desc: "Skicka digital kompensation via SMS direkt i kundtjanstsamtalet. Vardecheckar, presentkort och kuponger som loser in i 5 000+ butiker.",
+    color: "#4A90A4",
+    icon: "💬",
+    metrics: [
+      { value: "70%", label: "Behallerlojalitet" },
+      { value: "3x", label: "Snabbare arendehantering" },
+      { value: "0", label: "Fysiska vardeavier" },
+      { value: "SMS", label: "Direkt leverans" },
     ],
-    stats: "70% av kunder som far snabb kompensation forblir lojala, jamfort med 17% utan.",
-    cta: "Se hur Customer Care fungerar",
+    features: [
+      { title: "Direkt kompensation", desc: "Skicka vardecheckar via SMS pa sekunder, direkt i samtalet." },
+      { title: "CRM-integration", desc: "Koppla till ert befintliga CRM for automatisk loggning." },
+      { title: "Anpassade belopp", desc: "Satt belopp fritt eller anvand forinstaallda nivaer." },
+      { title: "Uppfoljning", desc: "Se inlosningsgrad och kundnojdhet i realtid." },
+    ],
     useCases: [
-      "Kundtjanst-team som hanterar klagomal och kompensationer",
-      "CRM-avdelningar som vill minska churn",
-      "Foretag med hog volym kundkontakt (telekom, retail, hotell)",
+      { title: "Klagomal", desc: "Kompensera missnojda kunder direkt och behall dem." },
+      { title: "Servicegaranti", desc: "Ge automatisk kompensation vid SLA-brott." },
+      { title: "Win-back", desc: "Ateraktivera churnade kunder med riktade erbjudanden." },
     ],
+    relatedSlugs: ["send-a-gift", "mobila-presentkort", "sales-promotion"],
   },
   "interactive-engage": {
-    benefits: [
-      "Gamification: spel, tavlingar, spin-the-wheel",
-      "+16% extra forsaljningsokning utover standard-kampanj",
-      "Engagerande upplevelser som driver delning",
-      "Kuponger som beloning for deltagande",
-      "Perfekt for events, massor och digitala kampanjer",
+    name: "Interactive Engage",
+    tagline: "Gamification som okar forsaljning med +16%",
+    desc: "Lagg till spelmekanik pa era kampanjer. Snurra hjulet, skrapkort, quiz och adventskalender. Kuponger som beloning for deltagande.",
+    color: "#E07A5F",
+    icon: "🎮",
+    metrics: [
+      { value: "+16%", label: "Extra forsaljning" },
+      { value: "4", label: "Speltyper" },
+      { value: "85%", label: "Engagemangsgrad" },
+      { value: "3x", label: "Delningsgrad" },
     ],
-    stats: "Interactive Engage ger i snitt +16% extra forsaljningsokning utover vad en vanlig kupongkampanj ger.",
-    cta: "Se Interactive Engage i aktion",
+    features: [
+      { title: "Snurra hjulet", desc: "Slumpad vinst som driver engagemang och delning." },
+      { title: "Skrapkort", desc: "Digital skraplott med garanterad vinst." },
+      { title: "Quiz", desc: "Kunskapsfraga med beloning. Larorik interaktion." },
+      { title: "Adventskalender", desc: "24 luckor med dagliga erbjudanden." },
+    ],
     useCases: [
-      "FMCG-varumarken som vill skapa engagemang runt kampanjer",
-      "Shopper Marketing-team som planerar butiksaktiviteter",
-      "Event-arrangorer som vill driva trafik och delning",
+      { title: "Events", desc: "Skapa engagemang pa massor och butiksaktiviteter." },
+      { title: "Digital kampanj", desc: "Oka konvertering i digitala kanaler." },
+      { title: "Lojalitet", desc: "Belona atekommande kunder med spelupplevelser." },
     ],
+    relatedSlugs: ["sales-promotion", "kampanja", "kuponger"],
   },
   kampanja: {
-    benefits: [
-      "Skapa egna kampanjsidor med egen URL pa minuter",
-      "Distribuera kuponger via SMS direkt till kunder",
-      "Perfekt for nylansering och tidsbestamda kampanjer",
-      "Ingen utvecklare behövs, lat att satta upp",
-      "Fullstandig statistik och uppfoljning",
+    name: "Kampanja",
+    tagline: "Bygg kampanjsidor och distribuera kuponger via SMS",
+    desc: "Skapa egna kampanjsidor pa minuter, distribuera kuponger via SMS direkt till kunder. Ingen utvecklare behovs.",
+    color: "#7B68EE",
+    icon: "📣",
+    metrics: [
+      { value: "< 1h", label: "Tid till live" },
+      { value: "0", label: "Utvecklare kravs" },
+      { value: "SMS", label: "Distribution" },
+      { value: "100%", label: "Sparbarhet" },
     ],
-    stats: "Kampanja minskar time-to-market for kupongkampanjer fran veckor till timmar.",
-    cta: "Testa Kampanja gratis",
+    features: [
+      { title: "Drag-and-drop", desc: "Bygg kampanjsidor utan teknisk kompetens." },
+      { title: "SMS-distribution", desc: "Skicka kuponger direkt till kundens telefon." },
+      { title: "Egen URL", desc: "Varumarkesanpassade kampanjsidor med egen URL." },
+      { title: "A/B-testning", desc: "Testa olika erbjudanden och optimera i realtid." },
+    ],
     useCases: [
-      "Marknadschefer som snabbt vill lansera kampanjer",
-      "Brand Managers som driver produktlanseringar",
-      "Foretag som behover agil kampanjhantering",
+      { title: "Nylansering", desc: "Snabb lansering av kampanjer for nya produkter." },
+      { title: "Flash sales", desc: "Tidsbestamda erbjudanden med hog urgency." },
+      { title: "Events", desc: "QR-koder pa plats som leder till kampanjsida." },
     ],
+    relatedSlugs: ["sales-promotion", "interactive-engage", "kuponger"],
   },
   "send-a-gift": {
-    benefits: [
-      "Digitala presentkort via SMS eller mail",
-      "Perfekt for personalbeloning och jubileum",
-      "Ingen administration, inga blanketter",
-      "Mottagaren valjer sjalv var de handlar",
-      "Skatteeffektiv personalformaner",
+    name: "Send a Gift",
+    tagline: "Digitala presentkort och personalbeloning",
+    desc: "Skicka digitala presentkort via SMS eller mail. Perfekt for personalbeloning, jubileum och kundgavor. Mottagaren valjer sjalv bland 5 000+ butiker.",
+    color: "#D4A574",
+    icon: "🎁",
+    metrics: [
+      { value: "-31%", label: "Personalomsattning" },
+      { value: "90%", label: "Uppskattningsgrad" },
+      { value: "5 000+", label: "Inlosningsplatser" },
+      { value: "0", label: "Administration" },
     ],
-    stats: "Regelbunden uppskattning minskar personalomsattning med upp till 31%.",
-    cta: "Borja skicka presenter idag",
+    features: [
+      { title: "SMS & mail", desc: "Valj leveranssatt efter mottagarens preferens." },
+      { title: "Fritt val", desc: "Mottagaren valjer sjalv bland tusentals butiker." },
+      { title: "Skatteeffektivt", desc: "Uppfyller Skatteverkets krav for personalformaner." },
+      { title: "Bulkutskick", desc: "Skicka till hundratals mottagare pa en gang." },
+    ],
     useCases: [
-      "HR-avdelningar som vill belona personal enkelt",
-      "Chefer som vill uppmarksamma medarbetares insatser",
-      "Foretag med manga anstallda som behover skalbar beloning",
+      { title: "Personalbeloning", desc: "Belona prestation, jubileum och fodelsedag." },
+      { title: "Kundgavor", desc: "Skicka tackgavor till viktiga kunder." },
+      { title: "Incitament", desc: "Motivera saljteam och partners." },
     ],
+    relatedSlugs: ["personalbeloning", "customer-care", "mobila-presentkort"],
   },
   "clearing-solutions": {
-    benefits: [
-      "Clearing-tjanster for kedjor och handlare",
-      "Enkel, saker och effektiv betalningshantering",
-      "Koppla kedjan till ClearOns clearing-infrastruktur",
-      "Automatisk avrakning och rapportering",
-      "Integreras med befintliga kassasystem",
+    name: "Clearing Solutions",
+    tagline: "Clearing-tjanster for kedjor och handlare",
+    desc: "Koppla er kedja till ClearOns clearing-infrastruktur. Automatisk avrakning, rapportering och betalningshantering for 20 000 kassor.",
+    color: "#6B7280",
+    icon: "🔄",
+    metrics: [
+      { value: "20 000", label: "Kassor" },
+      { value: "-85%", label: "Manuellt arbete" },
+      { value: "Realtid", label: "Rapportering" },
+      { value: "Auto", label: "Avrakning" },
     ],
-    stats: "ClearOns clearing-infrastruktur ar kopplad till 20 000 kassor i Sverige.",
-    cta: "Kontakta oss om Clearing",
+    features: [
+      { title: "Kassaintegration", desc: "Kopplat till de storsta kassasystemen i Sverige." },
+      { title: "Automatisk avrakning", desc: "Slopp manuella avrakningar och fakturor." },
+      { title: "Realtidsdata", desc: "Se inlosning, varde och trender i realtid." },
+      { title: "API", desc: "Integrera med era befintliga system." },
+    ],
     useCases: [
-      "Dagligvarukedjor som hanterar kupongclearing",
-      "Category Managers som behover battre insyn i kampanjresultat",
-      "Kedjor som vill effektivisera sin clearing-process",
+      { title: "Dagligvarukedjor", desc: "Effektivisera kupongclearing for hela kedjan." },
+      { title: "Category Management", desc: "Battre insyn i kampanjresultat per kategori." },
+      { title: "Leverantorssamarbete", desc: "Forenkla samarbete med FMCG-leverantorer." },
     ],
+    relatedSlugs: ["sales-promotion", "kuponger", "kampanja"],
+  },
+  engage: {
+    name: "Engage",
+    tagline: "Engagera kunder med interaktiva upplevelser",
+    desc: "Skapa engagerande kundupplevelser med gamification, quiz och interaktiva kampanjer. Oka forsaljning och lojalitet.",
+    color: "#E07A5F",
+    icon: "🎯",
+    metrics: [
+      { value: "+16%", label: "Extra forsaljning" },
+      { value: "85%", label: "Engagemangsgrad" },
+      { value: "4", label: "Speltyper" },
+      { value: "3x", label: "Delning" },
+    ],
+    features: [
+      { title: "Gamification", desc: "Snurra hjulet, skrapkort och quiz-spel." },
+      { title: "Beloning", desc: "Kuponger som beloning for deltagande." },
+      { title: "Data", desc: "Samla in kundinsikter genom interaktion." },
+      { title: "Delning", desc: "Viralt spridsningsmekanik built-in." },
+    ],
+    useCases: [
+      { title: "Events", desc: "Aktivera besokare pa massor och events." },
+      { title: "Nylansering", desc: "Skapa buzz runt nya produkter." },
+      { title: "Lojalitet", desc: "Bygga langvariga kundrelationer." },
+    ],
+    relatedSlugs: ["interactive-engage", "kampanja", "sales-promotion"],
+  },
+  personalbeloning: {
+    name: "Personalbeloning",
+    tagline: "Systematisk personalbeloning med digitala vardecheckar",
+    desc: "Automatisera personalbeloning for fodelsedag, jubileum och prestation. Digitala vardecheckar som loser in i 5 000+ butiker.",
+    color: "#8B6F47",
+    icon: "🏆",
+    metrics: [
+      { value: "-31%", label: "Personalomsattning" },
+      { value: "90%", label: "Uppskattning" },
+      { value: "Auto", label: "Utskick" },
+      { value: "0 kr", label: "Adminkostand" },
+    ],
+    features: [
+      { title: "Automatisering", desc: "Schemalaga utskick for fodelsedag och jubileum." },
+      { title: "Anpassade belopp", desc: "Valfritt belopp fran 50 kr till 5 000 kr." },
+      { title: "HR-rapportering", desc: "Oversikt over alla utskick och inlosningar." },
+      { title: "Bulkhantering", desc: "Ladda upp listor for storskaliga utskick." },
+    ],
+    useCases: [
+      { title: "Fodelsedag", desc: "Automatiska fodelsedagspresenter." },
+      { title: "Jubileum", desc: "Uppmarksamma anstallningsarsdagar." },
+      { title: "Prestation", desc: "Belona extra insatser och resultat." },
+    ],
+    relatedSlugs: ["send-a-gift", "mobila-presentkort", "customer-care"],
+  },
+  kuponger: {
+    name: "Kuponger",
+    tagline: "Digitala kuponger for fysisk retail",
+    desc: "Hela kedjan fran skapande till inlosning och clearing. Digitala kuponger som fungerar i 5 000+ butiker med 20 000 anslutna kassor.",
+    color: "#5e9732",
+    icon: "🎟",
+    metrics: [
+      { value: "5 000+", label: "Butiker" },
+      { value: "20 000", label: "Kassor" },
+      { value: "12%", label: "Snittinlosning" },
+      { value: "< 1h", label: "Setup" },
+    ],
+    features: [
+      { title: "Digitalt forst", desc: "SMS-distribution direkt till kunden." },
+      { title: "Kassaintegration", desc: "Skannas i kassan, automatisk avdrag." },
+      { title: "Clearing", desc: "Automatisk avrakning och betalning." },
+      { title: "Statistik", desc: "Full uppfoljning i realtid." },
+    ],
+    useCases: [
+      { title: "Forsaljningskampanj", desc: "Driva kop av specifika produkter." },
+      { title: "Nylansering", desc: "Introducera nya produkter." },
+      { title: "Lojalitet", desc: "Belona atekommande kunder." },
+    ],
+    relatedSlugs: ["sales-promotion", "kampanja", "interactive-engage"],
+  },
+  "mobila-presentkort": {
+    name: "Mobila Presentkort",
+    tagline: "Digitala presentkort via mobilen",
+    desc: "Skicka digitala presentkort via SMS. Perfekt for kompensation, beloning och gavagivande. Loser in i 5 000+ butiker over hela Sverige.",
+    color: "#c8a830",
+    icon: "💳",
+    metrics: [
+      { value: "SMS", label: "Leverans" },
+      { value: "5 000+", label: "Butiker" },
+      { value: "Valfritt", label: "Belopp" },
+      { value: "0", label: "Fysisk hantering" },
+    ],
+    features: [
+      { title: "Direkt leverans", desc: "Mottagaren far presentkortet via SMS pa sekunder." },
+      { title: "Valfritt belopp", desc: "Fran 25 kr till 10 000 kr." },
+      { title: "Bred tackning", desc: "5 000+ butiker i hela Sverige." },
+      { title: "Enkel hantering", desc: "Ingen fysisk logistik eller distribution." },
+    ],
+    useCases: [
+      { title: "Kompensation", desc: "Snabb kompensation till missnojda kunder." },
+      { title: "Gava", desc: "Skicka presentkort till vanner och familj." },
+      { title: "Beloning", desc: "Personalbeloning utan administration." },
+    ],
+    relatedSlugs: ["send-a-gift", "customer-care", "personalbeloning"],
+  },
+  sverigechecken: {
+    name: "Sverigechecken",
+    tagline: "Vardecheck som fungerar i hela Sverige",
+    desc: "En vardecheck som loser in i 5 000+ butiker over hela Sverige. Perfekt for kompensation, beloning och formaner.",
+    color: "#0068B5",
+    icon: "🇸🇪",
+    metrics: [
+      { value: "5 000+", label: "Butiker" },
+      { value: "Hela", label: "Sverige" },
+      { value: "Valfritt", label: "Belopp" },
+      { value: "Digital", label: "Distribution" },
+    ],
+    features: [
+      { title: "Rikstackande", desc: "Fungerar i 5 000+ butiker over hela Sverige." },
+      { title: "Flexibelt belopp", desc: "Satt valfritt belopp for varje check." },
+      { title: "Digital leverans", desc: "Skickas via SMS direkt till mottagaren." },
+      { title: "Hog acceptans", desc: "Brett natverk av anslutna handlare." },
+    ],
+    useCases: [
+      { title: "Personalforman", desc: "Skatteeffektiv personalforman med bred anvandning." },
+      { title: "Kundkompensation", desc: "Generell kompensation for alla typer av arenden." },
+      { title: "Marknadsforingskampanj", desc: "Attraktiv beloning i kampanjer." },
+    ],
+    relatedSlugs: ["mobila-presentkort", "send-a-gift", "customer-care"],
   },
 };
 
-export default function ProductLandingClient({ productSlug }: { productSlug: string }) {
-  const product = products.find((p) => p.slug === productSlug);
-  const benefits = productBenefits[productSlug];
+function resolveDetails(slug: string) {
+  // Map URL slugs to product detail keys
+  if (slug === "clearing") return PRODUCT_DETAILS["clearing-solutions"];
+  return PRODUCT_DETAILS[slug] || null;
+}
 
-  if (!product || !benefits) return null;
-
-  const Icon = iconMap[product.icon];
-
-  const { sessionId, consent, trackEvent, setConsent } = useTracking();
+export default function ProductLandingClient({
+  productSlug,
+}: {
+  productSlug: string;
+}) {
+  const details = resolveDetails(productSlug);
+  const { sessionId, trackEvent } = useTracking();
+  const formRef = useRef<HTMLDivElement>(null);
   const pageLoadTracked = useRef(false);
-
-  useEffect(() => {
-    if (!pageLoadTracked.current && sessionId) {
-      pageLoadTracked.current = true;
-      trackEvent("page_load", { variant: "product", product: productSlug, page_section: "hero" });
-    }
-  }, [sessionId, trackEvent, productSlug]);
 
   const [email, setEmail] = useState("");
   const [name, setName] = useState("");
   const [company, setCompany] = useState("");
   const [phone, setPhone] = useState("");
-  const [noCall, setNoCall] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
-  const formRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!pageLoadTracked.current && sessionId) {
+      pageLoadTracked.current = true;
+      trackEvent("page_load", {
+        variant: "product-v2",
+        product: productSlug,
+        page_section: "hero",
+      });
+    }
+  }, [sessionId, trackEvent, productSlug]);
+
+  if (!details) {
+    return (
+      <div
+        style={{
+          minHeight: "100vh",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          fontFamily: "var(--font-open-sans), sans-serif",
+          color: "var(--clr-ink)",
+        }}
+      >
+        Produkten kunde inte hittas.
+      </div>
+    );
+  }
 
   const scrollToForm = () => {
     trackClick("cta_contact", productSlug, "hero");
@@ -176,7 +360,7 @@ export default function ProductLandingClient({ productSlug }: { productSlug: str
     trackClick("submit_form", productSlug, "lead_form");
     setIsSubmitting(true);
     try {
-      fetch("/api/leads", {
+      await fetch("/api/leads", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -187,11 +371,10 @@ export default function ProductLandingClient({ productSlug }: { productSlug: str
             `name:${name || "ej angiven"}`,
             `product:${productSlug}`,
             `phone:${phone || "ej angiven"}`,
-            `noCall:${noCall}`,
-            `variant:product-landing`,
+            `variant:product-v2`,
           ],
         }),
-      }).catch(() => {});
+      });
       trackEvent("lead_submitted", {
         product: productSlug,
         has_phone: !!phone,
@@ -202,12 +385,6 @@ export default function ProductLandingClient({ productSlug }: { productSlug: str
         has_phone: !!phone,
       });
       setIsSubmitted(true);
-      confetti({
-        particleCount: 100,
-        spread: 70,
-        origin: { y: 0.6 },
-        colors: ["#739B36", "#8BB347", "#A3C55E"],
-      });
     } catch {
       // silently fail
     } finally {
@@ -215,300 +392,299 @@ export default function ProductLandingClient({ productSlug }: { productSlug: str
     }
   };
 
+  const relatedProducts = details.relatedSlugs
+    .map((s) => {
+      const d = PRODUCT_DETAILS[s];
+      return d ? { slug: s, ...d } : null;
+    })
+    .filter(Boolean) as Array<{ slug: string; name: string; tagline: string; color: string; icon: string }>;
+
   return (
-    <div className="min-h-screen" style={{ backgroundColor: "#f4f1e9", fontFamily: "Carlito, sans-serif" }}>
-      {/* Navigation */}
-      <nav className="fixed top-0 left-0 right-0 z-50 bg-[#f4f1e9]/90 backdrop-blur-md border-b border-[#3a453a]/10">
-        <div className="max-w-4xl mx-auto px-4 py-3 flex items-center justify-between">
-          <a href="/" className="flex items-center gap-2">
-            <svg viewBox="0 0 140 28" className="h-5" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <text x="0" y="22" fill="#416125" fontSize="24" fontWeight="700" fontFamily="system-ui, -apple-system, sans-serif" letterSpacing="-0.5">ClearOn</text>
-            </svg>
-          </a>
-          <button
-            onClick={scrollToForm}
-            className="text-sm font-semibold text-white bg-[#416125] rounded-lg px-4 py-2 hover:bg-[#416125]/90 transition-colors cursor-pointer"
-          >
-            Kontakta oss
-          </button>
-        </div>
-      </nav>
+    <SignalProvider>
+      <div
+        style={{
+          fontFamily: "var(--font-open-sans), sans-serif",
+          background: "var(--clr-beige)",
+          minHeight: "100vh",
+        }}
+      >
+        <SiteNav />
 
-      {/* Hero */}
-      <section className="pt-24 pb-16 px-4 md:px-6">
-        <div className="max-w-3xl mx-auto text-center">
-          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
-            <div className="flex items-center justify-center gap-3 mb-6">
-              <div
-                className="flex h-14 w-14 items-center justify-center rounded-full"
-                style={{ backgroundColor: product.color + "1A" }}
-              >
-                {Icon && <Icon className="h-7 w-7" style={{ color: product.color }} />}
-              </div>
+        {/* Hero */}
+        <section
+          style={{
+            paddingTop: 100,
+            paddingBottom: 64,
+            background: `linear-gradient(135deg, ${details.color}10, ${details.color}05, var(--clr-beige))`,
+            position: "relative",
+          }}
+        >
+          <div className="c-container" style={{ maxWidth: 800, textAlign: "center" }}>
+            <div style={{ fontSize: 48, marginBottom: 16 }}>{details.icon}</div>
+            <div className="c-eyebrow" style={{ marginBottom: 12, color: details.color }}>
+              {details.name}
             </div>
-            <h1 className="text-3xl md:text-4xl font-bold text-[#3a453a] leading-tight tracking-tight mb-4">
-              {product.name}
+            <h1 className="c-h1" style={{ marginBottom: 16 }}>
+              {details.tagline}
             </h1>
-            <p className="text-lg text-[#3a453a]/80 max-w-xl mx-auto leading-relaxed">
-              {product.tagline}
-            </p>
-            <button
-              onClick={scrollToForm}
-              className="mt-8 inline-flex items-center gap-2 text-sm font-semibold text-white bg-[#416125] rounded-xl px-6 py-3 hover:bg-[#416125]/90 transition-colors cursor-pointer"
+            <p
+              className="c-body-lg"
+              style={{ maxWidth: 560, margin: "0 auto 32px", color: "var(--clr-muted)" }}
             >
-              {benefits.cta}
-              <ArrowRight className="w-4 h-4" />
-            </button>
-          </motion.div>
-        </div>
-      </section>
+              {details.desc}
+            </p>
+            <div style={{ display: "flex", gap: 12, justifyContent: "center", flexWrap: "wrap" }}>
+              <button onClick={scrollToForm} className="c-btn c-btn--primary" style={{ background: details.color }}>
+                Boka demo
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                  <path d="M3 8H13M13 8L9 4M13 8L9 12" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+              </button>
+              <a href="/" className="c-btn c-btn--ghost">
+                Alla produkter
+              </a>
+            </div>
+          </div>
+        </section>
 
-      {/* Benefits */}
-      <section className="px-4 md:px-6 py-16">
-        <div className="max-w-3xl mx-auto">
-          <h2 className="text-2xl font-bold text-[#3a453a] text-center mb-8">
-            Fordelar med {product.name}
-          </h2>
-          <div className="space-y-3">
-            {benefits.benefits.map((benefit, i) => (
-              <motion.div
-                key={i}
-                initial={{ opacity: 0, x: -10 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: 0.1 + i * 0.05 }}
-                className="flex items-start gap-3 bg-white/80 border border-[#3a453a]/15 rounded-xl p-4"
+        {/* Metrics strip */}
+        <section
+          style={{
+            background: details.color,
+            padding: "24px 0",
+          }}
+        >
+          <div
+            className="c-container"
+            style={{
+              display: "flex",
+              justifyContent: "center",
+              gap: 40,
+              flexWrap: "wrap",
+            }}
+          >
+            {details.metrics.map((m) => (
+              <div key={m.label} style={{ textAlign: "center" }}>
+                <div
+                  style={{
+                    fontSize: 24,
+                    fontWeight: 800,
+                    color: "#fff",
+                    letterSpacing: "-0.02em",
+                  }}
+                >
+                  {m.value}
+                </div>
+                <div
+                  style={{
+                    fontSize: 11,
+                    fontWeight: 600,
+                    color: "rgba(255,255,255,0.7)",
+                    textTransform: "uppercase",
+                    letterSpacing: "0.05em",
+                  }}
+                >
+                  {m.label}
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
+
+        {/* Features grid */}
+        <section style={{ padding: "80px 0", background: "var(--clr-cl-surface)" }}>
+          <div className="c-container" style={{ maxWidth: 900 }}>
+            <div style={{ textAlign: "center", marginBottom: 40 }}>
+              <div className="c-eyebrow" style={{ marginBottom: 12 }}>Funktioner</div>
+              <h2 className="c-h2">Vad ingar i {details.name}</h2>
+            </div>
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
+                gap: 20,
+              }}
+            >
+              {details.features.map((f) => (
+                <div key={f.title} className="c-card" style={{ borderTop: `3px solid ${details.color}` }}>
+                  <h3
+                    style={{
+                      fontSize: 16,
+                      fontWeight: 700,
+                      color: "var(--clr-ink)",
+                      marginBottom: 8,
+                    }}
+                  >
+                    {f.title}
+                  </h3>
+                  <p style={{ fontSize: 13, color: "var(--clr-muted)", lineHeight: 1.6 }}>{f.desc}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        {/* Use cases */}
+        <section style={{ padding: "80px 0", background: "var(--clr-surface-alt)" }}>
+          <div className="c-container" style={{ maxWidth: 900 }}>
+            <div style={{ textAlign: "center", marginBottom: 40 }}>
+              <div className="c-eyebrow" style={{ marginBottom: 12 }}>Anvandningsomraden</div>
+              <h2 className="c-h2">Vem ar {details.name} for?</h2>
+            </div>
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))",
+                gap: 20,
+              }}
+            >
+              {details.useCases.map((uc) => (
+                <div key={uc.title} className="c-card">
+                  <h3
+                    style={{
+                      fontSize: 16,
+                      fontWeight: 700,
+                      color: "var(--clr-ink)",
+                      marginBottom: 8,
+                    }}
+                  >
+                    {uc.title}
+                  </h3>
+                  <p style={{ fontSize: 13, color: "var(--clr-muted)", lineHeight: 1.6 }}>{uc.desc}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        {/* Related products */}
+        {relatedProducts.length > 0 && (
+          <section style={{ padding: "60px 0", background: "var(--clr-cl-surface)" }}>
+            <div className="c-container" style={{ maxWidth: 900 }}>
+              <h2 className="c-h3" style={{ textAlign: "center", marginBottom: 24 }}>
+                Utforska fler losningar
+              </h2>
+              <div
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))",
+                  gap: 16,
+                }}
               >
-                <div className="flex h-6 w-6 items-center justify-center rounded-full bg-[#416125]/10 shrink-0 mt-0.5">
-                  <Check className="h-3.5 w-3.5 text-[#416125]" />
+                {relatedProducts.map((rp) => (
+                  <a
+                    key={rp.slug}
+                    href={`/${rp.slug === "clearing-solutions" ? "clearing" : rp.slug}`}
+                    className="c-card"
+                    style={{
+                      textDecoration: "none",
+                      borderLeft: `4px solid ${rp.color}`,
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 12,
+                    }}
+                  >
+                    <span style={{ fontSize: 28 }}>{rp.icon}</span>
+                    <div>
+                      <div style={{ fontSize: 15, fontWeight: 700, color: "var(--clr-ink)" }}>{rp.name}</div>
+                      <div style={{ fontSize: 12, color: "var(--clr-muted)" }}>{rp.tagline}</div>
+                    </div>
+                  </a>
+                ))}
+              </div>
+            </div>
+          </section>
+        )}
+
+        {/* Contact form */}
+        <section
+          ref={formRef}
+          style={{
+            padding: "80px 0",
+            background: "var(--clr-green-dark)",
+          }}
+        >
+          <div className="c-container" style={{ maxWidth: 500 }}>
+            {!isSubmitted ? (
+              <div>
+                <div style={{ textAlign: "center", marginBottom: 32 }}>
+                  <div className="c-eyebrow" style={{ color: "var(--clr-lime)", marginBottom: 12 }}>
+                    Kontakta oss
+                  </div>
+                  <h2 className="c-h2" style={{ color: "#fff" }}>
+                    Intresserad av {details.name}?
+                  </h2>
+                  <p style={{ fontSize: 14, color: "rgba(255,255,255,0.6)", marginTop: 8 }}>
+                    Lamna era uppgifter sa tar vi fram ett forslag anpassat for er.
+                  </p>
                 </div>
-                <p className="text-sm text-[#3a453a] leading-relaxed">{benefit}</p>
-              </motion.div>
-            ))}
-          </div>
-          <div className="mt-6 bg-[#416125]/5 border border-[#3a453a]/10 rounded-xl p-4 text-center">
-            <p className="text-sm text-[#416125] font-medium">{benefits.stats}</p>
-          </div>
-        </div>
-      </section>
-
-      {/* Use cases */}
-      <section className="px-4 md:px-6 py-16 bg-white/40">
-        <div className="max-w-3xl mx-auto">
-          <h2 className="text-2xl font-bold text-[#3a453a] text-center mb-8">
-            Vem ar {product.name} for?
-          </h2>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            {benefits.useCases.map((useCase, i) => (
-              <div key={i} className="bg-white border border-[#3a453a]/15 rounded-xl p-4">
-                <p className="text-sm text-[#3a453a] leading-relaxed">{useCase}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* How it works */}
-      <section className="px-4 md:px-6 py-16">
-        <div className="max-w-3xl mx-auto text-center">
-          <h2 className="text-2xl font-bold text-[#3a453a] mb-8">
-            Sa har fungerar det
-          </h2>
-          <div className="flex items-center justify-center gap-4 sm:gap-8 flex-wrap">
-            <div className="flex flex-col items-center gap-2">
-              <div className="w-12 h-12 rounded-full bg-[#416125]/10 flex items-center justify-center">
-                <Send className="w-5 h-5 text-[#416125]" />
-              </div>
-              <p className="text-xs font-semibold text-[#3a453a]">Skicka</p>
-              <p className="text-[10px] text-[#3a453a]/60">SMS/mail</p>
-            </div>
-            <ArrowRight className="w-4 h-4 text-[#3a453a]/30" />
-            <div className="flex flex-col items-center gap-2">
-              <div className="w-12 h-12 rounded-full bg-[#416125]/10 flex items-center justify-center">
-                <CreditCard className="w-5 h-5 text-[#416125]" />
-              </div>
-              <p className="text-xs font-semibold text-[#3a453a]">Handla</p>
-              <p className="text-[10px] text-[#3a453a]/60">5 000+ butiker</p>
-            </div>
-            <ArrowRight className="w-4 h-4 text-[#3a453a]/30" />
-            <div className="flex flex-col items-center gap-2">
-              <div className="w-12 h-12 rounded-full bg-[#416125]/10 flex items-center justify-center">
-                <BarChart3 className="w-5 h-5 text-[#416125]" />
-              </div>
-              <p className="text-xs font-semibold text-[#3a453a]">Folj upp</p>
-              <p className="text-[10px] text-[#3a453a]/60">Realtidsdata</p>
-            </div>
-          </div>
-          <div className="mt-8 flex items-center justify-center gap-2 sm:gap-4 text-[10px] sm:text-[11px] text-[#3a453a]/50">
-            <span className="flex items-center gap-1">
-              <Clock className="w-3 h-3 text-[#416125]" />
-              <strong className="text-[#3a453a]">1 timme</strong> setup
-            </span>
-            <span className="flex items-center gap-1">
-              <Wallet className="w-3 h-3 text-[#416125]" />
-              <strong className="text-[#3a453a]">Skraddarsydda</strong> losningar
-            </span>
-            <span className="flex items-center gap-1">
-              <Store className="w-3 h-3 text-[#416125]" />
-              <strong className="text-[#3a453a]">5 000+</strong> butiker
-            </span>
-          </div>
-        </div>
-      </section>
-
-      {/* Social proof */}
-      <section className="px-4 md:px-6 py-8">
-        <div className="max-w-xl mx-auto">
-          <div className="border border-[#3a453a]/15 rounded-xl p-4 bg-white/80 text-center">
-            <p className="text-sm text-[#3a453a]/70 italic leading-relaxed">
-              &ldquo;Vardecheckarna ar enkla att hantera och ger guldkant pa vardagen for mottagaren&rdquo;
-            </p>
-            <p className="text-xs text-[#416125] font-medium mt-2">
-              - Lina Arwidsson, Vision
-            </p>
-          </div>
-        </div>
-      </section>
-
-      {/* Contact form */}
-      <section ref={formRef} className="px-4 md:px-6 py-16">
-        <div className="max-w-md mx-auto">
-          {!isSubmitted ? (
-            <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
-              <div className="text-center mb-8">
-                <div className="w-14 h-14 rounded-2xl bg-[#416125]/10 flex items-center justify-center mx-auto mb-4">
-                  <Gift className="w-7 h-7 text-[#416125]" />
-                </div>
-                <h3 className="text-xl font-bold text-[#3a453a]">
-                  Intresserad av <span className="text-[#416125]">{product.name}</span>?
-                </h3>
-                <p className="text-sm text-[#3a453a]/70 mt-1.5 leading-relaxed">
-                  Lamna dina uppgifter sa tar vi fram ett forslag anpassat for er.
-                </p>
-              </div>
-
-              <form onSubmit={handleSubmit} className="space-y-3">
-                <Input
-                  type="text"
-                  placeholder="Ditt namn"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  className="rounded-xl bg-white border-[#3a453a]/20 text-[#3a453a] placeholder:text-[#3a453a]/40 focus:border-[#416125] text-base"
-                />
-                <Input
-                  type="email"
-                  placeholder="E-post *"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  required
-                  className="rounded-xl bg-white border-[#3a453a]/20 text-[#3a453a] placeholder:text-[#3a453a]/40 focus:border-[#416125] text-base"
-                />
-                <Input
-                  type="text"
-                  placeholder="Foretag"
-                  value={company}
-                  onChange={(e) => setCompany(e.target.value)}
-                  className="rounded-xl bg-white border-[#3a453a]/20 text-[#3a453a] placeholder:text-[#3a453a]/40 focus:border-[#416125] text-base"
-                />
-                <Input
-                  type="tel"
-                  placeholder="Telefonnummer (valfritt)"
-                  value={phone}
-                  onChange={(e) => setPhone(e.target.value)}
-                  className="rounded-xl bg-white border-[#3a453a]/20 text-[#3a453a] placeholder:text-[#3a453a]/40 focus:border-[#416125] text-base"
-                />
-
-                <div className="flex items-start gap-3 py-2">
-                  <Checkbox
-                    id="no-call-product"
-                    checked={noCall}
-                    onCheckedChange={(checked) => setNoCall(checked as boolean)}
-                    className="mt-0.5"
-                  />
-                  <label htmlFor="no-call-product" className="text-xs text-[#3a453a]/70 cursor-pointer leading-relaxed">
-                    Jag ar medveten om att ClearOn lagrar mina personuppgifter for att hantera detta arende.{" "}
+                <form onSubmit={handleSubmit} style={{ display: "grid", gap: 12 }}>
+                  {[
+                    { type: "text", placeholder: "Namn", value: name, setter: setName },
+                    { type: "email", placeholder: "E-post *", value: email, setter: setEmail, required: true },
+                    { type: "text", placeholder: "Foretag", value: company, setter: setCompany },
+                    { type: "tel", placeholder: "Telefon (valfritt)", value: phone, setter: setPhone },
+                  ].map((field) => (
+                    <input
+                      key={field.placeholder}
+                      type={field.type}
+                      placeholder={field.placeholder}
+                      value={field.value}
+                      onChange={(e) => field.setter(e.target.value)}
+                      required={field.required}
+                      style={{
+                        padding: "12px 16px",
+                        borderRadius: "var(--r-sm)",
+                        border: "1.5px solid rgba(255,255,255,0.15)",
+                        background: "rgba(255,255,255,0.08)",
+                        color: "#fff",
+                        fontSize: 14,
+                        outline: "none",
+                      }}
+                    />
+                  ))}
+                  <button
+                    type="submit"
+                    disabled={isSubmitting || !email}
+                    className="c-btn c-btn--accent"
+                    style={{
+                      justifyContent: "center",
+                      width: "100%",
+                      opacity: isSubmitting || !email ? 0.6 : 1,
+                    }}
+                  >
+                    {isSubmitting ? "Skickar..." : `Boka demo av ${details.name}`}
+                  </button>
+                  <p style={{ fontSize: 11, color: "rgba(255,255,255,0.4)", textAlign: "center" }}>
+                    Genom att skicka godkanner du var{" "}
                     <a
                       href="https://www.clearon.se/behandling-av-personuppgifter/"
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="text-[#416125] underline hover:text-[#416125]/80"
+                      style={{ color: "var(--clr-lime)", textDecoration: "underline" }}
                     >
-                      Las mer om personuppgiftsbehandling
+                      personuppgiftspolicy
                     </a>
-                  </label>
-                </div>
-
-                <button
-                  type="submit"
-                  className="w-full py-3 mt-2 text-sm font-semibold text-white bg-[#416125] rounded-xl hover:bg-[#416125]/90 transition-colors flex items-center justify-center gap-2 disabled:opacity-50 cursor-pointer"
-                  disabled={isSubmitting || !email}
-                >
-                  {isSubmitting ? "Skickar..." : benefits.cta}
-                  <ArrowRight className="w-4 h-4" />
-                </button>
-              </form>
-            </motion.div>
-          ) : (
-            <motion.div
-              initial={{ opacity: 0, scale: 0.97 }}
-              animate={{ opacity: 1, scale: 1 }}
-              className="text-center py-8"
-            >
-              <div className="w-14 h-14 rounded-2xl bg-[#416125]/10 flex items-center justify-center mx-auto mb-6">
-                <Check className="w-7 h-7 text-[#416125]" />
+                    .
+                  </p>
+                </form>
               </div>
-              <p className="font-bold text-2xl text-[#416125]">Tack! Vi hör av oss.</p>
-              <p className="text-[#3a453a]/70 mt-3 max-w-sm mx-auto">
-                Vi satter ihop ett forslag for hur {product.name} kan fungera for er och aterkommer inom en arbetsdag.
-              </p>
-            </motion.div>
-          )}
-        </div>
-      </section>
-
-      {/* Other products */}
-      <section className="px-4 md:px-6 py-16 bg-white/40">
-        <div className="max-w-3xl mx-auto">
-          <h2 className="text-lg font-bold text-[#3a453a] text-center mb-6">
-            Utforska fler losningar
-          </h2>
-          <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-            {products
-              .filter((p) => p.slug !== productSlug)
-              .map((p) => {
-                const PIcon = iconMap[p.icon];
-                const urlSlug = p.slug === "clearing-solutions" ? "clearing" : p.slug;
-                return (
-                  <a
-                    key={p.slug}
-                    href={`/${urlSlug}`}
-                    className="flex items-center gap-3 bg-white border border-[#3a453a]/15 rounded-xl p-3 hover:shadow-md transition-all"
-                  >
-                    <div
-                      className="flex h-9 w-9 items-center justify-center rounded-full shrink-0"
-                      style={{ backgroundColor: p.color + "1A" }}
-                    >
-                      {PIcon && <PIcon className="h-4 w-4" style={{ color: p.color }} />}
-                    </div>
-                    <div className="min-w-0">
-                      <p className="text-xs font-semibold text-[#3a453a] truncate">{p.name}</p>
-                      <p className="text-[10px] text-[#3a453a]/60 truncate">{p.tagline}</p>
-                    </div>
-                  </a>
-                );
-              })}
+            ) : (
+              <div style={{ textAlign: "center", padding: "40px 0" }}>
+                <div style={{ fontSize: 48, marginBottom: 16 }}>✅</div>
+                <h3 style={{ fontSize: 22, fontWeight: 800, color: "var(--clr-lime)", marginBottom: 8 }}>
+                  Tack for ert intresse!
+                </h3>
+                <p style={{ fontSize: 14, color: "rgba(255,255,255,0.7)" }}>
+                  Vi aterkommer inom en arbetsdag med ett skraddarsytt forslag for {details.name}.
+                </p>
+              </div>
+            )}
           </div>
-        </div>
-      </section>
+        </section>
 
-      <Footer />
-
-      <IceCreamPopup sessionId={sessionId} variant={productSlug} trackEvent={trackEvent} delayMs={7000} />
-
-      <ConsentBanner
-        visible={consent === null}
-        onAccept={() => setConsent(true)}
-        onDecline={() => setConsent(false)}
-      />
-    </div>
+        <CtaFooter />
+      </div>
+    </SignalProvider>
   );
 }
