@@ -2,8 +2,15 @@
 
 import { Card } from "@/components/ui/card";
 import { Play } from "lucide-react";
+import type { DashboardContact } from "@/lib/dashboard-data";
 
-export function DailyBrief() {
+interface DailyBriefProps {
+  hotLeadCount: number;
+  contactNowCount: number;
+  topLead: DashboardContact | null;
+}
+
+export function DailyBrief({ hotLeadCount, contactNowCount, topLead }: DailyBriefProps) {
   const today = new Date().toLocaleDateString("sv-SE", {
     weekday: "long",
     day: "numeric",
@@ -17,15 +24,21 @@ export function DailyBrief() {
         <div className="flex-1">
           <p className="section-prefix mb-4">{today} / DAILY BRIEF</p>
           <h2 className="font-display text-2xl text-text-primary mb-3">
-            God morgon Kaveh. 12 nya leads senaste 24h, varav 4 med score over 70. 6 leads bor kontaktas idag.
+            God morgon. {hotLeadCount} heta leads, {contactNowCount} att kontakta idag.
           </h2>
           <p className="text-sm text-text-secondary leading-relaxed max-w-2xl">
-            Maria Eriksson pa Fazer (score 87) besökte prissidan idag efter att ha laddat ner rapporten.
-            Johan Lindstrom (Volvo, score 79) besökte kontaktsidan for Send a Gift.
-            Anna Svensson (Orkla, score 76) aterkom till Interactive Engage efter LinkedIn-annonsklick.
-            Sara Bergstrom (Telia, score 72) klickade pa LinkedIn-annonsen och gick direkt till kontaktsidan.
-            Meta-kampanjen &quot;Kupongguiden&quot; genererade 3 nya leads bara idag med CPL 89 kr.
-            Alla 6 produkter har nu aktiva kampanjer pa Meta, Google och LinkedIn.
+            {topLead ? (
+              <>
+                Hetaste lead: <strong>{topLead.name}</strong> pa {topLead.company} (score {topLead.score}).
+                {topLead.contactNow && ` ${topLead.contactNowReason}.`}
+                {topLead.hasVisit && " Har besökt webbplatsen."}
+                {topLead.hasForm && " Har skickat formularet."}
+                {topLead.hasMail && " Har interagerat med mail."}
+                {topLead.topProduct && ` Troligt intresse: ${topLead.topProduct}.`}
+              </>
+            ) : (
+              "Inga aktiva leads just nu. Fokusera pa att driva trafik till landningssidorna."
+            )}
           </p>
         </div>
         <div className="flex flex-col items-center gap-2 shrink-0">
@@ -33,7 +46,6 @@ export function DailyBrief() {
             <Play className="h-3.5 w-3.5 fill-accent text-accent" />
             Lyssna pa briefingen
           </button>
-          {/* Audio waveform */}
           <div className="flex items-end gap-0.5 h-6">
             {[...Array(24)].map((_, i) => (
               <div

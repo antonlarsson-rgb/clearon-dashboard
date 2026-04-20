@@ -1,100 +1,67 @@
 "use client";
 
 import { Card } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { activityFeed } from "@/lib/mock-data";
-import {
-  Download,
-  Eye,
-  MousePointerClick,
-  Mail,
-  FolderKanban,
-  UserPlus,
-} from "lucide-react";
+import type { DashboardActivity } from "@/lib/dashboard-data";
+import { Phone, Mail, Globe, FileText, BarChart3, Users, Briefcase } from "lucide-react";
 
-const typeIcons: Record<string, typeof Download> = {
-  download: Download,
-  page_view: Eye,
-  ad_click: MousePointerClick,
-  email: Mail,
-  task: FolderKanban,
-  crm: UserPlus,
+interface LiveFeedProps {
+  activities: DashboardActivity[];
+}
+
+const typeIcons: Record<string, React.ElementType> = {
+  Telefonsamtal: Phone,
+  "E-post": Mail,
+  Todo: FileText,
+  Webbbesok: Globe,
+  Rapport: BarChart3,
+  Mote: Users,
 };
 
-const typeColors: Record<string, string> = {
-  download: "text-accent",
-  page_view: "text-accent-light",
-  ad_click: "text-[#7B68EE]",
-  email: "text-[#4A90A4]",
-  task: "text-[#E07A5F]",
-  crm: "text-text-muted",
-};
-
-export function LiveFeed() {
+export function LiveFeed({ activities }: LiveFeedProps) {
   return (
     <Card>
       <div className="p-5 border-b border-border flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <span className="section-prefix">/ LIVE</span>
-          <span className="text-sm text-text-secondary">Pagaende just nu</span>
-        </div>
+        <span className="section-prefix">/ SENASTE AKTIVITET</span>
         <div className="flex items-center gap-1.5">
-          <span className="relative flex h-2 w-2">
-            <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-accent opacity-75" />
-            <span className="relative inline-flex h-2 w-2 rounded-full bg-accent" />
-          </span>
-          <span className="text-[11px] text-accent font-medium">Live</span>
+          <span className="h-2 w-2 rounded-full bg-accent pulse-live" />
+          <span className="text-xs text-text-muted">Live fran Upsales</span>
         </div>
       </div>
       <div className="divide-y divide-border">
-        {activityFeed.map((activity) => {
-          const Icon = typeIcons[activity.type] || Eye;
-          const iconColor = typeColors[activity.type] || "text-text-muted";
-          const time = new Date(activity.timestamp).toLocaleTimeString("sv-SE", {
-            hour: "2-digit",
-            minute: "2-digit",
-          });
-
+        {activities.map((activity) => {
+          const Icon = typeIcons[activity.type] || Briefcase;
           return (
             <div
               key={activity.id}
-              className="flex items-center gap-4 px-5 py-3 hover:bg-surface-elevated transition-colors group"
+              className="flex items-start gap-3 px-5 py-3 hover:bg-surface-elevated transition-colors"
             >
-              <span className="font-mono text-[11px] text-text-muted w-10 shrink-0">
-                {time}
-              </span>
-              <Icon className={`h-3.5 w-3.5 shrink-0 ${iconColor}`} />
-              <div className="flex-1 min-w-0">
-                <span className="text-sm text-text-primary">
-                  {activity.contact_name && (
-                    <span className="font-medium">{activity.contact_name}</span>
-                  )}
-                  {activity.contact_name && activity.company && (
-                    <span className="text-text-muted"> ({activity.company}) </span>
-                  )}
-                  {!activity.contact_name && activity.company && (
-                    <span className="font-medium">{activity.company}: </span>
-                  )}
-                  {activity.description}
-                </span>
-                {activity.score_change && (
-                  <span className="ml-2 text-xs text-accent font-medium">
-                    [Score: {activity.score_change}]
-                  </span>
-                )}
+              <div className="flex h-8 w-8 items-center justify-center rounded-full bg-surface-elevated shrink-0 mt-0.5">
+                <Icon className="h-3.5 w-3.5 text-text-muted" />
               </div>
-              {activity.cta && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="text-xs opacity-0 group-hover:opacity-100 transition-opacity shrink-0"
-                >
-                  {activity.cta}
-                </Button>
-              )}
+              <div className="flex-1 min-w-0">
+                <p className="text-sm text-text-primary">
+                  {activity.description}
+                </p>
+                <div className="flex items-center gap-2 mt-0.5">
+                  {activity.contactName && (
+                    <span className="text-xs text-text-secondary">{activity.contactName}</span>
+                  )}
+                  {activity.company && (
+                    <span className="text-xs text-text-muted">{activity.company}</span>
+                  )}
+                </div>
+              </div>
+              <span className="font-mono text-[10px] text-text-muted shrink-0">
+                {activity.date}
+              </span>
             </div>
           );
         })}
+        {activities.length === 0 && (
+          <div className="px-5 py-8 text-center text-text-muted text-sm">
+            Inga aktiviteter att visa
+          </div>
+        )}
       </div>
     </Card>
   );

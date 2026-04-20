@@ -4,13 +4,16 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ScoreBadge } from "@/components/ui/score-badge";
-import { getHotLeads } from "@/lib/mock-data";
-import { getProduct } from "@/lib/products";
+import type { DashboardContact } from "@/lib/dashboard-data";
+import { products } from "@/lib/products";
 import { Phone, Mail, Zap } from "lucide-react";
-import Link from "next/link";
 
-export function HotLeads() {
-  const hotLeads = getHotLeads(5);
+interface HotLeadsProps {
+  leads: DashboardContact[];
+}
+
+export function HotLeads({ leads }: HotLeadsProps) {
+  const contactNowCount = leads.filter((l) => l.contactNow).length;
 
   return (
     <Card>
@@ -18,35 +21,34 @@ export function HotLeads() {
         <span className="section-prefix">/ HETA LEADS JUST NU</span>
         <div className="flex items-center gap-1.5 text-xs text-text-muted">
           <Zap className="h-3.5 w-3.5 text-amber-500" />
-          <span>{hotLeads.filter((l) => l.contactNow.should).length} ska kontaktas idag</span>
+          <span>{contactNowCount} ska kontaktas idag</span>
         </div>
       </div>
       <div className="divide-y divide-border">
-        {hotLeads.map((lead) => {
+        {leads.map((lead) => {
           const product = lead.topProduct
-            ? getProduct(lead.topProduct.product_slug)
+            ? products.find((p) => p.slug === lead.topProduct)
             : null;
 
           return (
-            <Link
-              key={lead.contact_id}
-              href={`/leads/${lead.contact_id}`}
+            <div
+              key={lead.id}
               className="flex items-center gap-4 px-5 py-3 hover:bg-surface-elevated transition-colors group"
             >
-              <ScoreBadge score={lead.total_score} size="md" />
+              <ScoreBadge score={Math.min(lead.score, 100)} size="md" />
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2">
                   <span className="text-sm font-medium text-text-primary truncate">
-                    {lead.contact?.name}
+                    {lead.name}
                   </span>
-                  {lead.contactNow.should && (
+                  {lead.contactNow && (
                     <Badge className="bg-amber-50 text-amber-700 border border-amber-200 text-[10px] px-1.5 py-0">
                       <Zap className="h-2.5 w-2.5 mr-0.5" />
                       Kontakta nu
                     </Badge>
                   )}
                   <span className="text-xs text-text-muted truncate">
-                    {lead.contact?.title}, {lead.contact?.account_name}
+                    {lead.title ? `${lead.title}, ` : ""}{lead.company}
                   </span>
                 </div>
                 <div className="flex items-center gap-2 mt-0.5">
@@ -61,26 +63,30 @@ export function HotLeads() {
                       </span>
                     </span>
                   )}
-                  {lead.contactNow.should ? (
+                  {lead.contactNow ? (
                     <span className="text-xs text-amber-600 font-medium">
-                      {lead.contactNow.reason}
+                      {lead.contactNowReason}
                     </span>
-                  ) : lead.signals[0] ? (
+                  ) : (
                     <span className="text-xs text-text-muted">
-                      {lead.signals[0].description}
+                      Score: {lead.score} | {lead.sourceChannel}
                     </span>
-                  ) : null}
+                  )}
                 </div>
               </div>
               <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                <Button variant="ghost" size="icon" className="h-7 w-7">
-                  <Phone className="h-3.5 w-3.5" />
-                </Button>
-                <Button variant="ghost" size="icon" className="h-7 w-7">
-                  <Mail className="h-3.5 w-3.5" />
-                </Button>
+                {lead.phone && (
+                  <Button variant="ghost" size="icon" className="h-7 w-7" asChild>
+                    <a href={`tel:${lead.phone}`}><Phone className="h-3.5 w-3.5" /></a>
+                  </Button>
+                )}
+                {lead.email && (
+                  <Button variant="ghost" size="icon" className="h-7 w-7" asChild>
+                    <a href={`mailto:${lead.email}`}><Mail className="h-3.5 w-3.5" /></a>
+                  </Button>
+                )}
               </div>
-            </Link>
+            </div>
           );
         })}
       </div>
