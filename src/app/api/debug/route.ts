@@ -28,6 +28,32 @@ export async function GET() {
     error = `Raw API error: ${e}`;
   }
 
+  // Test raw processing of first contact
+  let processError = null;
+  try {
+    const rawRes2 = await fetch(
+      `https://power.upsales.com/api/v2/contacts?token=${token}&limit=10&sort=-score`,
+      { cache: "no-store" }
+    );
+    const rawData2 = await rawRes2.json();
+    const firstContact = rawData2.data?.[1]; // skip first (internal), use second
+    if (firstContact) {
+      const client = firstContact.client || {};
+      const segments = (firstContact.segments || []).map((s: {name: string}) => s.name);
+      const projects = (firstContact.projects || []).map((p: {name: string}) => p.name);
+      processError = JSON.stringify({
+        name: firstContact.name,
+        company: client.name,
+        email: firstContact.email,
+        segments,
+        projects,
+        score: firstContact.score,
+      });
+    }
+  } catch (e) {
+    processError = `Processing error: ${e}`;
+  }
+
   // Then test through our data layer
   try {
     clearCache();
@@ -42,6 +68,7 @@ export async function GET() {
     hasToken,
     rawApiCount: rawCount,
     rawApiSample: rawSample,
+    processError,
     error,
     contactsCount: contacts.length,
     contactsSample: contacts.slice(0, 5).map((c) => ({
