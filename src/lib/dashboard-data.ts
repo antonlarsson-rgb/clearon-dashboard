@@ -288,40 +288,43 @@ export async function getContacts(limit = 200): Promise<DashboardContact[]> {
     if (!UPSALES_TOKEN) return [];
     const data = await upsalesGet("/contacts", { limit: String(fetchLimit), sort: "-score" });
 
-    return (data.data || [])
-      .map((c: Record<string, unknown>) => {
-        const client = (c.client as Record<string, unknown>) || {};
-        const segments = ((c.segments as Array<{ name: string }>) || []).map((s) => s.name);
-        const projects = ((c.projects as Array<{ name: string }>) || []).map((p) => p.name);
-        const score = (c.score as number) || 0;
-        const hasVisit = !!(c.hasVisit);
-        const hasForm = !!(c.hasForm);
-        const hasMail = !!(c.hasMail);
-        const title = (c.title as string) || null;
+    const results: DashboardContact[] = [];
+    for (const c of (data.data || [])) {
+      try {
+        const client = ((c as Record<string, unknown>).client as Record<string, unknown>) || {};
+        const segments = (((c as Record<string, unknown>).segments as Array<{ name: string }>) || []).map((s) => s.name);
+        const projects = (((c as Record<string, unknown>).projects as Array<{ name: string }>) || []).map((p) => p.name);
+        const score = ((c as Record<string, unknown>).score as number) || 0;
+        const hasVisit = !!((c as Record<string, unknown>).hasVisit);
+        const hasForm = !!((c as Record<string, unknown>).hasForm);
+        const hasMail = !!((c as Record<string, unknown>).hasMail);
+        const title = ((c as Record<string, unknown>).title as string) || null;
         const company = (client.name as string) || "";
-        const email = (c.email as string) || "";
+        const email = ((c as Record<string, unknown>).email as string) || "";
 
         const cat = categorizeContact({ email, company, projects, segments, hasVisit, hasMail, hasForm, score });
+        if (cat.category === "internal") continue;
+
         const status = computeStatus(score, hasVisit, hasForm);
         const cn = computeContactNow({ score, hasVisit, hasForm, hasMail, category: cat.category, segments });
 
-        return {
-          id: c.id as number,
-          name: c.name as string,
+        results.push({
+          id: (c as Record<string, unknown>).id as number,
+          name: (c as Record<string, unknown>).name as string,
           email,
-          phone: (c.cellPhone as string) || (c.phone as string) || null,
+          phone: ((c as Record<string, unknown>).cellPhone as string) || ((c as Record<string, unknown>).phone as string) || null,
           title,
           company,
           companyId: (client.id as number) || null,
           score,
-          journeyStep: (c.journeyStep as string) || "unknown",
+          journeyStep: ((c as Record<string, unknown>).journeyStep as string) || "unknown",
           hasVisit,
           hasForm,
           hasMail,
           segments,
           projects,
-          regDate: (c.regDate as string) || "",
-          modDate: (c.modDate as string) || "",
+          regDate: ((c as Record<string, unknown>).regDate as string) || "",
+          modDate: ((c as Record<string, unknown>).modDate as string) || "",
           category: cat.category,
           categoryLabel: cat.label,
           status,
@@ -330,11 +333,15 @@ export async function getContacts(limit = 200): Promise<DashboardContact[]> {
           topProduct: resolveProduct(projects, title),
           landingPage: resolveLandingPage(projects),
           sourceChannel: resolveSourceChannel({ category: cat.category, hasVisit, hasMail, hasForm, projects }),
-        };
-      })
-      // Filter out internal contacts from the main view
-      .filter((c: DashboardContact) => c.category !== "internal")
-      .slice(0, limit);
+        });
+
+        if (results.length >= limit) break;
+      } catch (e) {
+        console.error("Error processing contact:", (c as Record<string, unknown>).name, e);
+        continue;
+      }
+    }
+    return results;
   }, []);
 }
 
