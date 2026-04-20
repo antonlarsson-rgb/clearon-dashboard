@@ -69,24 +69,11 @@ export function SiteNav() {
             textDecoration: "none",
           }}
         >
-          <svg
-            viewBox="0 0 140 28"
-            style={{ height: 22 }}
-            fill="none"
-            xmlns="http://www.w3.org/2000/svg"
-          >
-            <text
-              x="0"
-              y="22"
-              fill="var(--clr-green-deep)"
-              fontSize="24"
-              fontWeight="700"
-              fontFamily="system-ui, -apple-system, sans-serif"
-              letterSpacing="-0.5"
-            >
-              ClearOn
-            </text>
-          </svg>
+          <img
+            src="/clearon-logo.png"
+            alt="ClearOn"
+            style={{ height: 32, width: "auto" }}
+          />
         </a>
 
         {/* Desktop nav */}
@@ -151,16 +138,19 @@ export function SiteNav() {
                     top: "100%",
                     left: -16,
                     paddingTop: 8,
-                    minWidth: 220,
                   }}
                 >
                   <div
                     style={{
-                      background: "var(--clr-cl-surface)",
+                      background: "#fff",
                       border: "1px solid var(--clr-line)",
                       borderRadius: "var(--r-md)",
-                      padding: "8px 0",
+                      padding: 12,
                       boxShadow: "var(--sh-lg)",
+                      display: "grid",
+                      gridTemplateColumns: "1fr 1fr",
+                      gap: 2,
+                      width: 460,
                     }}
                   >
                     {PRODUCT_DROPDOWN.map((p) => (
@@ -169,17 +159,18 @@ export function SiteNav() {
                         href={p.href}
                         style={{
                           display: "block",
-                          padding: "8px 20px",
-                          fontSize: 13,
+                          padding: "10px 12px",
+                          fontSize: 14,
                           fontWeight: 500,
-                          color: "var(--clr-ink-2)",
+                          color: "var(--clr-ink)",
                           textDecoration: "none",
                           transition: "background 0.15s",
+                          borderRadius: "var(--r-sm)",
                           fontFamily: "var(--font-open-sans), sans-serif",
                         }}
                         onMouseOver={(e) =>
                           ((e.target as HTMLElement).style.background =
-                            "var(--clr-green-tint)")
+                            "var(--clr-beige-warm)")
                         }
                         onMouseOut={(e) =>
                           ((e.target as HTMLElement).style.background =

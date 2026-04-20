@@ -334,14 +334,21 @@ export function CtaFooter() {
             gap: 16,
           }}
         >
-          <div
-            style={{
-              fontFamily: "var(--font-open-sans), sans-serif",
-              fontSize: 13,
-              color: "rgba(255,255,255,0.4)",
-            }}
-          >
-            &copy; 2026 ClearOn AB. Alla rattigheter forbehallna.
+          <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
+            <img
+              src="/clearon-logo.png"
+              alt="ClearOn"
+              style={{ height: 22, width: "auto", filter: "brightness(0) invert(1)", opacity: 0.5 }}
+            />
+            <span
+              style={{
+                fontFamily: "var(--font-open-sans), sans-serif",
+                fontSize: 13,
+                color: "rgba(255,255,255,0.4)",
+              }}
+            >
+              &copy; 2026 ClearOn AB
+            </span>
           </div>
           <div style={{ display: "flex", gap: 24 }}>
             {[
