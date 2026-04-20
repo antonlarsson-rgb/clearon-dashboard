@@ -1,67 +1,33 @@
 import { NextResponse } from "next/server";
+import { getContacts, clearCache } from "@/lib/dashboard-data";
+
+export const dynamic = "force-dynamic";
 
 export async function GET() {
-  const token = process.env.UPSALES_API_KEY || "";
-
-  // Fetch 10 contacts directly
-  const res = await fetch(
-    `https://power.upsales.com/api/v2/contacts?token=${token}&limit=10&sort=-score`,
-    { cache: "no-store" }
-  );
-  const raw = await res.json();
-  const rawContacts = raw.data || [];
-
-  // Process them inline - same logic as dashboard-data.ts
-  const INTERNAL_DOMAINS = ["clearon.se", "wearestellar.se", "clearon-test.se"];
-  const INTERNAL_COMPANIES = ["testbolag", "test företag", "e2e test", "persisttest", "poangtest"];
-
-  const processed = [];
-  for (const c of rawContacts) {
-    const client = c.client || {};
-    const email = c.email || "";
-    const company = (client.name as string) || "";
-    const domain = email.split("@")[1] || "";
-
-    const isInternalDomain = INTERNAL_DOMAINS.some(d => domain.includes(d));
-    const isInternalCompany = INTERNAL_COMPANIES.some(ic => company.toLowerCase().includes(ic));
-    const isInternal = isInternalDomain || isInternalCompany;
-
-    processed.push({
-      name: c.name,
-      email,
-      company,
-      domain,
-      score: c.score,
-      isInternalDomain,
-      isInternalCompany,
-      isInternal,
-      filtered: isInternal ? "YES - REMOVED" : "NO - KEPT",
-    });
-  }
-
-  // Now test getContacts
-  const dashboardData = await import("@/lib/dashboard-data");
-  const { getContacts, clearCache } = dashboardData;
   clearCache();
 
-  // Check if getToken works inside the module
-  const moduleTokenCheck = process.env.UPSALES_API_KEY ? "HAS TOKEN" : "NO TOKEN";
-
-  let getContactsResult: Awaited<ReturnType<typeof getContacts>> | undefined;
-  let getContactsError: unknown;
+  // Direct test of getContacts
+  let result;
+  let error;
   try {
-    getContactsResult = await getContacts(10);
+    result = await getContacts(10);
   } catch (e) {
-    getContactsError = e instanceof Error ? { msg: e.message, stack: e.stack } : String(e);
+    error = e instanceof Error ? e.message + "\n" + e.stack : String(e);
   }
 
+  // Also test raw
+  const token = process.env.UPSALES_API_KEY || "";
+  const rawRes = await fetch(
+    `https://power.upsales.com/api/v2/contacts?token=${token}&limit=3&sort=-score`,
+    { cache: "no-store" }
+  );
+  const raw = await rawRes.json();
+
   return NextResponse.json({
-    rawCount: raw.metadata?.total,
-    processed,
-    getContactsCount: getContactsResult?.length ?? "error",
-    getContactsError,
-    getContactsSample: (getContactsResult || []).slice(0, 3).map((c) => ({
-      name: c.name, company: c.company, category: c.category
-    })),
+    envAvailable: !!process.env.UPSALES_API_KEY,
+    rawTotal: raw.metadata?.total,
+    getContactsLength: result?.length,
+    getContactsError: error || null,
+    first3: (result || []).slice(0, 3).map((c) => ({ name: c.name, company: c.company, score: c.score, category: c.category })),
   });
 }
