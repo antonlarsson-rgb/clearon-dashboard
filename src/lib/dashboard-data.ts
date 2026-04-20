@@ -24,8 +24,13 @@ async function cachedFetch<T>(key: string, fetcher: () => Promise<T>, _fallback:
 }
 
 async function upsalesGet(path: string, params?: Record<string, string>) {
+  const token = process.env.UPSALES_API_KEY || "";
+  if (!token) {
+    console.error("UPSALES_API_KEY is not set!");
+    return { data: [], metadata: { total: 0 } };
+  }
   const u = new URL(`${BASE}${path}`);
-  u.searchParams.set("token", getToken());
+  u.searchParams.set("token", token);
   if (params) for (const [k, v] of Object.entries(params)) u.searchParams.set(k, v);
   const res = await fetch(u.toString(), { cache: "no-store" });
   if (!res.ok) {
@@ -283,7 +288,7 @@ export async function getContacts(limit = 200): Promise<DashboardContact[]> {
   // Fetch more than needed since we filter some out
   const fetchLimit = Math.min(limit * 3, 500);
   return cachedFetch(`contacts-${limit}`, async () => {
-    if (!getToken()) return [];
+    if (!process.env.UPSALES_API_KEY) return [];
     const data = await upsalesGet("/contacts", { limit: String(fetchLimit), sort: "-score" });
 
     const results: DashboardContact[] = [];
@@ -383,7 +388,7 @@ export async function getKpis(): Promise<DashboardKpis> {
 
 export async function getActivities(limit = 15): Promise<DashboardActivity[]> {
   return cachedFetch(`activities-${limit}`, async () => {
-    if (!getToken()) return [];
+    if (!process.env.UPSALES_API_KEY) return [];
     const data = await upsalesGet("/activities", { limit: String(limit), sort: "-date" });
 
     return (data.data || []).map((a: Record<string, unknown>) => {

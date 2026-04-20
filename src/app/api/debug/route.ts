@@ -40,8 +40,12 @@ export async function GET() {
   }
 
   // Now test getContacts
-  const { getContacts, clearCache } = await import("@/lib/dashboard-data");
+  const dashboardData = await import("@/lib/dashboard-data");
+  const { getContacts, clearCache } = dashboardData;
   clearCache();
+
+  // Check if getToken works inside the module
+  const moduleTokenCheck = process.env.UPSALES_API_KEY ? "HAS TOKEN" : "NO TOKEN";
 
   let getContactsResult: Awaited<ReturnType<typeof getContacts>> | undefined;
   let getContactsError: unknown;
