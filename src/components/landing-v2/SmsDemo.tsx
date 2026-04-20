@@ -162,7 +162,7 @@ function HomeScreen() {
       display: "flex", flexDirection: "column", alignItems: "center", padding: "60px 0 0",
       color: "#fff",
     }}>
-      <div style={{ fontSize: 14, marginTop: 6 }}>fredag 20 april</div>
+      <div style={{ fontSize: 14, marginTop: 6 }}>{new Date().toLocaleDateString("sv-SE", { weekday: "long", day: "numeric", month: "long" })}</div>
       <div style={{ fontSize: 72, fontWeight: 200, letterSpacing: "-0.04em", marginTop: -4 }}>{hh}:{mm}</div>
     </div>
   );

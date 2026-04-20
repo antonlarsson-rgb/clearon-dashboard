@@ -54,7 +54,7 @@ export function Testimonials() {
             <h2 className="c-h2">Vad kunder<br/>säger om oss.</h2>
           </div>
           <div style={{ display: "flex", gap: 8 }}>
-            <button onClick={() => setIdx((idx - 1 + items.length) % items.length)} style={arrowBtn}>&larr;</button>
+            <button onClick={() => { setIdx((idx - 1 + items.length) % items.length); track("module:engage", { id: "testimonial-prev" }); }} style={arrowBtn}>&larr;</button>
             <button onClick={() => { setIdx((idx + 1) % items.length); track("module:engage", { id: "testimonial-next" }); }} style={arrowBtn}>&rarr;</button>
           </div>
         </div>

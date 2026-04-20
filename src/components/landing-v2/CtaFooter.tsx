@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState } from "react";
 import { useSignal } from "./SignalProvider";
 import { trackClick, trackLead } from "@/lib/meta-pixel";
 
@@ -148,23 +148,21 @@ function ContactForm({ track, sessionId, segment, score }: {
 function Field({ label, value, onChange, type = "text", multiline }: {
   label: string; value: string; onChange: (v: string) => void; type?: string; multiline?: boolean;
 }) {
-  const Tag = multiline ? "textarea" : "input";
+  const fieldStyle: React.CSSProperties = {
+    width: "100%", padding: "14px 16px",
+    background: "rgba(255,255,255,0.05)",
+    border: "1px solid rgba(255,255,255,0.15)",
+    borderRadius: "var(--r-sm)",
+    color: "#fff", fontSize: 15, fontFamily: "inherit", resize: "vertical",
+  };
   return (
     <label>
       <div style={{ fontSize: 12, color: "rgba(255,255,255,0.6)", marginBottom: 6, fontFamily: "var(--font-mono)", letterSpacing: "0.06em" }}>{label.toUpperCase()}</div>
-      <Tag
-        type={type}
-        value={value}
-        onChange={e => onChange(e.target.value)}
-        rows={multiline ? 3 : undefined}
-        style={{
-          width: "100%", padding: "14px 16px",
-          background: "rgba(255,255,255,0.05)",
-          border: "1px solid rgba(255,255,255,0.15)",
-          borderRadius: "var(--r-sm)",
-          color: "#fff", fontSize: 15, fontFamily: "inherit", resize: "vertical",
-        }}
-      />
+      {multiline ? (
+        <textarea value={value} onChange={e => onChange(e.target.value)} rows={3} style={fieldStyle} />
+      ) : (
+        <input type={type} value={value} onChange={e => onChange(e.target.value)} style={fieldStyle} />
+      )}
     </label>
   );
 }
@@ -192,14 +190,47 @@ function Footer() {
   );
 }
 
+const footerLinks: Record<string, string> = {
+  "Digitala kuponger": "/kuponger",
+  "Mobila presentkort": "/mobila-presentkort",
+  "Sverigechecken": "/sverigechecken",
+  "Customer Care": "/customer-care",
+  "Clearing Solutions": "/clearing",
+  "Om ClearOn": "https://www.clearon.se",
+  "Karriar": "https://www.clearon.se",
+  "Event": "https://www.clearon.se",
+  "Artiklar": "https://www.clearon.se",
+  "Hallbarhet": "https://www.clearon.se",
+  "Kontakta oss": "#kontakt",
+  "Fragor och svar": "https://www.clearon.se",
+  "Hitta butik": "#butiker",
+  "Kontrollera vardebarare": "https://www.clearon.se",
+  "Logga in": "https://dashboard.clearon.live",
+};
+
 function FooterCol({ title, items }: { title: string; items: string[] }) {
   return (
     <div>
       <div style={{ fontSize: 12, color: "rgba(255,255,255,0.5)", fontFamily: "var(--font-mono)", letterSpacing: "0.08em", marginBottom: 14, textTransform: "uppercase" }}>{title}</div>
       <ul style={{ listStyle: "none", padding: 0, margin: 0, display: "flex", flexDirection: "column", gap: 8 }}>
-        {items.map(i => (
-          <li key={i} style={{ fontSize: 14, color: "rgba(255,255,255,0.8)", cursor: "pointer" }}>{i}</li>
-        ))}
+        {items.map(i => {
+          const href = footerLinks[i] || "#";
+          const isExternal = href.startsWith("http");
+          return (
+            <li key={i}>
+              <a
+                href={href}
+                target={isExternal ? "_blank" : undefined}
+                rel={isExternal ? "noopener noreferrer" : undefined}
+                style={{ fontSize: 14, color: "rgba(255,255,255,0.8)", textDecoration: "none", transition: "color 0.15s" }}
+                onMouseOver={e => (e.currentTarget.style.color = "#fff")}
+                onMouseOut={e => (e.currentTarget.style.color = "rgba(255,255,255,0.8)")}
+              >
+                {i}
+              </a>
+            </li>
+          );
+        })}
       </ul>
     </div>
   );
