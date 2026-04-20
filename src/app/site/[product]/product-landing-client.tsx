@@ -1,8 +1,12 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { motion } from "framer-motion";
 import { products } from "@/lib/products";
+import { useTracking } from "@/hooks/use-tracking";
+import { trackClick, trackLead } from "@/lib/meta-pixel";
+import { ConsentBanner } from "@/components/landing/ConsentBanner";
+import { IceCreamPopup } from "@/components/landing/IceCreamPopup";
 import {
   ArrowRight,
   Check,
@@ -142,6 +146,16 @@ export default function ProductLandingClient({ productSlug }: { productSlug: str
 
   const Icon = iconMap[product.icon];
 
+  const { sessionId, consent, trackEvent, setConsent } = useTracking();
+  const pageLoadTracked = useRef(false);
+
+  useEffect(() => {
+    if (!pageLoadTracked.current && sessionId) {
+      pageLoadTracked.current = true;
+      trackEvent("page_load", { variant: "product", product: productSlug, page_section: "hero" });
+    }
+  }, [sessionId, trackEvent, productSlug]);
+
   const [email, setEmail] = useState("");
   const [name, setName] = useState("");
   const [company, setCompany] = useState("");
@@ -152,18 +166,21 @@ export default function ProductLandingClient({ productSlug }: { productSlug: str
   const formRef = useRef<HTMLDivElement>(null);
 
   const scrollToForm = () => {
+    trackClick("cta_contact", productSlug, "hero");
     formRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!email) return;
+    trackClick("submit_form", productSlug, "lead_form");
     setIsSubmitting(true);
     try {
       fetch("/api/leads", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
+          sessionId,
           email,
           company: company || null,
           interests: [
@@ -175,6 +192,15 @@ export default function ProductLandingClient({ productSlug }: { productSlug: str
           ],
         }),
       }).catch(() => {});
+      trackEvent("lead_submitted", {
+        product: productSlug,
+        has_phone: !!phone,
+        has_company: !!company,
+      });
+      trackLead(productSlug, {
+        product: productSlug,
+        has_phone: !!phone,
+      });
       setIsSubmitted(true);
       confetti({
         particleCount: 100,
@@ -475,6 +501,14 @@ export default function ProductLandingClient({ productSlug }: { productSlug: str
       </section>
 
       <Footer />
+
+      <IceCreamPopup sessionId={sessionId} variant={productSlug} trackEvent={trackEvent} delayMs={7000} />
+
+      <ConsentBanner
+        visible={consent === null}
+        onAccept={() => setConsent(true)}
+        onDecline={() => setConsent(false)}
+      />
     </div>
   );
 }

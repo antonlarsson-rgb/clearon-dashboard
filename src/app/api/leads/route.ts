@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getServiceClient } from "@/lib/supabase";
+import { findOrCreateContact } from "@/lib/upsales";
 
 export async function POST(request: Request) {
   try {
@@ -160,6 +161,34 @@ export async function POST(request: Request) {
         .update({ contact_id: contactData?.id })
         .eq("anonymous_id", sessionId);
     }
+
+    // Sync with Upsales CRM (non-blocking)
+    const product = getField("product:") || "";
+    const variant = getField("variant:") || "main";
+    const utmSource = getField("utm_source:") || variant;
+
+    findOrCreateContact({
+      name: contactName !== "ej angiven" ? contactName : email.split("@")[0],
+      email,
+      phone: phone && phone !== "ej angiven" ? phone : undefined,
+      company: company || undefined,
+      product: product || undefined,
+      source: utmSource,
+    }).then((result) => {
+      // Update Supabase contact with Upsales ID for linking
+      if (result.contact?.id && contactData?.id) {
+        supabase
+          .from("contacts")
+          .update({ upsales_id: result.contact.id })
+          .eq("id", contactData.id)
+          .then(() => {});
+      }
+      console.log(
+        `Upsales sync: ${result.isNew ? "NEW" : "EXISTING"} contact ${result.contact?.name} (ID: ${result.contact?.id}), product: ${product}`
+      );
+    }).catch((e) => {
+      console.error("Upsales sync failed (non-blocking):", e);
+    });
 
     return NextResponse.json({
       success: true,
