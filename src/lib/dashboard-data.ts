@@ -110,8 +110,8 @@ export interface DashboardActivity {
 
 // ---- Categorization ----
 
-const INTERNAL_DOMAINS = ["clearon.se", "wearestellar.se", "clearon-test.se", "stellar.se"];
-const INTERNAL_COMPANIES = ["clearon", "stellar", "testbolag", "test företag", "e2e test", "persisttest", "poangtest"];
+const INTERNAL_DOMAINS = ["clearon.se", "wearestellar.se", "clearon-test.se"];
+const INTERNAL_COMPANIES = ["testbolag", "test företag", "e2e test", "persisttest", "poangtest"];
 
 function categorizeContact(c: {
   email: string;
@@ -278,9 +278,11 @@ function resolveSourceChannel(c: {
 // ---- Data fetchers ----
 
 export async function getContacts(limit = 200): Promise<DashboardContact[]> {
+  // Fetch more than needed since we filter some out
+  const fetchLimit = Math.min(limit * 3, 500);
   return cachedFetch(`contacts-${limit}`, async () => {
     if (!UPSALES_TOKEN) return [];
-    const data = await upsalesGet("/contacts", { limit: String(limit), sort: "-score" });
+    const data = await upsalesGet("/contacts", { limit: String(fetchLimit), sort: "-score" });
 
     return (data.data || [])
       .map((c: Record<string, unknown>) => {
@@ -327,7 +329,8 @@ export async function getContacts(limit = 200): Promise<DashboardContact[]> {
         };
       })
       // Filter out internal contacts from the main view
-      .filter((c: DashboardContact) => c.category !== "internal");
+      .filter((c: DashboardContact) => c.category !== "internal")
+      .slice(0, limit);
   }, []);
 }
 
