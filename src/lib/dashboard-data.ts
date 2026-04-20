@@ -2,7 +2,7 @@
 // Scoring extensible for Google Ads, Meta, LinkedIn
 
 function getToken() {
-  return process.env.UPSALES_API_KEY || "";
+  return (process.env.UPSALES_API_KEY || "").trim();
 }
 const BASE = "https://power.upsales.com/api/v2";
 
@@ -27,7 +27,7 @@ async function cachedFetch<T>(key: string, fetcher: () => Promise<T>, _fallback:
 export let lastFetchDebug = { url: "", status: 0, dataLength: 0, error: "" };
 
 async function upsalesGet(path: string, params?: Record<string, string>) {
-  const token = process.env.UPSALES_API_KEY || "";
+  const token = (process.env.UPSALES_API_KEY || "").trim();
   if (!token) {
     lastFetchDebug = { url: "", status: 0, dataLength: 0, error: "NO TOKEN" };
     return { data: [], metadata: { total: 0 } };
