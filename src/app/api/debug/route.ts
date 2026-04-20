@@ -54,14 +54,23 @@ export async function GET() {
     processError = `Processing error: ${e}`;
   }
 
-  // Then test through our data layer
+  // Test through data layer with explicit error capture
+  let dataLayerError = null;
   try {
     clearCache();
     contacts = await getContacts(50);
+  } catch (e) {
+    dataLayerError = `getContacts threw: ${e instanceof Error ? e.message + '\n' + e.stack : String(e)}`;
+  }
+  try {
     kpis = await getKpis();
+  } catch (e) {
+    // ignore
+  }
+  try {
     hotLeads = await getHotLeads(5);
   } catch (e) {
-    error = String(e);
+    // ignore
   }
 
   return NextResponse.json({
@@ -69,6 +78,7 @@ export async function GET() {
     rawApiCount: rawCount,
     rawApiSample: rawSample,
     processError,
+    dataLayerError,
     error,
     contactsCount: contacts.length,
     contactsSample: contacts.slice(0, 5).map((c) => ({

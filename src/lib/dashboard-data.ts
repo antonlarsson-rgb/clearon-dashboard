@@ -12,17 +12,13 @@ export function clearCache() {
   cache.clear();
 }
 
-async function cachedFetch<T>(key: string, fetcher: () => Promise<T>, fallback: T): Promise<T> {
+async function cachedFetch<T>(key: string, fetcher: () => Promise<T>, _fallback: T): Promise<T> {
   const cached = cache.get(key);
   if (cached && Date.now() - cached.ts < CACHE_TTL) return cached.data as T;
-  try {
-    const data = await fetcher();
-    cache.set(key, { data, ts: Date.now() });
-    return data;
-  } catch (e) {
-    console.error(`Dashboard fetch error [${key}]:`, e);
-    return fallback;
-  }
+  // Let errors propagate so we can see them in debug
+  const data = await fetcher();
+  cache.set(key, { data, ts: Date.now() });
+  return data;
 }
 
 async function upsalesGet(path: string, params?: Record<string, string>) {
