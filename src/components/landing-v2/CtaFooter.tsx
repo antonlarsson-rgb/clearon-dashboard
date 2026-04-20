@@ -16,12 +16,12 @@ export function CtaFooter() {
         }} />
         <div className="c-container" style={{ position: "relative" }}>
           <div style={{ maxWidth: 820, marginBottom: 56 }}>
-            <div className="c-eyebrow" style={{ color: "var(--clr-yellow)", marginBottom: 16 }}>Redo att komma igang?</div>
+            <div className="c-eyebrow" style={{ color: "var(--clr-yellow)", marginBottom: 16 }}>Redo att komma igång?</div>
             <h2 className="c-h2" style={{ color: "#fff", marginBottom: 24 }}>
-              En timmes setup.<br/>Resten skoter vi.
+              En timmes setup.<br/>Resten sköter vi.
             </h2>
             <p className="c-body-lg" style={{ color: "rgba(255,255,255,0.75)", maxWidth: 560 }}>
-              Boka ett kort mote. Vi lyssnar pa vad ni vill uppna och visar exakt hur ClearOn loser det, med riktiga exempel fran er bransch.
+              Boka ett kort möte. Vi lyssnar på vad ni vill uppnå och visar exakt hur ClearOn löser det, med riktiga exempel från er bransch.
             </p>
           </div>
 
@@ -35,13 +35,13 @@ export function CtaFooter() {
             }}>
               <div className="c-eyebrow" style={{ color: "var(--clr-yellow)", marginBottom: 14 }}>Det vi redan vet om er</div>
               <div style={{ display: "flex", flexDirection: "column", gap: 14, fontSize: 14 }}>
-                <FactRow label="Segment" value={segment || "annu okand"} />
-                <FactRow label="Score" value={`${score} poang`} />
+                <FactRow label="Segment" value={segment || "ännu okänd"} />
+                <FactRow label="Score" value={`${score} poäng`} />
                 <FactRow label="Scroll" value={`${scrollDepth}%`} />
-                <FactRow label="Tid pa sidan" value={`${dwellTime}s`} />
+                <FactRow label="Tid på sidan" value={`${dwellTime}s`} />
               </div>
               <div style={{ marginTop: 20, padding: 14, background: "rgba(255, 199, 44, 0.12)", borderRadius: "var(--r-sm)", fontSize: 13, lineHeight: 1.5, color: "rgba(255,255,255,0.8)" }}>
-                Vi har markt vad du last. Sa slipper du upprepa det i motet.
+                Vi har märkt vad du läst. Så slipper du upprepa det i mötet.
               </div>
             </div>
           </div>
@@ -122,7 +122,7 @@ function ContactForm({ track, sessionId, segment, score }: {
       }}>
         <div style={{ fontSize: 48, marginBottom: 16, color: "var(--clr-yellow)" }}>&#x2713;</div>
         <div style={{ fontSize: 22, fontWeight: 600, marginBottom: 8 }}>Tack!</div>
-        <div style={{ color: "rgba(255,255,255,0.7)" }}>En saljare hor av sig inom en arbetsdag.</div>
+        <div style={{ color: "rgba(255,255,255,0.7)" }}>En säljare hör av sig inom en arbetsdag.</div>
       </div>
     );
   }
@@ -131,8 +131,8 @@ function ContactForm({ track, sessionId, segment, score }: {
     <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: 14 }}>
       <Field label="Namn" value={form.name} onChange={v => setForm({ ...form, name: v })} />
       <Field label="E-post" type="email" value={form.email} onChange={v => setForm({ ...form, email: v })} />
-      <Field label="Foretag" value={form.company} onChange={v => setForm({ ...form, company: v })} />
-      <Field label="Vad vill ni losa?" multiline value={form.msg} onChange={v => setForm({ ...form, msg: v })} />
+      <Field label="Företag" value={form.company} onChange={v => setForm({ ...form, company: v })} />
+      <Field label="Vad vill ni lösa?" multiline value={form.msg} onChange={v => setForm({ ...form, msg: v })} />
       <button type="submit" disabled={isSubmitting || !form.email} className="c-btn" style={{
         background: "var(--clr-yellow)", color: "var(--clr-navy)",
         justifyContent: "center", padding: "16px", fontSize: 15, fontWeight: 600, marginTop: 6,
@@ -176,16 +176,17 @@ function Footer() {
         <div>
           <img src="/clearon-logo.png" alt="ClearOn" style={{ height: 34, width: "auto", filter: "brightness(0) invert(1)", opacity: 0.7 }} />
           <p style={{ marginTop: 16, color: "rgba(255,255,255,0.6)", fontSize: 14, maxWidth: 300, lineHeight: 1.5 }}>
-            Digitala kupong- och beloningslosningar for kundforvarv, kundvard och personalbeloning.
+            Digitala kupong- och belöningslösningar för kundförvärv, kundvård och personalbelöning.
           </p>
         </div>
         <FooterCol title="Produkter" items={["Digitala kuponger", "Mobila presentkort", "Sverigechecken", "Customer Care", "Clearing Solutions"]} />
-        <FooterCol title="Foretag" items={["Om ClearOn", "Karriar", "Event", "Artiklar", "Hallbarhet"]} />
-        <FooterCol title="Kontakt" items={["Kontakta oss", "Fragor och svar", "Hitta butik", "Kontrollera vardebarare", "Logga in"]} />
+        <FooterCol title="Företag" items={["Om ClearOn", "Karriär", "Event", "Artiklar", "Hållbarhet"]} />
+        <FooterCol title="Kontakt" items={["Kontakta oss", "Frågor och svar", "Hitta butik", "Kontrollera värdebärare", "Logga in"]} />
       </div>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: 12, color: "rgba(255,255,255,0.4)", paddingTop: 20, borderTop: "1px solid rgba(255,255,255,0.08)" }}>
         <span>&copy; 2026 ClearOn AB &middot; Liljeholmsstranden 3, 117 61 Stockholm</span>
         <span style={{ fontFamily: "var(--font-mono)" }}>Integritet &middot; Cookies</span>
+
       </div>
     </footer>
   );

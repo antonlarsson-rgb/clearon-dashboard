@@ -6,17 +6,17 @@ const MIXES = [
   {
     name: "Den spelifierade consent-kampanjen",
     flow: ["Spel & kampanj", "Incitament"],
-    story: "Besokare spinner lyckohjul, ger e-post + consent, far kupong via SMS. Tva mekaniker, ett flode.",
+    story: "Besökare spinner lyckohjul, ger e-post + consent, får kupong via SMS. Två mekaniker, ett flöde.",
   },
   {
     name: "Support-till-NPS-loopen",
-    flow: ["Kundvard", "Incitament"],
-    story: "Lost supportarende triggar kompensation, 72 h senare skickas ny kampanjkupong till samma kund.",
+    flow: ["Kundvård", "Incitament"],
+    story: "Löst supportärende triggar kompensation, 72 h senare skickas ny kampanjkupong till samma kund.",
   },
   {
     name: "Medarbetare + kund i samma program",
-    flow: ["Personalbeloning", "Kundvard"],
-    story: "Butikspersonal far bonus nar de fangar NPS-svar. Missnojda kunder far glass-kupong direkt.",
+    flow: ["Personalbelöning", "Kundvård"],
+    story: "Butikspersonal får bonus när de fångar NPS-svar. Missnöjda kunder får glass-kupong direkt.",
   },
 ];
 
@@ -31,10 +31,10 @@ export function MixItUp() {
               Mixa<br/>som ni vill.
             </h2>
             <p className="c-body" style={{ color: "var(--clr-ink-2)", marginBottom: 16 }}>
-              Ni ar inte lasta till en paketering. Samma infrastruktur, samma kupongmotor, samma butiksnatverk, anvands for flera affarer parallellt.
+              Ni är inte låsta till en paketering. Samma infrastruktur, samma kupongmotor, samma butiksnätverk, används för flera affärer parallellt.
             </p>
             <p className="c-body" style={{ color: "var(--clr-ink-2)" }}>
-              Har ar tre exempel pa hur paketeringar kombineras i verkliga kundfloden.
+              Här är tre exempel på hur paketeringar kombineras i verkliga kundflöden.
             </p>
           </div>
 

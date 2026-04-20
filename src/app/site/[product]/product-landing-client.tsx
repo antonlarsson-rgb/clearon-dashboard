@@ -23,62 +23,62 @@ const PRODUCT_DETAILS: Record<
 > = {
   "sales-promotion": {
     name: "Sales Promotion",
-    tagline: "Fysiska kuponger som driver kop i butik",
-    desc: "Lansera nya produkter eller oka forsaljning pa etablerade varumarken med kuponger som loseses in direkt i kassan. Full sparbarhet fran plan till resultat.",
+    tagline: "Fysiska kuponger som driver köp i butik",
+    desc: "Lansera nya produkter eller öka försäljning på etablerade varumärken med kuponger som löses in direkt i kassan. Full spårbarhet från plan till resultat.",
     color: "#2D6A4F",
     icon: "🎫",
     metrics: [
-      { value: "+46%", label: "Forsaljningslyft nylansering" },
+      { value: "+46%", label: "Försäljningslyft nylansering" },
       { value: "+15%", label: "Etablerade produkter" },
       { value: "20 000", label: "Anslutna kassor" },
       { value: "5 000+", label: "Butiker" },
     ],
     features: [
       { title: "Kassaintegration", desc: "Kopplat till 20 000 kassor i hela Sverige. Kupongen scannas direkt." },
-      { title: "Realtidsdata", desc: "Se vilka butiker, regioner och tidsperioder som presterar bast." },
-      { title: "Flexibla kampanjer", desc: "Kronor-av, procent, kop 2 betala for 1, och fler kampanjtyper." },
-      { title: "Full clearing", desc: "Automatisk avrakning och rapportering. Ni far faktura, inte pappersarbete." },
+      { title: "Realtidsdata", desc: "Se vilka butiker, regioner och tidsperioder som presterar bäst." },
+      { title: "Flexibla kampanjer", desc: "Kronor-av, procent, köp 2 betala för 1, och fler kampanjtyper." },
+      { title: "Full clearing", desc: "Automatisk avräkning och rapportering. Ni får faktura, inte pappersarbete." },
     ],
     useCases: [
       { title: "FMCG-lansering", desc: "Lansera nya produkter med garanterad exponering i butik." },
-      { title: "Trade Marketing", desc: "Ge ert field sales-team matbara verktyg." },
-      { title: "Sasongskapanjer", desc: "Tidsbestamda erbjudanden med full kontroll." },
+      { title: "Trade Marketing", desc: "Ge ert field sales-team mätbara verktyg." },
+      { title: "Säsongskampanjer", desc: "Tidsbestämda erbjudanden med full kontroll." },
     ],
     relatedSlugs: ["interactive-engage", "kampanja", "kuponger"],
   },
   "customer-care": {
     name: "Customer Care",
-    tagline: "Digital kompensation som vandermisnoje till lojalitet",
-    desc: "Skicka digital kompensation via SMS direkt i kundtjanstsamtalet. Vardecheckar, presentkort och kuponger som loser in i 5 000+ butiker.",
+    tagline: "Digital kompensation som vänder missnöje till lojalitet",
+    desc: "Skicka digital kompensation via SMS direkt i kundtjänstsamtalet. Värdecheckar, presentkort och kuponger som löser in i 5 000+ butiker.",
     color: "#4A90A4",
     icon: "💬",
     metrics: [
-      { value: "70%", label: "Behallerlojalitet" },
-      { value: "3x", label: "Snabbare arendehantering" },
-      { value: "0", label: "Fysiska vardeavier" },
+      { value: "70%", label: "Behållerlojalitet" },
+      { value: "3x", label: "Snabbare ärendehantering" },
+      { value: "0", label: "Fysiska värdeavier" },
       { value: "SMS", label: "Direkt leverans" },
     ],
     features: [
-      { title: "Direkt kompensation", desc: "Skicka vardecheckar via SMS pa sekunder, direkt i samtalet." },
-      { title: "CRM-integration", desc: "Koppla till ert befintliga CRM for automatisk loggning." },
-      { title: "Anpassade belopp", desc: "Satt belopp fritt eller anvand forinstaallda nivaer." },
-      { title: "Uppfoljning", desc: "Se inlosningsgrad och kundnojdhet i realtid." },
+      { title: "Direkt kompensation", desc: "Skicka värdecheckar via SMS på sekunder, direkt i samtalet." },
+      { title: "CRM-integration", desc: "Koppla till ert befintliga CRM för automatisk loggning." },
+      { title: "Anpassade belopp", desc: "Sätt belopp fritt eller använd förinställda nivåer." },
+      { title: "Uppföljning", desc: "Se inlösningsgrad och kundnöjdhet i realtid." },
     ],
     useCases: [
-      { title: "Klagomal", desc: "Kompensera missnojda kunder direkt och behall dem." },
+      { title: "Klagomål", desc: "Kompensera missnöjda kunder direkt och behåll dem." },
       { title: "Servicegaranti", desc: "Ge automatisk kompensation vid SLA-brott." },
-      { title: "Win-back", desc: "Ateraktivera churnade kunder med riktade erbjudanden." },
+      { title: "Win-back", desc: "Återaktivera churnade kunder med riktade erbjudanden." },
     ],
     relatedSlugs: ["send-a-gift", "mobila-presentkort", "sales-promotion"],
   },
   "interactive-engage": {
     name: "Interactive Engage",
-    tagline: "Gamification som okar forsaljning med +16%",
-    desc: "Lagg till spelmekanik pa era kampanjer. Snurra hjulet, skrapkort, quiz och adventskalender. Kuponger som beloning for deltagande.",
+    tagline: "Gamification som ökar försäljning med +16%",
+    desc: "Lägg till spelmekanik på era kampanjer. Snurra hjulet, skrapkort, quiz och adventskalender. Kuponger som belöning för deltagande.",
     color: "#E07A5F",
     icon: "🎮",
     metrics: [
-      { value: "+16%", label: "Extra forsaljning" },
+      { value: "+16%", label: "Extra försäljning" },
       { value: "4", label: "Speltyper" },
       { value: "85%", label: "Engagemangsgrad" },
       { value: "3x", label: "Delningsgrad" },
@@ -86,70 +86,70 @@ const PRODUCT_DETAILS: Record<
     features: [
       { title: "Snurra hjulet", desc: "Slumpad vinst som driver engagemang och delning." },
       { title: "Skrapkort", desc: "Digital skraplott med garanterad vinst." },
-      { title: "Quiz", desc: "Kunskapsfraga med beloning. Larorik interaktion." },
+      { title: "Quiz", desc: "Kunskapsfråga med belöning. Lärorik interaktion." },
       { title: "Adventskalender", desc: "24 luckor med dagliga erbjudanden." },
     ],
     useCases: [
-      { title: "Events", desc: "Skapa engagemang pa massor och butiksaktiviteter." },
-      { title: "Digital kampanj", desc: "Oka konvertering i digitala kanaler." },
-      { title: "Lojalitet", desc: "Belona atekommande kunder med spelupplevelser." },
+      { title: "Events", desc: "Skapa engagemang på mässor och butiksaktiviteter." },
+      { title: "Digital kampanj", desc: "Öka konvertering i digitala kanaler." },
+      { title: "Lojalitet", desc: "Belöna återkommande kunder med spelupplevelser." },
     ],
     relatedSlugs: ["sales-promotion", "kampanja", "kuponger"],
   },
   kampanja: {
     name: "Kampanja",
     tagline: "Bygg kampanjsidor och distribuera kuponger via SMS",
-    desc: "Skapa egna kampanjsidor pa minuter, distribuera kuponger via SMS direkt till kunder. Ingen utvecklare behovs.",
+    desc: "Skapa egna kampanjsidor på minuter, distribuera kuponger via SMS direkt till kunder. Ingen utvecklare behövs.",
     color: "#7B68EE",
     icon: "📣",
     metrics: [
       { value: "< 1h", label: "Tid till live" },
-      { value: "0", label: "Utvecklare kravs" },
+      { value: "0", label: "Utvecklare krävs" },
       { value: "SMS", label: "Distribution" },
-      { value: "100%", label: "Sparbarhet" },
+      { value: "100%", label: "Spårbarhet" },
     ],
     features: [
       { title: "Drag-and-drop", desc: "Bygg kampanjsidor utan teknisk kompetens." },
       { title: "SMS-distribution", desc: "Skicka kuponger direkt till kundens telefon." },
-      { title: "Egen URL", desc: "Varumarkesanpassade kampanjsidor med egen URL." },
+      { title: "Egen URL", desc: "Varumärkesanpassade kampanjsidor med egen URL." },
       { title: "A/B-testning", desc: "Testa olika erbjudanden och optimera i realtid." },
     ],
     useCases: [
-      { title: "Nylansering", desc: "Snabb lansering av kampanjer for nya produkter." },
-      { title: "Flash sales", desc: "Tidsbestamda erbjudanden med hog urgency." },
-      { title: "Events", desc: "QR-koder pa plats som leder till kampanjsida." },
+      { title: "Nylansering", desc: "Snabb lansering av kampanjer för nya produkter." },
+      { title: "Flash sales", desc: "Tidsbestämda erbjudanden med hög urgency." },
+      { title: "Events", desc: "QR-koder på plats som leder till kampanjsida." },
     ],
     relatedSlugs: ["sales-promotion", "interactive-engage", "kuponger"],
   },
   "send-a-gift": {
     name: "Send a Gift",
-    tagline: "Digitala presentkort och personalbeloning",
-    desc: "Skicka digitala presentkort via SMS eller mail. Perfekt for personalbeloning, jubileum och kundgavor. Mottagaren valjer sjalv bland 5 000+ butiker.",
+    tagline: "Digitala presentkort och personalbelöning",
+    desc: "Skicka digitala presentkort via SMS eller mail. Perfekt för personalbelöning, jubileum och kundgåvor. Mottagaren väljer själv bland 5 000+ butiker.",
     color: "#D4A574",
     icon: "🎁",
     metrics: [
-      { value: "-31%", label: "Personalomsattning" },
+      { value: "-31%", label: "Personalomsättning" },
       { value: "90%", label: "Uppskattningsgrad" },
-      { value: "5 000+", label: "Inlosningsplatser" },
+      { value: "5 000+", label: "Inlösningsplatser" },
       { value: "0", label: "Administration" },
     ],
     features: [
-      { title: "SMS & mail", desc: "Valj leveranssatt efter mottagarens preferens." },
-      { title: "Fritt val", desc: "Mottagaren valjer sjalv bland tusentals butiker." },
-      { title: "Skatteeffektivt", desc: "Uppfyller Skatteverkets krav for personalformaner." },
-      { title: "Bulkutskick", desc: "Skicka till hundratals mottagare pa en gang." },
+      { title: "SMS & mail", desc: "Välj leveranssätt efter mottagarens preferens." },
+      { title: "Fritt val", desc: "Mottagaren väljer själv bland tusentals butiker." },
+      { title: "Skatteeffektivt", desc: "Uppfyller Skatteverkets krav för personalförmåner." },
+      { title: "Bulkutskick", desc: "Skicka till hundratals mottagare på en gång." },
     ],
     useCases: [
-      { title: "Personalbeloning", desc: "Belona prestation, jubileum och fodelsedag." },
-      { title: "Kundgavor", desc: "Skicka tackgavor till viktiga kunder." },
-      { title: "Incitament", desc: "Motivera saljteam och partners." },
+      { title: "Personalbelöning", desc: "Belöna prestation, jubileum och födelsedag." },
+      { title: "Kundgåvor", desc: "Skicka tackgåvor till viktiga kunder." },
+      { title: "Incitament", desc: "Motivera säljteam och partners." },
     ],
     relatedSlugs: ["personalbeloning", "customer-care", "mobila-presentkort"],
   },
   "clearing-solutions": {
     name: "Clearing Solutions",
-    tagline: "Clearing-tjanster for kedjor och handlare",
-    desc: "Koppla er kedja till ClearOns clearing-infrastruktur. Automatisk avrakning, rapportering och betalningshantering for 20 000 kassor.",
+    tagline: "Clearing-tjänster för kedjor och handlare",
+    desc: "Koppla er kedja till ClearOns clearing-infrastruktur. Automatisk avräkning, rapportering och betalningshantering för 20 000 kassor.",
     color: "#6B7280",
     icon: "🔄",
     metrics: [
@@ -159,97 +159,97 @@ const PRODUCT_DETAILS: Record<
       { value: "Auto", label: "Avrakning" },
     ],
     features: [
-      { title: "Kassaintegration", desc: "Kopplat till de storsta kassasystemen i Sverige." },
-      { title: "Automatisk avrakning", desc: "Slopp manuella avrakningar och fakturor." },
-      { title: "Realtidsdata", desc: "Se inlosning, varde och trender i realtid." },
+      { title: "Kassaintegration", desc: "Kopplat till de största kassasystemen i Sverige." },
+      { title: "Automatisk avräkning", desc: "Slöpp manuella avräkningar och fakturor." },
+      { title: "Realtidsdata", desc: "Se inlösning, värde och trender i realtid." },
       { title: "API", desc: "Integrera med era befintliga system." },
     ],
     useCases: [
-      { title: "Dagligvarukedjor", desc: "Effektivisera kupongclearing for hela kedjan." },
-      { title: "Category Management", desc: "Battre insyn i kampanjresultat per kategori." },
-      { title: "Leverantorssamarbete", desc: "Forenkla samarbete med FMCG-leverantorer." },
+      { title: "Dagligvarukedjor", desc: "Effektivisera kupongclearing för hela kedjan." },
+      { title: "Category Management", desc: "Bättre insyn i kampanjresultat per kategori." },
+      { title: "Leverantörssamarbete", desc: "Förenkla samarbete med FMCG-leverantörer." },
     ],
     relatedSlugs: ["sales-promotion", "kuponger", "kampanja"],
   },
   engage: {
     name: "Engage",
     tagline: "Engagera kunder med interaktiva upplevelser",
-    desc: "Skapa engagerande kundupplevelser med gamification, quiz och interaktiva kampanjer. Oka forsaljning och lojalitet.",
+    desc: "Skapa engagerande kundupplevelser med gamification, quiz och interaktiva kampanjer. Öka försäljning och lojalitet.",
     color: "#E07A5F",
     icon: "🎯",
     metrics: [
-      { value: "+16%", label: "Extra forsaljning" },
+      { value: "+16%", label: "Extra försäljning" },
       { value: "85%", label: "Engagemangsgrad" },
       { value: "4", label: "Speltyper" },
       { value: "3x", label: "Delning" },
     ],
     features: [
       { title: "Gamification", desc: "Snurra hjulet, skrapkort och quiz-spel." },
-      { title: "Beloning", desc: "Kuponger som beloning for deltagande." },
+      { title: "Belöning", desc: "Kuponger som belöning för deltagande." },
       { title: "Data", desc: "Samla in kundinsikter genom interaktion." },
-      { title: "Delning", desc: "Viralt spridsningsmekanik built-in." },
+      { title: "Delning", desc: "Viral spridningsmekanik built-in." },
     ],
     useCases: [
-      { title: "Events", desc: "Aktivera besokare pa massor och events." },
+      { title: "Events", desc: "Aktivera besökare på mässor och events." },
       { title: "Nylansering", desc: "Skapa buzz runt nya produkter." },
-      { title: "Lojalitet", desc: "Bygga langvariga kundrelationer." },
+      { title: "Lojalitet", desc: "Bygga långvariga kundrelationer." },
     ],
     relatedSlugs: ["interactive-engage", "kampanja", "sales-promotion"],
   },
   personalbeloning: {
-    name: "Personalbeloning",
-    tagline: "Systematisk personalbeloning med digitala vardecheckar",
-    desc: "Automatisera personalbeloning for fodelsedag, jubileum och prestation. Digitala vardecheckar som loser in i 5 000+ butiker.",
+    name: "Personalbelöning",
+    tagline: "Systematisk personalbelöning med digitala värdecheckar",
+    desc: "Automatisera personalbelöning för födelsedag, jubileum och prestation. Digitala värdecheckar som löser in i 5 000+ butiker.",
     color: "#8B6F47",
     icon: "🏆",
     metrics: [
-      { value: "-31%", label: "Personalomsattning" },
+      { value: "-31%", label: "Personalomsättning" },
       { value: "90%", label: "Uppskattning" },
       { value: "Auto", label: "Utskick" },
-      { value: "0 kr", label: "Adminkostand" },
+      { value: "0 kr", label: "Adminkostnad" },
     ],
     features: [
-      { title: "Automatisering", desc: "Schemalaga utskick for fodelsedag och jubileum." },
-      { title: "Anpassade belopp", desc: "Valfritt belopp fran 50 kr till 5 000 kr." },
-      { title: "HR-rapportering", desc: "Oversikt over alla utskick och inlosningar." },
-      { title: "Bulkhantering", desc: "Ladda upp listor for storskaliga utskick." },
+      { title: "Automatisering", desc: "Schemalägg utskick för födelsedag och jubileum." },
+      { title: "Anpassade belopp", desc: "Valfritt belopp från 50 kr till 5 000 kr." },
+      { title: "HR-rapportering", desc: "Översikt över alla utskick och inlösningar." },
+      { title: "Bulkhantering", desc: "Ladda upp listor för storskaliga utskick." },
     ],
     useCases: [
-      { title: "Fodelsedag", desc: "Automatiska fodelsedagspresenter." },
-      { title: "Jubileum", desc: "Uppmarksamma anstallningsarsdagar." },
-      { title: "Prestation", desc: "Belona extra insatser och resultat." },
+      { title: "Födelsedag", desc: "Automatiska födelsedagspresenter." },
+      { title: "Jubileum", desc: "Uppmärksamma anställningsårsdagar." },
+      { title: "Prestation", desc: "Belöna extra insatser och resultat." },
     ],
     relatedSlugs: ["send-a-gift", "mobila-presentkort", "customer-care"],
   },
   kuponger: {
     name: "Kuponger",
-    tagline: "Digitala kuponger for fysisk retail",
-    desc: "Hela kedjan fran skapande till inlosning och clearing. Digitala kuponger som fungerar i 5 000+ butiker med 20 000 anslutna kassor.",
+    tagline: "Digitala kuponger för fysisk retail",
+    desc: "Hela kedjan från skapande till inlösning och clearing. Digitala kuponger som fungerar i 5 000+ butiker med 20 000 anslutna kassor.",
     color: "#5e9732",
     icon: "🎟",
     metrics: [
       { value: "5 000+", label: "Butiker" },
       { value: "20 000", label: "Kassor" },
-      { value: "12%", label: "Snittinlosning" },
+      { value: "12%", label: "Snittinlösning" },
       { value: "< 1h", label: "Setup" },
     ],
     features: [
-      { title: "Digitalt forst", desc: "SMS-distribution direkt till kunden." },
+      { title: "Digitalt först", desc: "SMS-distribution direkt till kunden." },
       { title: "Kassaintegration", desc: "Skannas i kassan, automatisk avdrag." },
-      { title: "Clearing", desc: "Automatisk avrakning och betalning." },
-      { title: "Statistik", desc: "Full uppfoljning i realtid." },
+      { title: "Clearing", desc: "Automatisk avräkning och betalning." },
+      { title: "Statistik", desc: "Full uppföljning i realtid." },
     ],
     useCases: [
-      { title: "Forsaljningskampanj", desc: "Driva kop av specifika produkter." },
+      { title: "Försäljningskampanj", desc: "Driva köp av specifika produkter." },
       { title: "Nylansering", desc: "Introducera nya produkter." },
-      { title: "Lojalitet", desc: "Belona atekommande kunder." },
+      { title: "Lojalitet", desc: "Belöna återkommande kunder." },
     ],
     relatedSlugs: ["sales-promotion", "kampanja", "interactive-engage"],
   },
   "mobila-presentkort": {
     name: "Mobila Presentkort",
     tagline: "Digitala presentkort via mobilen",
-    desc: "Skicka digitala presentkort via SMS. Perfekt for kompensation, beloning och gavagivande. Loser in i 5 000+ butiker over hela Sverige.",
+    desc: "Skicka digitala presentkort via SMS. Perfekt för kompensation, belöning och gåvogivande. Löser in i 5 000+ butiker över hela Sverige.",
     color: "#c8a830",
     icon: "💳",
     metrics: [
@@ -259,22 +259,22 @@ const PRODUCT_DETAILS: Record<
       { value: "0", label: "Fysisk hantering" },
     ],
     features: [
-      { title: "Direkt leverans", desc: "Mottagaren far presentkortet via SMS pa sekunder." },
-      { title: "Valfritt belopp", desc: "Fran 25 kr till 10 000 kr." },
-      { title: "Bred tackning", desc: "5 000+ butiker i hela Sverige." },
+      { title: "Direkt leverans", desc: "Mottagaren får presentkortet via SMS på sekunder." },
+      { title: "Valfritt belopp", desc: "Från 25 kr till 10 000 kr." },
+      { title: "Bred täckning", desc: "5 000+ butiker i hela Sverige." },
       { title: "Enkel hantering", desc: "Ingen fysisk logistik eller distribution." },
     ],
     useCases: [
-      { title: "Kompensation", desc: "Snabb kompensation till missnojda kunder." },
-      { title: "Gava", desc: "Skicka presentkort till vanner och familj." },
-      { title: "Beloning", desc: "Personalbeloning utan administration." },
+      { title: "Kompensation", desc: "Snabb kompensation till missnöjda kunder." },
+      { title: "Gåva", desc: "Skicka presentkort till vänner och familj." },
+      { title: "Belöning", desc: "Personalbelöning utan administration." },
     ],
     relatedSlugs: ["send-a-gift", "customer-care", "personalbeloning"],
   },
   sverigechecken: {
     name: "Sverigechecken",
-    tagline: "Vardecheck som fungerar i hela Sverige",
-    desc: "En vardecheck som loser in i 5 000+ butiker over hela Sverige. Perfekt for kompensation, beloning och formaner.",
+    tagline: "Värdecheck som fungerar i hela Sverige",
+    desc: "En värdecheck som löser in i 5 000+ butiker över hela Sverige. Perfekt för kompensation, belöning och förmåner.",
     color: "#0068B5",
     icon: "🇸🇪",
     metrics: [
@@ -284,15 +284,15 @@ const PRODUCT_DETAILS: Record<
       { value: "Digital", label: "Distribution" },
     ],
     features: [
-      { title: "Rikstackande", desc: "Fungerar i 5 000+ butiker over hela Sverige." },
-      { title: "Flexibelt belopp", desc: "Satt valfritt belopp for varje check." },
+      { title: "Rikstäckande", desc: "Fungerar i 5 000+ butiker över hela Sverige." },
+      { title: "Flexibelt belopp", desc: "Sätt valfritt belopp för varje check." },
       { title: "Digital leverans", desc: "Skickas via SMS direkt till mottagaren." },
-      { title: "Hog acceptans", desc: "Brett natverk av anslutna handlare." },
+      { title: "Hög acceptans", desc: "Brett nätverk av anslutna handlare." },
     ],
     useCases: [
-      { title: "Personalforman", desc: "Skatteeffektiv personalforman med bred anvandning." },
-      { title: "Kundkompensation", desc: "Generell kompensation for alla typer av arenden." },
-      { title: "Marknadsforingskampanj", desc: "Attraktiv beloning i kampanjer." },
+      { title: "Personalförmån", desc: "Skatteeffektiv personalförmån med bred användning." },
+      { title: "Kundkompensation", desc: "Generell kompensation för alla typer av ärenden." },
+      { title: "Marknadsföringskampanj", desc: "Attraktiv belöning i kampanjer." },
     ],
     relatedSlugs: ["mobila-presentkort", "send-a-gift", "customer-care"],
   },
@@ -496,7 +496,7 @@ export default function ProductLandingClient({
           <div className="c-container" style={{ maxWidth: 900 }}>
             <div style={{ textAlign: "center", marginBottom: 40 }}>
               <div className="c-eyebrow" style={{ marginBottom: 12 }}>Funktioner</div>
-              <h2 className="c-h2">Vad ingar i {details.name}</h2>
+              <h2 className="c-h2">Vad ingår i {details.name}</h2>
             </div>
             <div
               style={{
@@ -528,8 +528,8 @@ export default function ProductLandingClient({
         <section style={{ padding: "80px 0", background: "var(--clr-surface-alt)" }}>
           <div className="c-container" style={{ maxWidth: 900 }}>
             <div style={{ textAlign: "center", marginBottom: 40 }}>
-              <div className="c-eyebrow" style={{ marginBottom: 12 }}>Anvandningsomraden</div>
-              <h2 className="c-h2">Vem ar {details.name} for?</h2>
+              <div className="c-eyebrow" style={{ marginBottom: 12 }}>Användningsområden</div>
+              <h2 className="c-h2">Vem är {details.name} för?</h2>
             </div>
             <div
               style={{
@@ -562,7 +562,7 @@ export default function ProductLandingClient({
           <section style={{ padding: "60px 0", background: "var(--clr-cl-surface)" }}>
             <div className="c-container" style={{ maxWidth: 900 }}>
               <h2 className="c-h3" style={{ textAlign: "center", marginBottom: 24 }}>
-                Utforska fler losningar
+                Utforska fler lösningar
               </h2>
               <div
                 style={{
@@ -615,14 +615,14 @@ export default function ProductLandingClient({
                     Intresserad av {details.name}?
                   </h2>
                   <p style={{ fontSize: 14, color: "rgba(255,255,255,0.6)", marginTop: 8 }}>
-                    Lamna era uppgifter sa tar vi fram ett forslag anpassat for er.
+                    Lämna era uppgifter så tar vi fram ett förslag anpassat för er.
                   </p>
                 </div>
                 <form onSubmit={handleSubmit} style={{ display: "grid", gap: 12 }}>
                   {[
                     { type: "text", placeholder: "Namn", value: name, setter: setName },
                     { type: "email", placeholder: "E-post *", value: email, setter: setEmail, required: true },
-                    { type: "text", placeholder: "Foretag", value: company, setter: setCompany },
+                    { type: "text", placeholder: "Företag", value: company, setter: setCompany },
                     { type: "tel", placeholder: "Telefon (valfritt)", value: phone, setter: setPhone },
                   ].map((field) => (
                     <input
@@ -656,7 +656,7 @@ export default function ProductLandingClient({
                     {isSubmitting ? "Skickar..." : `Boka demo av ${details.name}`}
                   </button>
                   <p style={{ fontSize: 11, color: "rgba(255,255,255,0.4)", textAlign: "center" }}>
-                    Genom att skicka godkanner du var{" "}
+                    Genom att skicka godkänner du vår{" "}
                     <a
                       href="https://www.clearon.se/behandling-av-personuppgifter/"
                       target="_blank"
@@ -673,10 +673,10 @@ export default function ProductLandingClient({
               <div style={{ textAlign: "center", padding: "40px 0" }}>
                 <div style={{ fontSize: 48, marginBottom: 16 }}>✅</div>
                 <h3 style={{ fontSize: 22, fontWeight: 800, color: "var(--clr-lime)", marginBottom: 8 }}>
-                  Tack for ert intresse!
+                  Tack för ert intresse!
                 </h3>
                 <p style={{ fontSize: 14, color: "rgba(255,255,255,0.7)" }}>
-                  Vi aterkommer inom en arbetsdag med ett skraddarsytt forslag for {details.name}.
+                  Vi återkommer inom en arbetsdag med ett skräddarsytt förslag för {details.name}.
                 </p>
               </div>
             )}

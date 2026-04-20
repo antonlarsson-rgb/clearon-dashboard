@@ -5,27 +5,27 @@ import { useSignal } from "./SignalProvider";
 
 const items = [
   {
-    quote: "Vardecheckarna ar enkla att hantera och ger guldkant pa vardagen for mottagaren.",
+    quote: "Värdecheckarna är enkla att hantera och ger guldkant på vardagen för mottagaren.",
     author: "Lina Arwidsson",
     role: "Kommunikationsstrateg, Vision",
     accent: "var(--clr-teal)",
   },
   {
-    quote: "Vi kompenserar drabbade kunder inom minuter istallet for dagar. NPS-kurvan vande helt.",
+    quote: "Vi kompenserar drabbade kunder inom minuter istället för dagar. NPS-kurvan vände helt.",
     author: "Marcus Ek",
     role: "Head of Customer Service, Retail Nord",
     accent: "var(--clr-coral)",
   },
   {
-    quote: "Under Black Week skickade vi 280 000 kuponger. Inlosen lag pa 34%, tre ganger var print-kampanj.",
+    quote: "Under Black Week skickade vi 280 000 kuponger. Inlösen låg på 34%, tre gånger vår print-kampanj.",
     author: "Sara Lindqvist",
-    role: "Campaign Lead, FMCG-varumarke",
+    role: "Campaign Lead, FMCG-varumärke",
     accent: "var(--clr-yellow)",
   },
   {
-    quote: "Personalbeloningen gick fran en logistikmardrom till ett knapptryck. Fantastiskt.",
+    quote: "Personalbelöningen gick från en logistikmardröm till ett knapptryck. Fantastiskt.",
     author: "Johanna Berg",
-    role: "HR-chef, Serviceforetag",
+    role: "HR-chef, Serviceföretag",
     accent: "var(--clr-lime)",
   },
 ];
@@ -51,7 +51,7 @@ export function Testimonials() {
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "end", marginBottom: 48, flexWrap: "wrap", gap: 20 }}>
           <div>
             <div className="c-eyebrow" style={{ marginBottom: 14 }}>Kundcase</div>
-            <h2 className="c-h2">Vad kunder<br/>sager om oss.</h2>
+            <h2 className="c-h2">Vad kunder<br/>säger om oss.</h2>
           </div>
           <div style={{ display: "flex", gap: 8 }}>
             <button onClick={() => setIdx((idx - 1 + items.length) % items.length)} style={arrowBtn}>&larr;</button>

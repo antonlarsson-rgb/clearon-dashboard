@@ -4,8 +4,8 @@ import { useState } from "react";
 import { useSignal } from "./SignalProvider";
 
 const campaigns: Record<string, { brand: string; offer: string; color: string; icon: string }> = {
-  ica: { brand: "ICA", offer: "20 kr pa OATLY Havredryck", color: "#e70713", icon: "ICA" },
-  hm: { brand: "H&M Home", offer: "150 kr valkomstcheck", color: "#222", icon: "H&M" },
+  ica: { brand: "ICA", offer: "20 kr på OATLY Havredryck", color: "#e70713", icon: "ICA" },
+  hm: { brand: "H&M Home", offer: "150 kr välkomstcheck", color: "#222", icon: "H&M" },
   apoteket: { brand: "Apoteket", offer: "Gratis Multivitamin (50 st)", color: "#00994d", icon: "Apo" },
 };
 
@@ -31,16 +31,16 @@ export function SmsDemo() {
       <div className="c-container">
         <div style={{ display: "grid", gridTemplateColumns: "1.1fr 1fr", gap: 80, alignItems: "center" }} className="smsdemo-grid">
           <div>
-            <div className="c-eyebrow" style={{ marginBottom: 14 }}>Live demo, prova sjalv</div>
-            <h2 className="c-h2" style={{ marginBottom: 20 }}>Fran kampanj till kassa.<br/>Prova flodet.</h2>
+            <div className="c-eyebrow" style={{ marginBottom: 14 }}>Live demo, prova själv</div>
+            <h2 className="c-h2" style={{ marginBottom: 20 }}>Från kampanj till kassa.<br/>Prova flödet.</h2>
             <p className="c-body-lg" style={{ marginBottom: 32, maxWidth: 520 }}>
               Skriv in ett (fiktivt) telefonnummer och skicka ett exempel-erbjudande.
-              Se hur mottagaren far SMS, oppnar sin vardebarare och loser in i butik.
+              Se hur mottagaren får SMS, öppnar sin värdebärare och löser in i butik.
             </p>
 
             <div style={{ marginBottom: 20 }}>
               <label style={{ display: "block", fontSize: 13, fontWeight: 500, color: "var(--clr-ink-2)", marginBottom: 8 }}>
-                Valj kampanj
+                Välj kampanj
               </label>
               <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
                 {Object.entries(campaigns).map(([k, v]) => (
@@ -88,7 +88,7 @@ export function SmsDemo() {
             <div style={{ marginTop: 28, display: "flex", gap: 24, color: "var(--clr-muted)", fontSize: 13, fontFamily: "var(--font-mono)", letterSpacing: "0.04em" }}>
               <StepIndicator n="1" label="SKICKA" active={step >= 1} />
               <StepIndicator n="2" label="SMS" active={step >= 2} />
-              <StepIndicator n="3" label="OPPNA" active={step >= 3} />
+              <StepIndicator n="3" label="ÖPPNA" active={step >= 3} />
               <StepIndicator n="4" label="BUTIK" active={step >= 4} />
             </div>
           </div>
@@ -182,7 +182,7 @@ function SmsScreen({ campaign, onOpen }: { campaign: { brand: string; offer: str
           <div style={{ fontSize: 11, color: "#888" }}>nu</div>
         </div>
         <div style={{ fontSize: 13, lineHeight: 1.45, color: "#222" }}>
-          Tack for att du ar kund! Har ar en vardecheck pa {campaign.offer.toLowerCase()}. Galler i 30 dagar i 5 000+ butiker.
+          Tack för att du är kund! Här är en värdecheck på {campaign.offer.toLowerCase()}. Gäller i 30 dagar i 5 000+ butiker.
           <br/><br/>
           <span style={{ color: campaign.color, textDecoration: "underline", cursor: "pointer" }}
             onClick={onOpen}>
@@ -197,7 +197,7 @@ function SmsScreen({ campaign, onOpen }: { campaign: { brand: string; offer: str
           padding: 12, background: "var(--clr-navy)", color: "#fff",
           border: "none", borderRadius: 12, fontSize: 13, fontWeight: 500, cursor: "pointer",
         }}>
-        Oppna lanken &rarr;
+        Öppna länken &rarr;
       </button>
     </div>
   );
@@ -213,7 +213,7 @@ function LandingScreen({ campaign, onRedeem }: { campaign: { brand: string; offe
       }}>
         {campaign.brand}
       </div>
-      <div style={{ fontSize: 13, color: "#888", marginBottom: 6, fontFamily: "var(--font-mono)" }}>DIN VARDECHECK</div>
+      <div style={{ fontSize: 13, color: "#888", marginBottom: 6, fontFamily: "var(--font-mono)" }}>DIN VÄRDECHECK</div>
       <div style={{ fontSize: 20, fontWeight: 600, lineHeight: 1.2, marginBottom: 14 }}>{campaign.offer}</div>
 
       <div style={{
@@ -257,13 +257,13 @@ function RedeemedScreen({ campaign, onBack }: { campaign: { brand: string }; onB
       }}>
         <svg width="32" height="32" viewBox="0 0 32 32"><path d="M8 16 l5 5 L24 10" stroke="#fff" strokeWidth="3" fill="none" strokeLinecap="round" strokeLinejoin="round"/></svg>
       </div>
-      <div style={{ fontSize: 22, fontWeight: 600, marginBottom: 8, letterSpacing: "-0.02em" }}>Inlost!</div>
+      <div style={{ fontSize: 22, fontWeight: 600, marginBottom: 8, letterSpacing: "-0.02em" }}>Inlöst!</div>
       <div style={{ fontSize: 13, opacity: 0.85, marginBottom: 20 }}>Clearingen sker automatiskt mellan butik och {campaign.brand}.</div>
       <button onClick={onBack} style={{
         padding: "10px 18px", background: "rgba(255,255,255,0.2)", color: "#fff",
         border: "1px solid rgba(255,255,255,0.3)", borderRadius: 999, fontSize: 13, cursor: "pointer",
       }}>
-        Borja om
+        Börja om
       </button>
     </div>
   );

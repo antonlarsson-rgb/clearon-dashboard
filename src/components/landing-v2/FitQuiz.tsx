@@ -6,44 +6,44 @@ import { useSignal } from "./SignalProvider";
 const QUIZ_QS = [
   {
     id: "dept",
-    q: "Vem ar du pa din sida?",
+    q: "Vem är du på din sida?",
     opts: [
       { v: "marketing", label: "Marknad / Brand", weight: { gamify: 3, reward: 2 } },
       { v: "crm", label: "CRM / Loyalty", weight: { winback: 3, reward: 2 } },
-      { v: "cx", label: "Kundtjanst / CX", weight: { complaint: 3 } },
+      { v: "cx", label: "Kundtjänst / CX", weight: { complaint: 3 } },
       { v: "hr", label: "HR / People", weight: { staff: 3 } },
       { v: "data", label: "Data / Digital", weight: { consent: 3 } },
-      { v: "growth", label: "Tillvaxt / Salj", weight: { acquisition: 3, gamify: 1 } },
+      { v: "growth", label: "Tillväxt / Sälj", weight: { acquisition: 3, gamify: 1 } },
     ],
   },
   {
     id: "goal",
-    q: "Vad vill du uppna narmaste kvartalet?",
+    q: "Vad vill du uppnå närmaste kvartalet?",
     opts: [
       { v: "new", label: "Hitta nya kunder", weight: { acquisition: 3, gamify: 2 } },
       { v: "activate", label: "Aktivera sovande kunder", weight: { winback: 3, reward: 1 } },
-      { v: "engage", label: "Gora befintliga glada", weight: { reward: 3, complaint: 1 } },
-      { v: "consent", label: "Hoja consent / svar pa enkat", weight: { consent: 3 } },
-      { v: "staff", label: "Se personalen battre", weight: { staff: 3 } },
+      { v: "engage", label: "Göra befintliga glada", weight: { reward: 3, complaint: 1 } },
+      { v: "consent", label: "Höja consent / svar på enkät", weight: { consent: 3 } },
+      { v: "staff", label: "Se personalen bättre", weight: { staff: 3 } },
     ],
   },
   {
     id: "volume",
-    q: "Hur manga vill du na?",
+    q: "Hur många vill du nå?",
     opts: [
       { v: "s", label: "Under 1 000", weight: { staff: 2, complaint: 2 } },
       { v: "m", label: "1 000 - 10 000", weight: { winback: 2, reward: 2, consent: 1 } },
       { v: "l", label: "10 000 - 100 000", weight: { gamify: 2, acquisition: 2, consent: 2 } },
-      { v: "xl", label: "Fler an 100 000", weight: { acquisition: 3, gamify: 2 } },
+      { v: "xl", label: "Fler än 100 000", weight: { acquisition: 3, gamify: 2 } },
     ],
   },
   {
     id: "reward",
-    q: "Vilken typ av beloning kanns ratt?",
+    q: "Vilken typ av belöning känns rätt?",
     opts: [
       { v: "free", label: "En specifik produkt (glass, kaffe, havredryck)", weight: { gamify: 2, reward: 2 } },
-      { v: "cash", label: "En vardecheck i kronor", weight: { staff: 2, acquisition: 2, complaint: 2 } },
-      { v: "either", label: "Bada / vet inte", weight: { reward: 1 } },
+      { v: "cash", label: "En värdecheck i kronor", weight: { staff: 2, acquisition: 2, complaint: 2 } },
+      { v: "either", label: "Båda / vet inte", weight: { reward: 1 } },
     ],
   },
 ];
@@ -51,37 +51,37 @@ const QUIZ_QS = [
 const QUIZ_RESULTS: Record<string, { title: string; desc: string; product: string; pageLabel: string }> = {
   gamify: {
     title: "Gamifierad kampanj",
-    desc: "Ni vill engagera en storre malgrupp med nagot roligt. Skraplotter, lyckohjul eller kalender gor jobbet, alla vinner nagot, och beloningen ar alltid inlosbar i butik.",
+    desc: "Ni vill engagera en större målgrupp med något roligt. Skraplotter, lyckohjul eller kalender gör jobbet, alla vinner något, och belöningen är alltid inlösbar i butik.",
     product: "kuponger", pageLabel: "Digitala kuponger & spel",
   },
   acquisition: {
     title: "Acquisition-kampanj",
-    desc: "Anvand maten som havstang. ICA-check pa kopet ar ofta det som avgor nar er egen produkt ar abstrakt (el, forsakring, mobilabonnemang).",
-    product: "engage", pageLabel: "Varumarkeskampanjer",
+    desc: "Använd maten som hävstång. ICA-check på köpet är ofta det som avgör när er egen produkt är abstrakt (el, försäkring, mobilabonnemang).",
+    product: "engage", pageLabel: "Varumärkeskampanjer",
   },
   winback: {
     title: "CRM-reaktivering",
-    desc: "Ni har en sovande bas. SMS-kupong med en specifik, tidsatt beloning har hogst oppningsgrad av alla kanaler.",
+    desc: "Ni har en sovande bas. SMS-kupong med en specifik, tidsatt belöning har högst öppningsgrad av alla kanaler.",
     product: "kuponger", pageLabel: "Kundklubb & lojalitet",
   },
   consent: {
-    title: "Consent-beloning",
-    desc: "Hoj cookie-acceptans eller enkatsvar genom att erbjuda riktigt varde. En 20-kronor till Apoteket slar vanlig consent-banner gang pa gang.",
+    title: "Consent-belöning",
+    desc: "Höj cookie-acceptans eller enkätsvar genom att erbjuda riktigt värde. En 20-kronor till Apoteket slår vanlig consent-banner gång på gång.",
     product: "kuponger", pageLabel: "Digitala kuponger",
   },
   complaint: {
     title: "Kundtjanst-plaster",
-    desc: "Nar nagot gar fel, skicka en kupong i chatten. Farre negativa omdomen, snabbare arendelosning, mottagaren kannar sig sedd.",
-    product: "customer-care", pageLabel: "SMS-vardecheckar",
+    desc: "När något går fel, skicka en kupong i chatten. Färre negativa omdömen, snabbare ärendelösning, mottagaren känner sig sedd.",
+    product: "customer-care", pageLabel: "SMS-värdecheckar",
   },
   staff: {
-    title: "Personalbeloning",
-    desc: "Spontan erkansla slar arlig bonus. En 100-krona nar nagon gjort nagot bra, fungerar i dagligvaruhandeln, inga fakturor, inga lagerbeslut.",
-    product: "personalbeloning", pageLabel: "Beloningar & lojalitet",
+    title: "Personalbelöning",
+    desc: "Spontan erkänsla slår årlig bonus. En 100-krona när någon gjort något bra, fungerar i dagligvaruhandeln, inga fakturor, inga lagerbeslut.",
+    product: "personalbeloning", pageLabel: "Belöningar & lojalitet",
   },
   reward: {
-    title: "Oppen reward-setup",
-    desc: "Ni vet att ni vill belona, men ar inte sakra pa hur. Borja med en liten pilot: 500 mottagare, en specifik mekanik, mat resultatet, skala upp.",
+    title: "Öppen reward-setup",
+    desc: "Ni vet att ni vill belöna, men är inte säkra på hur. Börja med en liten pilot: 500 mottagare, en specifik mekanik, mät resultatet, skala upp.",
     product: "kuponger", pageLabel: "Digitala kuponger",
   },
 };
@@ -116,12 +116,12 @@ export function FitQuiz() {
     <section id="quiz" style={{ padding: "96px 0", background: "var(--clr-surface)" }}>
       <div className="c-container">
         <div style={{ maxWidth: 720, marginBottom: 40 }}>
-          <div className="c-eyebrow" style={{ marginBottom: 16 }}>04 &middot; Hitta ratt</div>
+          <div className="c-eyebrow" style={{ marginBottom: 16 }}>04 &middot; Hitta rätt</div>
           <h2 className="c-h2" style={{ marginBottom: 16 }}>
-            Vilken ClearOn-losning passar just er?
+            Vilken ClearOn-lösning passar just er?
           </h2>
           <p className="c-body-lg">
-            Fyra fragor. Ingen e-post. En rekommendation.
+            Fyra frågor. Ingen e-post. En rekommendation.
           </p>
         </div>
 
@@ -141,7 +141,7 @@ export function FitQuiz() {
                   }} />
                 ))}
               </div>
-              <div className="c-eyebrow" style={{ marginBottom: 12 }}>Fraga {step + 1} / {QUIZ_QS.length}</div>
+              <div className="c-eyebrow" style={{ marginBottom: 12 }}>Fråga {step + 1} / {QUIZ_QS.length}</div>
               <h3 className="c-h3" style={{ marginBottom: 24, fontSize: 26 }}>{QUIZ_QS[step].q}</h3>
               <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 10 }}>
                 {QUIZ_QS[step].opts.map(o => (
@@ -169,21 +169,22 @@ export function FitQuiz() {
                 <button onClick={() => setStep(step - 1)} style={{
                   marginTop: 20, background: "transparent", border: "none",
                   fontSize: 13, color: "var(--clr-muted)", cursor: "pointer", textDecoration: "underline",
-                }}>&larr; Foregaende</button>
+                }}>&larr; Föregående</button>
               )}
             </>
           ) : (
             <div>
-              <div className="c-eyebrow" style={{ marginBottom: 10 }}>Var rekommendation</div>
+              <div className="c-eyebrow" style={{ marginBottom: 10 }}>Vår rekommendation</div>
               <h3 className="c-h3" style={{ marginBottom: 16, fontSize: 32 }}>{winner.title}</h3>
               <p className="c-body-lg" style={{ marginBottom: 28 }}>{winner.desc}</p>
               <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
                 <a href={`/${winner.product}`} className="c-btn c-btn--primary"
                   onClick={() => track("quiz:cta", { product: winner.product })}>
                   Utforska {winner.pageLabel} &rarr;
+
                 </a>
                 <button onClick={reset} className="c-btn c-btn--ghost">
-                  Gor om quizet
+                  Gör om quizet
                 </button>
               </div>
             </div>

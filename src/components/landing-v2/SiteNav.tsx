@@ -7,7 +7,7 @@ const products = [
   { id: "mobila-presentkort", label: "Mobila presentkort" },
   { id: "sverigechecken", label: "Sverigechecken" },
   { id: "customer-care", label: "Customer Care" },
-  { id: "personalbeloning", label: "Personalbeloning" },
+  { id: "personalbeloning", label: "Personalbelöning" },
   { id: "engage", label: "Engage" },
   { id: "send-a-gift", label: "Send a gift" },
   { id: "clearing", label: "Clearing Solutions" },
@@ -81,7 +81,7 @@ export function SiteNav() {
               </div>
             )}
           </div>
-          <a href="#hur" style={navLinkStyle}>Sa fungerar det</a>
+          <a href="#hur" style={navLinkStyle}>Så fungerar det</a>
           <a href="#roi" style={navLinkStyle}>ROI</a>
           <a href="#butiker" style={navLinkStyle}>Butiker</a>
           <a href="#kundcase" style={navLinkStyle}>Kundcase</a>

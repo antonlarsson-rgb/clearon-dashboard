@@ -5,26 +5,26 @@ import { useSignal } from "./SignalProvider";
 
 const cities = [
   { name: "Stockholm", x: 68, y: 58, count: 842, type: "Huvudstad" },
-  { name: "Goteborg", x: 30, y: 62, count: 512, type: "Vastkusten" },
-  { name: "Malmo", x: 38, y: 86, count: 328, type: "Skane" },
-  { name: "Uppsala", x: 66, y: 54, count: 182, type: "Malardalen" },
-  { name: "Linkoping", x: 56, y: 68, count: 147, type: "Ostergotland" },
-  { name: "Vasteras", x: 60, y: 54, count: 129, type: "Malardalen" },
-  { name: "Orebro", x: 52, y: 58, count: 124, type: "Bergslagen" },
-  { name: "Norrkoping", x: 60, y: 66, count: 118, type: "Ostergotland" },
-  { name: "Helsingborg", x: 32, y: 82, count: 98, type: "Skane" },
-  { name: "Jonkoping", x: 44, y: 72, count: 88, type: "Smaland" },
-  { name: "Umea", x: 62, y: 22, count: 78, type: "Norrland" },
-  { name: "Lulea", x: 70, y: 10, count: 62, type: "Norrbotten" },
+  { name: "Göteborg", x: 30, y: 62, count: 512, type: "Västkusten" },
+  { name: "Malmö", x: 38, y: 86, count: 328, type: "Skåne" },
+  { name: "Uppsala", x: 66, y: 54, count: 182, type: "Mälardalen" },
+  { name: "Linköping", x: 56, y: 68, count: 147, type: "Östergötland" },
+  { name: "Västerås", x: 60, y: 54, count: 129, type: "Mälardalen" },
+  { name: "Örebro", x: 52, y: 58, count: 124, type: "Bergslagen" },
+  { name: "Norrköping", x: 60, y: 66, count: 118, type: "Östergötland" },
+  { name: "Helsingborg", x: 32, y: 82, count: 98, type: "Skåne" },
+  { name: "Jönköping", x: 44, y: 72, count: 88, type: "Småland" },
+  { name: "Umeå", x: 62, y: 22, count: 78, type: "Norrland" },
+  { name: "Luleå", x: 70, y: 10, count: 62, type: "Norrbotten" },
   { name: "Sundsvall", x: 56, y: 32, count: 92, type: "Medelpad" },
-  { name: "Gavle", x: 58, y: 46, count: 74, type: "Gastrikland" },
-  { name: "Boras", x: 32, y: 70, count: 78, type: "Vastergotland" },
+  { name: "Gävle", x: 58, y: 46, count: 74, type: "Gästrikland" },
+  { name: "Borås", x: 32, y: 70, count: 78, type: "Västergötland" },
   { name: "Halmstad", x: 32, y: 78, count: 58, type: "Halland" },
-  { name: "Kalmar", x: 58, y: 78, count: 48, type: "Smaland" },
-  { name: "Vaxjo", x: 48, y: 78, count: 52, type: "Smaland" },
-  { name: "Karlstad", x: 42, y: 54, count: 82, type: "Varmland" },
+  { name: "Kalmar", x: 58, y: 78, count: 48, type: "Småland" },
+  { name: "Växjö", x: 48, y: 78, count: 52, type: "Småland" },
+  { name: "Karlstad", x: 42, y: 54, count: 82, type: "Värmland" },
   { name: "Falun", x: 52, y: 46, count: 48, type: "Dalarna" },
-  { name: "Ostersund", x: 46, y: 30, count: 42, type: "Jamtland" },
+  { name: "Östersund", x: 46, y: 30, count: 42, type: "Jämtland" },
   { name: "Kiruna", x: 66, y: 4, count: 18, type: "Norrbotten" },
 ];
 
@@ -49,15 +49,15 @@ export function StoreFinder() {
       <div className="c-container">
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1.4fr", gap: 64, alignItems: "start" }} className="butik-grid">
           <div>
-            <div className="c-eyebrow" style={{ marginBottom: 14 }}>Tackning i hela Sverige</div>
+            <div className="c-eyebrow" style={{ marginBottom: 14 }}>Täckning i hela Sverige</div>
             <h2 className="c-h2" style={{ marginBottom: 20 }}>5 000+ butiker.<br/>Hela Sverige.</h2>
             <p className="c-body-lg" style={{ marginBottom: 32, maxWidth: 440 }}>
-              Dagligvaror, service, apotek och restauranger. Fran Kiruna i norr till Smygehuk i soder, var din mottagare an bor finns en butik pa gangavstand.
+              Dagligvaror, service, apotek och restauranger. Från Kiruna i norr till Smygehuk i söder, var din mottagare än bor finns en butik på gångavstånd.
             </p>
             <input
               value={query}
               onChange={e => { setQuery(e.target.value); track("module:engage", { id: "storefinder-search" }); }}
-              placeholder="Sok stad eller region..."
+              placeholder="Sök stad eller region..."
               style={{
                 width: "100%", padding: "14px 18px",
                 border: "1px solid var(--clr-line)", background: "#fff",
@@ -114,9 +114,9 @@ export function StoreFinder() {
               borderRadius: "var(--r-sm)", border: "1px solid var(--clr-line)",
               fontSize: 13,
             }}>
-              <div style={{ fontFamily: "var(--font-mono)", fontSize: 11, color: "var(--clr-muted)", letterSpacing: "0.06em" }}>TOTAL TACKNING</div>
+              <div style={{ fontFamily: "var(--font-mono)", fontSize: 11, color: "var(--clr-muted)", letterSpacing: "0.06em" }}>TOTAL TÄCKNING</div>
               <div style={{ fontSize: 22, fontWeight: 600, marginTop: 2 }}>{total.toLocaleString("sv-SE")}+</div>
-              <div style={{ color: "var(--clr-muted)", fontSize: 12 }}>anslutna inlosenstallen</div>
+              <div style={{ color: "var(--clr-muted)", fontSize: 12 }}>anslutna inlösenställen</div>
             </div>
           </div>
         </div>

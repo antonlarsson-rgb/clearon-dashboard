@@ -6,8 +6,8 @@ import { useSignal } from "./SignalProvider";
 const PROBLEMS = [
   {
     id: "consent",
-    label: "Cookie-consent-raten ar lag",
-    sub: "Belona besokare for att saga ja till data",
+    label: "Cookie-consent-raten är låg",
+    sub: "Belöna besökare för att säga ja till data",
     departments: ["Data / GDPR", "Digital"],
     accent: "var(--clr-lime)",
     accentInk: "#4a5a1a",
@@ -23,9 +23,9 @@ const PROBLEMS = [
   },
   {
     id: "complaint",
-    label: "Kunder som klagar blir forbannade",
-    sub: "Ge plaster pa saret i kundtjanst",
-    departments: ["Kundtjanst", "CX"],
+    label: "Kunder som klagar blir förbannade",
+    sub: "Ge plåster på såret i kundtjänst",
+    departments: ["Kundtjänst", "CX"],
     accent: "var(--clr-orange)",
     accentInk: "#7a3810",
     icon: (
@@ -37,8 +37,8 @@ const PROBLEMS = [
   },
   {
     id: "staff",
-    label: "Personalen kanns osedd",
-    sub: "Spontan erkansla med verkligt varde",
+    label: "Personalen känns osedd",
+    sub: "Spontan erkänsla med verkligt värde",
     departments: ["HR", "Ledning"],
     accent: "var(--clr-teal)",
     accentInk: "#1f3d13",
@@ -52,8 +52,8 @@ const PROBLEMS = [
   },
   {
     id: "boring",
-    label: "Vara kampanjer ar trakiga",
-    sub: "Gor det lekfullt med spel och skraplotter",
+    label: "Våra kampanjer är tråkiga",
+    sub: "Gör det lekfullt med spel och skraplotter",
     departments: ["Marknad", "Brand"],
     accent: "var(--clr-coral)",
     accentInk: "#7a3010",
@@ -66,9 +66,9 @@ const PROBLEMS = [
   },
   {
     id: "acquire",
-    label: "Vi behover locka kunder fran nya branscher",
-    sub: "Elbolag? Telekom? Forsakring? Ge en ICA-check pa kopet",
-    departments: ["Marknad", "Tillvaxt"],
+    label: "Vi behöver locka kunder från nya branscher",
+    sub: "Elbolag? Telekom? Försäkring? Ge en ICA-check på köpet",
+    departments: ["Marknad", "Tillväxt"],
     accent: "var(--clr-yellow)",
     accentInk: "#4a5a1a",
     icon: (
@@ -86,33 +86,33 @@ export const ROLES = PROBLEMS.map(p => ({ id: p.id, label: p.label, accent: p.ac
 const HEROES: Record<string, { kicker: string; headline: string; sub: string }> = {
   default: {
     kicker: "Reward platform for B2B",
-    headline: "Vi belonar dina kunder,\npersonal och besokare.",
-    sub: "ClearOn ar Sveriges reward-plattform. Kupongen ar valutan, fysisk eller digital, alltid kopplad till mat och vardagsvaror i 5 000+ butiker. Du bygger spel, skraplotter, kampanjer och beloningar, vi skoter infrastrukturen.",
+    headline: "Vi belönar dina kunder,\npersonal och besökare.",
+    sub: "ClearOn är Sveriges reward-plattform. Kupongen är valutan, fysisk eller digital, alltid kopplad till mat och vardagsvaror i 5 000+ butiker. Du bygger spel, skraplotter, kampanjer och belöningar, vi sköter infrastrukturen.",
   },
   consent: {
-    kicker: "For Data & Digital",
-    headline: "Hoj consent-raten\nmed ett riktigt varde.",
-    sub: "En ICA-check for att saga ja till cookies slar \"vi anvander cookies for att forbattra din upplevelse\" varenda gang. Vi ser kunder ga fran 42% till 78% consent.",
+    kicker: "För Data & Digital",
+    headline: "Höj consent-raten\nmed ett riktigt värde.",
+    sub: "En ICA-check för att säga ja till cookies slår \"vi använder cookies för att förbättra din upplevelse\" varenda gång. Vi ser kunder gå från 42% till 78% consent.",
   },
   complaint: {
-    kicker: "For Kundtjanst",
-    headline: "Vand ilska\ntill tacksamhet.",
-    sub: "Skicka en kupong direkt i chatten nar nagot gar fel. Det kostar mindre an en missnojd kund pa Trustpilot, och mottagaren far ett verkligt varde samma dag.",
+    kicker: "För Kundtjänst",
+    headline: "Vänd ilska\ntill tacksamhet.",
+    sub: "Skicka en kupong direkt i chatten när något går fel. Det kostar mindre än en missnöjd kund på Trustpilot, och mottagaren får ett verkligt värde samma dag.",
   },
   staff: {
-    kicker: "For HR & People",
-    headline: "En fredag.\nEn vardecheck.\nEn tarta pa huset.",
-    sub: "Spontan erkansla slar arliga bonusar. Skicka en 100-krona till dagligvaran nar nagon gjort nagot bra. Inga fakturor, ingen logistik, bara ett SMS.",
+    kicker: "För HR & People",
+    headline: "En fredag.\nEn värdecheck.\nEn tårta på huset.",
+    sub: "Spontan erkänsla slår årliga bonusar. Skicka en 100-krona till dagligvaran när någon gjort något bra. Inga fakturor, ingen logistik, bara ett SMS.",
   },
   boring: {
-    kicker: "For Marknad & Brand",
-    headline: "Kampanjer som\nkanns som spel.",
-    sub: "Lyckohjul, skraplott, quiz, adventskalender. Alla varianter kopplade till en riktig beloning som loses in i butik. Vi bygger spelet, du far engagemanget.",
+    kicker: "För Marknad & Brand",
+    headline: "Kampanjer som\nkänns som spel.",
+    sub: "Lyckohjul, skraplott, quiz, adventskalender. Alla varianter kopplade till en riktig belöning som löses in i butik. Vi bygger spelet, du får engagemanget.",
   },
   acquire: {
-    kicker: "For Tillvaxt & Forvarv",
-    headline: "Lat maten\ngora jobbet.",
-    sub: "Prenumerera pa vart elbolag, fa 500 kr pa ICA. Byt bank, fa en manad gratis glass. Nar din produkt ar abstrakt, lanar du vardet fran nagot alla forstar.",
+    kicker: "För Tillväxt & Förvärv",
+    headline: "Låt maten\ngöra jobbet.",
+    sub: "Prenumerera på vårt elbolag, få 500 kr på ICA. Byt bank, få en månad gratis glass. När din produkt är abstrakt, lånar du värdet från något alla förstår.",
   },
 };
 
@@ -165,13 +165,13 @@ export function Hero({
             <svg width="14" height="14" viewBox="0 0 14 14"><path d="M2 7h10M8 3l4 4-4 4" stroke="currentColor" strokeWidth="1.8" fill="none" strokeLinecap="round" strokeLinejoin="round"/></svg>
           </a>
           <a href="#quiz" className="c-btn c-btn--ghost" onClick={() => track("module:engage", { id: "hero-quiz" })}>
-            Vilken losning passar mig?
+            Vilken lösning passar mig?
           </a>
         </div>
 
         <div>
           <div className="c-eyebrow" style={{ marginBottom: 14 }}>
-            {role === "default" ? "Borja med problemet du brottas med" : "Byt problem"}
+            {role === "default" ? "Börja med problemet du brottas med" : "Byt problem"}
           </div>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))", gap: 10 }}>
             {PROBLEMS.map(p => {
@@ -226,9 +226,9 @@ export function Hero({
 function HeroStats() {
   const stats = [
     { v: "5 000+", l: "Butiker i Sverige" },
-    { v: "30+ ar", l: "Belonings\u00ADexpertis" },
-    { v: "< 1 min", l: "Fran SMS till inlost" },
-    { v: "99,8%", l: "Clearing-tillfrlitlighet" },
+    { v: "30+ år", l: "Belönings\u00ADexpertis" },
+    { v: "< 1 min", l: "Från SMS till inlöst" },
+    { v: "99,8%", l: "Clearing-tillförlitlighet" },
   ];
   return (
     <div style={{

@@ -34,13 +34,13 @@ export function ColdTrafficFilter() {
       }}>
         <div className="c-container" style={{ display: "flex", gap: 16, alignItems: "center", flexWrap: "wrap", fontSize: 14 }}>
           <span style={{ color: "var(--clr-ink-2)", flex: 1, minWidth: 200 }}>
-            Tack for att du tittade. ClearOn hjalper foretag som saljer till konsument i Sverige, kanske ar vi inte ratt match idag, men vi gor det garna om nagot andras.
+            Tack för att du tittade. ClearOn hjälper företag som säljer till konsument i Sverige, kanske är vi inte rätt match idag, men vi gör det gärna om något ändras.
           </span>
           <button onClick={() => answer("yes")} style={{
             background: "transparent", border: "none", fontSize: 13, color: "var(--clr-green-dark)",
             textDecoration: "underline", cursor: "pointer",
           }}>
-            Fortsatt anda &rarr;
+            Fortsätt ändå &rarr;
           </button>
         </div>
       </div>
@@ -57,7 +57,7 @@ export function ColdTrafficFilter() {
           SNABB KOLL
         </span>
         <span style={{ flex: 1, minWidth: 240 }}>
-          Saljer ni till konsument i Sverige? Det ar dar ClearOn fungerar bast.
+          Säljer ni till konsument i Sverige? Det är där ClearOn fungerar bäst.
         </span>
         <div style={{ display: "flex", gap: 8 }}>
           <button onClick={() => answer("yes")} style={{

@@ -4,9 +4,9 @@ import { useState, useEffect } from "react";
 import { useSignal } from "./SignalProvider";
 
 const assumptions: Record<string, { redemption: number; uplift: number; cac: number; label: string }> = {
-  marknad: { redemption: 0.28, uplift: 3.2, cac: 1.4, label: "Kundforvarv" },
+  marknad: { redemption: 0.28, uplift: 3.2, cac: 1.4, label: "Kundförvärv" },
   compensation: { redemption: 0.71, uplift: 1.0, cac: 1.0, label: "Kompensation" },
-  personal: { redemption: 0.94, uplift: 1.1, cac: 0.6, label: "Personalbeloning" },
+  personal: { redemption: 0.94, uplift: 1.1, cac: 0.6, label: "Personalbelöning" },
 };
 
 export function RoiCalculator() {
@@ -38,18 +38,18 @@ export function RoiCalculator() {
       <div className="c-container" style={{ position: "relative" }}>
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1.2fr", gap: 64, alignItems: "start" }} className="roi-grid">
           <div>
-            <div className="c-eyebrow" style={{ color: "var(--clr-yellow)", marginBottom: 14 }}>Rakna sjalv</div>
+            <div className="c-eyebrow" style={{ color: "var(--clr-yellow)", marginBottom: 14 }}>Räkna själv</div>
             <h2 className="c-h2" style={{ color: "#fff", marginBottom: 20 }}>
-              Vad far ni<br/>tillbaka?
+              Vad får ni<br/>tillbaka?
             </h2>
             <p className="c-body-lg" style={{ color: "rgba(255,255,255,0.75)", marginBottom: 40, maxWidth: 440 }}>
-              Justera volym, varde och syfte. Modellen ar baserad pa snittdata fran over 1 000 ClearOn-kampanjer
+              Justera volym, värde och syfte. Modellen är baserad på snittdata från över 1 000 ClearOn-kampanjer
               inom svensk dagligvaruhandel.
             </p>
 
             <div style={{ marginBottom: 32 }}>
               <label style={{ display: "block", fontSize: 13, color: "rgba(255,255,255,0.6)", marginBottom: 10, fontFamily: "var(--font-mono)", letterSpacing: "0.06em" }}>
-                ANVANDNINGSOMRADE
+                ANVÄNDNINGSOMRÅDE
               </label>
               <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
                 {Object.entries(assumptions).map(([k, v]) => (
@@ -69,14 +69,14 @@ export function RoiCalculator() {
             </div>
 
             <Slider
-              label="Antal skickade vardebarare"
+              label="Antal skickade värdebärare"
               value={volume}
               min={1000} max={500000} step={1000}
               onChange={setVolume}
               format={v => fmt(v) + " st"}
             />
             <Slider
-              label="Varde per vardebarare"
+              label="Värde per värdebärare"
               value={value}
               min={5} max={500} step={5}
               onChange={setValue}
@@ -92,22 +92,22 @@ export function RoiCalculator() {
             padding: 40,
           }}>
             <div style={{ marginBottom: 28 }}>
-              <div className="c-eyebrow" style={{ color: "rgba(255,255,255,0.5)", marginBottom: 10 }}>Beraknad effekt</div>
+              <div className="c-eyebrow" style={{ color: "rgba(255,255,255,0.5)", marginBottom: 10 }}>Beräknad effekt</div>
               <div style={{ fontSize: 72, fontWeight: 600, letterSpacing: "-0.03em", lineHeight: 1, fontFamily: "var(--font-display)" }}>
                 {roi > 0 ? "+" : ""}{fmt(roi)}<span style={{ fontSize: 32, color: "var(--clr-yellow)" }}>%</span>
               </div>
-              <div style={{ fontSize: 14, color: "rgba(255,255,255,0.6)", marginTop: 4 }}>beraknad ROI over kampanjperioden</div>
+              <div style={{ fontSize: 14, color: "rgba(255,255,255,0.6)", marginTop: 4 }}>beräknad ROI över kampanjperioden</div>
             </div>
 
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 1, background: "rgba(255,255,255,0.1)", borderRadius: "var(--r-sm)", overflow: "hidden" }}>
-              <RoiMetric label="Inlosta" value={fmt(redeemed)} sub={`${Math.round(a.redemption * 100)}% inlosengrad`} />
+              <RoiMetric label="Inlösta" value={fmt(redeemed)} sub={`${Math.round(a.redemption * 100)}% inlösengrad`} />
               <RoiMetric label="Kostnad" value={fmt(spend) + " kr"} sub="utbetalt till butik" />
-              <RoiMetric label="Genererad intakt" value={fmt(generatedRevenue) + " kr"} sub={`${a.uplift.toFixed(1)}x hyllvarde`} highlight />
+              <RoiMetric label="Genererad intäkt" value={fmt(generatedRevenue) + " kr"} sub={`${a.uplift.toFixed(1)}x hyllvärde`} highlight />
               <RoiMetric label="CPA" value={fmt(Math.round(spend / Math.max(redeemed, 1) * a.cac)) + " kr"} sub="per engagerad mottagare" />
             </div>
 
             <div style={{ marginTop: 24, padding: 16, background: "rgba(255, 199, 44, 0.15)", borderRadius: "var(--r-sm)", fontSize: 13, color: "rgba(255,255,255,0.85)", lineHeight: 1.5 }}>
-              <strong style={{ color: "var(--clr-yellow)" }}>Tips.</strong> En riktig berakning tar ocksa hansyn till marginal, viral spridning och aterkopsfrekvens. Vi tar garna ett detaljerat samtal.
+              <strong style={{ color: "var(--clr-yellow)" }}>Tips.</strong> En riktig beräkning tar också hänsyn till marginal, viral spridning och återköpsfrekvens. Vi tar gärna ett detaljerat samtal.
             </div>
           </div>
         </div>

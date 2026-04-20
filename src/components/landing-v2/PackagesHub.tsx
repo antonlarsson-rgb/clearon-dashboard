@@ -7,38 +7,39 @@ const PACKAGES = [
   {
     id: "engage",
     name: "Incitament",
-    tagline: "Locka, varva, konvertera",
-    who: "Marknad & Tillvaxt",
-    triggers: ["Ny prenumerant", "Cookie-consent", "Leadformular ifyllt", "Kampanjaktivering"],
-    mechanics: "SMS-kupong, digital vardecheck, kampanjsida",
+    tagline: "Locka, värva, konvertera",
+    who: "Marknad & Tillväxt",
+    triggers: ["Ny prenumerant", "Cookie-consent", "Leadformulär ifyllt", "Kampanjaktivering"],
+    mechanics: "SMS-kupong, digital värdecheck, kampanjsida",
     productHref: "/engage",
     example: "Elbolag ger 500 kr ICA-check till nya prenumeranter. Konvertering +34% vs rabattrad.",
+
     color: "var(--clr-teal)",
     colorSoft: "var(--clr-teal-soft)",
     icon: "\u2197",
   },
   {
     id: "customer-care",
-    name: "Kundvard",
-    tagline: "Plaster pa saret",
+    name: "Kundvård",
+    tagline: "Plåster på såret",
     who: "CX & Support",
-    triggers: ["Klagomal registrerat", "Fordrojd leverans", "Servicefel", "Enkatsvar"],
-    mechanics: "SMS direkt ur arendesystemet, individuellt belopp",
+    triggers: ["Klagomål registrerat", "Fördröjd leverans", "Servicefel", "Enkätsvar"],
+    mechanics: "SMS direkt ur ärendesystemet, individuellt belopp",
     productHref: "/customer-care",
-    example: "Telecom skickar glass-kupong nar kund vantat >10 min i chatt. NPS +38 punkter.",
+    example: "Telecom skickar glass-kupong när kund väntat >10 min i chatt. NPS +38 punkter.",
     color: "var(--clr-orange)",
     colorSoft: "var(--clr-orange-soft)",
     icon: "\u2665",
   },
   {
     id: "personalbeloning",
-    name: "Personalbeloning",
-    tagline: "Tack for insatsen",
+    name: "Personalbelöning",
+    tagline: "Tack för insatsen",
     who: "HR & Ledning",
-    triggers: ["Manadens medarbetare", "Teamets mal natt", "Jubileum", "Jul/midsommar"],
-    mechanics: "Batch via CSV/API, skatteklassad, export till lonesystem",
+    triggers: ["Månadens medarbetare", "Teamets mål nått", "Jubileum", "Jul/midsommar"],
+    mechanics: "Batch via CSV/API, skatteklassad, export till lönesystem",
     productHref: "/personalbeloning",
-    example: "Bygg-kedja gav Sverigecheck till 4 200 anstallda pa 8 minuter. 94% inlosen.",
+    example: "Bygg-kedja gav Sverigecheck till 4 200 anställda på 8 minuter. 94% inlösen.",
     color: "#B8860B",
     colorSoft: "var(--clr-lime-soft)",
     icon: "\u2605",
@@ -46,12 +47,12 @@ const PACKAGES = [
   {
     id: "kuponger",
     name: "Spel & kampanj",
-    tagline: "Gor det lekfullt",
+    tagline: "Gör det lekfullt",
     who: "Brand & Digital",
-    triggers: ["Produktlansering", "Sasongskampanj", "Event", "Adventskampanj"],
+    triggers: ["Produktlansering", "Säsongskampanj", "Event", "Adventskampanj"],
     mechanics: "Lyckohjul, skraplott, quiz, kalender, allt kopplat till kupong",
     productHref: "/kuponger",
-    example: "FMCG-lansering med skraplott, 127 000 deltaganden pa 14 dagar, 41% inlosen.",
+    example: "FMCG-lansering med skraplott, 127 000 deltaganden på 14 dagar, 41% inlösen.",
     color: "var(--clr-navy)",
     colorSoft: "#E8EEF6",
     icon: "\u25C9",
@@ -62,7 +63,7 @@ const PACKAGES = [
     tagline: "Klassikern i butik",
     who: "Retail & FMCG",
     triggers: ["Print-kampanj", "DR-utskick", "Butikskampanj", "Magasinsbilaga"],
-    mechanics: "Tryckt check med streckkod, inloses i kassan, clearas automatiskt",
+    mechanics: "Tryckt check med streckkod, inlöses i kassan, clearas automatiskt",
     productHref: "/sverigechecken",
     example: "ICA-bilaga med Sverigecheck, 5 000+ butiker tar emot, clearing inom 48 h.",
     color: "#6B5B95",
@@ -80,13 +81,13 @@ export function PackagesHub() {
       <div className="c-container">
         {/* Intro */}
         <div style={{ maxWidth: 780, marginBottom: 72 }}>
-          <div className="c-eyebrow" style={{ marginBottom: 14 }}>Samma plattform, olika affarer</div>
+          <div className="c-eyebrow" style={{ marginBottom: 14 }}>Samma plattform, olika affärer</div>
           <h2 className="c-h2" style={{ marginBottom: 24 }}>
             Ett verktyg.<br/>Fem paketeringar.
           </h2>
           <p className="c-body-lg" style={{ color: "var(--clr-ink-2)", maxWidth: 640 }}>
-            ClearOn ar en infrastruktur for beloningar, kuponger, presentkort, vardecheckar, som redan ror sig genom 5 000+ svenska butiker.
-            Samma motor levererar losningar for marknad, kundvard, HR, kampanj och retail. Ni valjer paketering utifran vilken affar ni vill flytta.
+            ClearOn är en infrastruktur för belöningar, kuponger, presentkort, värdecheckar, som redan rör sig genom 5 000+ svenska butiker.
+            Samma motor levererar lösningar för marknad, kundvård, HR, kampanj och retail. Ni väljer paketering utifrån vilken affär ni vill flytta.
           </p>
         </div>
 
@@ -125,7 +126,7 @@ export function PackagesHub() {
             }}>
               <div style={{ fontFamily: "var(--font-mono)", fontSize: 10, letterSpacing: "0.15em", opacity: 0.7, marginBottom: 8 }}>PLATTFORMEN</div>
               <div style={{ fontSize: 22, fontWeight: 600, letterSpacing: "-0.02em", lineHeight: 1.15, marginBottom: 10 }}>ClearOn<br/>Core</div>
-              <div style={{ fontSize: 12, opacity: 0.8, lineHeight: 1.4 }}>Vardebarare,<br/>distribution, clearing</div>
+              <div style={{ fontSize: 12, opacity: 0.8, lineHeight: 1.4 }}>Värdebärare,<br/>distribution, clearing</div>
             </div>
 
             {/* Right: packages 3-5 */}
@@ -153,10 +154,10 @@ export function PackagesHub() {
 
         {/* Five tracks, detailed */}
         <div style={{ marginBottom: 40 }}>
-          <div className="c-eyebrow" style={{ marginBottom: 14 }}>Valj utgangspunkt</div>
-          <h3 className="c-h3" style={{ marginBottom: 8 }}>Vilken paketering passar er affar?</h3>
+          <div className="c-eyebrow" style={{ marginBottom: 14 }}>Välj utgångspunkt</div>
+          <h3 className="c-h3" style={{ marginBottom: 8 }}>Vilken paketering passar er affär?</h3>
           <p className="c-body" style={{ color: "var(--clr-ink-2)", maxWidth: 560, marginBottom: 40 }}>
-            De flesta kunder borjar i en paketering och vaxer in i fler. Ni behover inte valja allt fran borjan.
+            De flesta kunder börjar i en paketering och växer in i fler. Ni behöver inte välja allt från början.
           </p>
         </div>
 
@@ -286,7 +287,7 @@ function PackageCard({ p, onOpen }: { p: typeof PACKAGES[0]; onOpen: () => void 
         fontWeight: 600,
         color: p.color,
         textDecoration: "none",
-      }}>Las mer om {p.name.toLowerCase()} &rarr;</a>
+      }}>Läs mer om {p.name.toLowerCase()} &rarr;</a>
     </div>
   );
 }

@@ -7,8 +7,8 @@ type GameId = "wheel" | "scratch" | "quiz" | "calendar";
 
 const games: { id: GameId; label: string; desc: string; segment: string }[] = [
   { id: "wheel", label: "Lyckohjul", desc: "Snurra och vinn", segment: "playful-marketer" },
-  { id: "scratch", label: "Skraplott", desc: "Skrapa fram beloningen", segment: "playful-marketer" },
-  { id: "quiz", label: "Quiz", desc: "Svara ratt, vinn kupong", segment: "playful-marketer" },
+  { id: "scratch", label: "Skraplott", desc: "Skrapa fram belöningen", segment: "playful-marketer" },
+  { id: "quiz", label: "Quiz", desc: "Svara rätt, vinn kupong", segment: "playful-marketer" },
   { id: "calendar", label: "Kalender", desc: "En lucka om dagen", segment: "playful-marketer" },
 ];
 
@@ -25,12 +25,12 @@ export function GamesSection() {
     <section id="spela" style={{ padding: "96px 0", background: "var(--clr-bg-warm)" }}>
       <div className="c-container">
         <div style={{ maxWidth: 720, marginBottom: 48 }}>
-          <div className="c-eyebrow" style={{ marginBottom: 16 }}>02 &middot; Testa sjalv</div>
+          <div className="c-eyebrow" style={{ marginBottom: 16 }}>02 &middot; Testa själv</div>
           <h2 className="c-h2" style={{ marginBottom: 18 }}>
             Spelen som kunderna faktiskt vill spela.
           </h2>
           <p className="c-body-lg">
-            Varje mekanik gar att kora som standalone-kampanj eller baddas in i er app, mejl eller hemsida. Beloningen ar alltid en kupong som gar att losa in i butik.
+            Varje mekanik går att köra som standalone-kampanj eller bäddas in i er app, mejl eller hemsida. Belöningen är alltid en kupong som går att lösa in i butik.
           </p>
         </div>
 
@@ -88,7 +88,7 @@ function GameHeader({ eyebrow, title, desc, usecases }: {
       <div className="c-eyebrow" style={{ marginBottom: 10 }}>{eyebrow}</div>
       <h3 className="c-h3" style={{ marginBottom: 14, fontSize: 28 }}>{title}</h3>
       <p className="c-body" style={{ marginBottom: 24 }}>{desc}</p>
-      <div style={{ marginBottom: 8 }} className="c-eyebrow">Passar for</div>
+      <div style={{ marginBottom: 8 }} className="c-eyebrow">Passar för</div>
       <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
         {usecases.map(u => <span key={u} className="c-chip" style={{ fontSize: 12 }}>{u}</span>)}
       </div>
@@ -106,13 +106,13 @@ function WheelGame() {
 
   const slices = [
     { label: "50 kr ICA", color: "#5e9732", ink: "#fff" },
-    { label: "Forsok igen", color: "#ece7d8", ink: "#4a5344" },
+    { label: "Försök igen", color: "#ece7d8", ink: "#4a5344" },
     { label: "Glass gratis", color: "#e8864c", ink: "#fff" },
-    { label: "Forsok igen", color: "#f4f1e9", ink: "#4a5344" },
+    { label: "Försök igen", color: "#f4f1e9", ink: "#4a5344" },
     { label: "20 kr Apotek", color: "#c8e66b", ink: "#4a5a1a" },
-    { label: "Forsok igen", color: "#ece7d8", ink: "#4a5344" },
-    { label: "100 kr Hemkop", color: "#416125", ink: "#fff" },
-    { label: "Forsok igen", color: "#f4f1e9", ink: "#4a5344" },
+    { label: "Försök igen", color: "#ece7d8", ink: "#4a5344" },
+    { label: "100 kr Hemköp", color: "#416125", ink: "#fff" },
+    { label: "Försök igen", color: "#f4f1e9", ink: "#4a5344" },
   ];
   const n = slices.length;
   const sliceDeg = 360 / n;
@@ -144,8 +144,8 @@ function WheelGame() {
         <GameHeader
           eyebrow="Lyckohjul"
           title="Varje snurr en ny chans."
-          desc="Perfekt for kundklubbs-aktivering, massor, eller for att vacka en sovande CRM-bas. Satt vinstchansen, satt budgeten, vi skoter clearing."
-          usecases={["Black Friday-teaser", "Sommarkampanj", "Aktivera vilande kunder", "Massa / event"]}
+          desc="Perfekt för kundklubbs-aktivering, mässor, eller för att väcka en sovande CRM-bas. Sätt vinstchansen, sätt budgeten, vi sköter clearing."
+          usecases={["Black Friday-teaser", "Sommarkampanj", "Aktivera vilande kunder", "Mässa / event"]}
         />
       </div>
 
@@ -212,13 +212,13 @@ function WheelGame() {
         {result && !spinning && (
           <div style={{
             padding: "14px 20px",
-            background: result.label === "Forsok igen" ? "var(--clr-beige-warm)" : "var(--clr-green-soft)",
+            background: result.label === "Försök igen" ? "var(--clr-beige-warm)" : "var(--clr-green-soft)",
             borderRadius: "var(--r-md)",
             textAlign: "center",
             minWidth: 260,
           }}>
             <div className="c-eyebrow" style={{ marginBottom: 4, fontSize: 10 }}>
-              {result.label === "Forsok igen" ? "OJ" : "VINST"}
+              {result.label === "Försök igen" ? "OJ" : "VINST"}
             </div>
             <div style={{ fontSize: 20, fontWeight: 700, color: "var(--clr-green-dark)" }}>
               {result.label}
@@ -255,9 +255,9 @@ function ScratchGame() {
     ctx.fillStyle = "rgba(74,83,68,0.4)";
     ctx.font = "bold 14px monospace";
     ctx.textAlign = "center";
-    ctx.fillText("SKRAPA HAR", sizeW / 2, sizeH / 2 - 8);
+    ctx.fillText("SKRAPA HÄR", sizeW / 2, sizeH / 2 - 8);
     ctx.font = "11px monospace";
-    ctx.fillText("anvand musen eller fingret", sizeW / 2, sizeH / 2 + 14);
+    ctx.fillText("använd musen eller fingret", sizeW / 2, sizeH / 2 + 14);
     setPercent(0);
     setRevealed(false);
   }, [key]);
@@ -288,7 +288,7 @@ function ScratchGame() {
     setPercent(p);
     if (p > 45 && !revealed) {
       setRevealed(true);
-      track("game:win", { game: "scratch", prize: "Glass fran GB" });
+      track("game:win", { game: "scratch", prize: "Glass från GB" });
     }
   };
 
@@ -317,9 +317,9 @@ function ScratchGame() {
       <div>
         <GameHeader
           eyebrow="Skraplott"
-          title="Den analoga kanslan, digitalt."
-          desc="Byggs som fysisk print (utdelas i butik / per post) eller digitalt i webben, appen eller SMS:et. Alla vinner nagot, bara olika mycket."
-          usecases={["Valkomstpresent nya medlemmar", "Kompletterar stort kop", "Eventutdelning", "Tidningsbilaga"]}
+          title="Den analoga känslan, digitalt."
+          desc="Byggs som fysisk print (utdelas i butik / per post) eller digitalt i webben, appen eller SMS:et. Alla vinner något, bara olika mycket."
+          usecases={["Välkomstpresent nya medlemmar", "Kompletterar stort köp", "Eventutdelning", "Tidningsbilaga"]}
         />
       </div>
 
@@ -335,9 +335,9 @@ function ScratchGame() {
             <div style={{ fontSize: 48 }}>&#x1F366;</div>
             <div className="c-eyebrow" style={{ color: "var(--clr-green-dark)", fontSize: 10 }}>DU VANN</div>
             <div style={{ fontSize: 22, fontWeight: 700, color: "var(--clr-green-dark)", letterSpacing: "-0.01em" }}>
-              Gratis glass fran GB
+              Gratis glass från GB
             </div>
-            <div style={{ fontSize: 12, color: "var(--clr-ink-2)" }}>Varde upp till 35 kr</div>
+            <div style={{ fontSize: 12, color: "var(--clr-ink-2)" }}>Värde upp till 35 kr</div>
           </div>
           <canvas
             ref={canvasRef}
@@ -349,12 +349,12 @@ function ScratchGame() {
           />
         </div>
         <div style={{ fontSize: 12, color: "var(--clr-muted)", fontFamily: "var(--font-mono)" }}>
-          SKRAPAT {percent}% {revealed && " AVSLOJAT"}
+          SKRAPAT {percent}% {revealed && " AVSLÖJAT"}
         </div>
         <button onClick={() => setKey(k => k + 1)}
           className="c-btn c-btn--ghost"
           style={{ fontSize: 13, padding: "10px 18px" }}>
-          Borja om
+          Börja om
         </button>
       </div>
     </>
@@ -365,9 +365,9 @@ function ScratchGame() {
 
 function QuizGame() {
   const questions = [
-    { q: "Hur manga butiker loser in ClearOn-kuponger i Sverige?", opts: ["500+", "2 000+", "5 000+", "10 000+"], correct: 2 },
-    { q: "Vilket ar grundades ClearOn?", opts: ["1994", "2004", "2014", "1985"], correct: 0 },
-    { q: "Vad hander efter att en kupong scannas i kassan?", opts: ["Kunden betalar mellanskillnaden", "Butiken ater kostnaden", "ClearOn clearar automatiskt mellan varumarke och butik", "Ingenting, det ar bara symboliskt"], correct: 2 },
+    { q: "Hur många butiker löser in ClearOn-kuponger i Sverige?", opts: ["500+", "2 000+", "5 000+", "10 000+"], correct: 2 },
+    { q: "Vilket år grundades ClearOn?", opts: ["1994", "2004", "2014", "1985"], correct: 0 },
+    { q: "Vad händer efter att en kupong scannas i kassan?", opts: ["Kunden betalar mellanskillnaden", "Butiken äter kostnaden", "ClearOn clearar automatiskt mellan varumärke och butik", "Ingenting, det är bara symboliskt"], correct: 2 },
   ];
 
   const [step, setStep] = useState(0);
@@ -399,9 +399,9 @@ function QuizGame() {
       <div>
         <GameHeader
           eyebrow="Quiz"
-          title="Lar och belona samtidigt."
-          desc="Engagerar mer an en vanlig enkat. Anvand for produktkannedom, onboarding, kampanjer mot malgrupper som redan kan ditt varumarke."
-          usecases={["Enkat med incitament", "Produktlansering", "Onboarding-kampanj", "CRM-reaktivering"]}
+          title="Lär och belöna samtidigt."
+          desc="Engagerar mer än en vanlig enkät. Använd för produktkännedom, onboarding, kampanjer mot målgrupper som redan kan ditt varumärke."
+          usecases={["Enkät med incitament", "Produktlansering", "Onboarding-kampanj", "CRM-reaktivering"]}
         />
       </div>
 
@@ -416,7 +416,7 @@ function QuizGame() {
                 }} />
               ))}
             </div>
-            <div className="c-eyebrow" style={{ marginBottom: 10 }}>Fraga {step + 1} / {questions.length}</div>
+            <div className="c-eyebrow" style={{ marginBottom: 10 }}>Fråga {step + 1} / {questions.length}</div>
             <h4 style={{ fontSize: 20, fontWeight: 700, marginBottom: 24, lineHeight: 1.3, color: "var(--clr-ink)" }}>
               {questions[step].q}
             </h4>
@@ -451,15 +451,15 @@ function QuizGame() {
           </>
         ) : (
           <div style={{ textAlign: "center" }}>
-            <div className="c-eyebrow" style={{ marginBottom: 8 }}>Klar &middot; {score}/{questions.length} ratt</div>
+            <div className="c-eyebrow" style={{ marginBottom: 8 }}>Klar &middot; {score}/{questions.length} rätt</div>
             <h4 style={{ fontSize: 24, fontWeight: 700, marginBottom: 12 }}>
-              {score === questions.length ? "Fullpott!" : score >= 2 ? "Snyggt jobbat." : "Nara!"}
+              {score === questions.length ? "Fullpott!" : score >= 2 ? "Snyggt jobbat." : "Nära!"}
             </h4>
             <p className="c-body" style={{ marginBottom: 20 }}>
-              Din beloning: <strong>20 kr rabatt pa Oatly havredryck</strong>.
+              Din belöning: <strong>20 kr rabatt på Oatly havredryck</strong>.
             </p>
             <button onClick={reset} className="c-btn c-btn--ghost" style={{ fontSize: 13 }}>
-              Gor om
+              Gör om
             </button>
           </div>
         )}
@@ -504,7 +504,7 @@ function CalendarGame() {
         <GameHeader
           eyebrow="Kalender"
           title="En anledning att komma tillbaka, 12 dagar i rad."
-          desc="Klassisk julkalender, men fungerar lika bra som sommarkalender, paskaegg, eller 30-dagars onboardingkalender. Folk oppnar appen varje dag for att inte missa sin lucka."
+          desc="Klassisk julkalender, men fungerar lika bra som sommarkalender, påskägg, eller 30-dagars onboardingkalender. Folk öppnar appen varje dag för att inte missa sin lucka."
           usecases={["Adventskampanj", "Sommaraktivering", "App-retention", "30-dagars onboarding"]}
         />
       </div>
@@ -555,7 +555,7 @@ function CalendarGame() {
           })}
         </div>
         <div style={{ marginTop: 20, textAlign: "center", fontSize: 12, color: "var(--clr-muted)", fontFamily: "var(--font-mono)" }}>
-          OPPNAT {Object.keys(opened).length} / {doors.length}
+          ÖPPNAT {Object.keys(opened).length} / {doors.length}
         </div>
       </div>
     </>

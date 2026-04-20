@@ -6,44 +6,44 @@ import { useSignal } from "./SignalProvider";
 const USECASES = [
   {
     id: "elbolag", category: "Acquisition", who: "Svenskt elbolag",
-    problem: "Prenumerationer i elbranschen ar emotionellt tomma, priset avgor och Prisjakt vinner.",
-    solution: "Varje ny prenumerant fick 500 kr vardecheck att anvanda pa ICA. Kampanjen kordes i 8 veckor via Meta + display.",
-    result: ["42% hogre conversion rate vs kontrollgrupp", "ROI 3,2x pa kampanjbudget", "28% lagre churn forsta 90 dagarna"],
+    problem: "Prenumerationer i elbranschen är emotionellt tomma, priset avgör och Prisjakt vinner.",
+    solution: "Varje ny prenumerant fick 500 kr värdecheck att använda på ICA. Kampanjen kördes i 8 veckor via Meta + display.",
+    result: ["42% högre conversion rate vs kontrollgrupp", "ROI 3,2x på kampanjbudget", "28% lägre churn första 90 dagarna"],
     accent: "var(--clr-yellow)",
   },
   {
     id: "telecom-cx", category: "Customer Service", who: "Telekom-operator",
-    problem: "Arga kunder i chatten, negativa Trustpilot-omdomen, samre acquisition.",
-    solution: "Kundtjanst fick ett verktyg for att skicka kupong direkt i chatten vid nedtid eller leveransproblem. 50 kr - 200 kr beroende pa arende.",
-    result: ["+38 punkter NPS-lyft hos kompenserade", "Genomsnittlig arendetid sjunk 22%", "Trustpilot-score steg fran 3,4 till 4,1 pa ett ar"],
+    problem: "Arga kunder i chatten, negativa Trustpilot-omdömen, sämre acquisition.",
+    solution: "Kundtjänst fick ett verktyg för att skicka kupong direkt i chatten vid nedtid eller leveransproblem. 50 kr - 200 kr beroende på ärende.",
+    result: ["+38 punkter NPS-lyft hos kompenserade", "Genomsnittlig ärendetid sjönk 22%", "Trustpilot-score steg från 3,4 till 4,1 på ett år"],
     accent: "var(--clr-orange)",
   },
   {
     id: "saas-consent", category: "Consent & Data", who: "Svenskt SaaS-bolag",
-    problem: "Cookie-consent-raten lag pa 42%. Marknadsteamet flog blint pa analytics.",
-    solution: "Ersatte standard-consent med en \"Sag ja till cookies, fa 20 kr pa Apoteket\"-variant. Beloningen triggades vid aktivt ja.",
-    result: ["Consent-rate 42% till 78% pa 6 veckor", "Kostnad per ja: 14 kr", "Attributionsdata blev anvandbar igen"],
+    problem: "Cookie-consent-raten låg på 42%. Marknadsteamet flög blint på analytics.",
+    solution: "Ersatte standard-consent med en \"Säg ja till cookies, få 20 kr på Apoteket\"-variant. Belöningen triggades vid aktivt ja.",
+    result: ["Consent-rate 42% till 78% på 6 veckor", "Kostnad per ja: 14 kr", "Attributionsdata blev användbar igen"],
     accent: "var(--clr-lime)",
   },
   {
-    id: "hr-reward", category: "Internal", who: "Butikskedja med 1 200 anstallda",
-    problem: "\"Manadens medarbetare\" med en kaka i fikarummet kannes pliktskyldig. Vardecheckar via lon var byrakratiskt.",
+    id: "hr-reward", category: "Internal", who: "Butikskedja med 1 200 anställda",
+    problem: "\"Månadens medarbetare\" med en kaka i fikarummet kändes pliktskyldig. Värdecheckar via lön var byråkratiskt.",
     solution: "Chefer fick en budget att dela ut ClearOn-kuponger spontant via SMS. 100-500 kr, fungerade i matbutik, restaurang, cafe.",
-    result: ["eNPS steg fran 6 till 32 pa 9 manader", "93% av cheferna anvander verktyget minst varannan vecka", "\"Jag kande mig sedd\", vanligaste citatet i medarbetarenkat"],
+    result: ["eNPS steg från 6 till 32 på 9 månader", "93% av cheferna använder verktyget minst varannan vecka", "\"Jag kände mig sedd\", vanligaste citatet i medarbetarenkät"],
     accent: "var(--clr-teal)",
   },
   {
-    id: "fmcg-winback", category: "CRM", who: "Mejerikoncern, ledande varumarke",
-    problem: "CRM-bas pa 180 000, varav 60% inte klickat pa mejl pa 6+ manader.",
-    solution: "Reaktiveringskampanj: \"Valkommen tillbaka, gratis produkt pa huset\" via SMS till inaktiva. Ingen fraga om varfor de slutat handla.",
-    result: ["24% SMS-oppningsgrad, 11% inlosen", "68% av de som loste in handlade igen inom 30 dagar", "ROI 4,7x"],
+    id: "fmcg-winback", category: "CRM", who: "Mejerikoncern, ledande varumärke",
+    problem: "CRM-bas på 180 000, varav 60% inte klickat på mejl på 6+ månader.",
+    solution: "Reaktiveringskampanj: \"Välkommen tillbaka, gratis produkt på huset\" via SMS till inaktiva. Ingen fråga om varför de slutat handla.",
+    result: ["24% SMS-öppningsgrad, 11% inlösen", "68% av de som löste in handlade igen inom 30 dagar", "ROI 4,7x"],
     accent: "var(--clr-coral)",
   },
   {
     id: "retail-loyalty", category: "Retail", who: "Dagligvarukedja, medlemsprogram",
-    problem: "Nya medlemmar, manga registrerade sig aldrig pa appen efter skyltfonsterarvning.",
-    solution: "Vid kassan: \"Bli medlem, fa en gratis glass nu.\" Kupong digitalt till telefonen, in i appen direkt.",
-    result: ["3,1x fler medlemsregistreringar vid kassan", "Av dessa: 61% aktiverade appen samma dag", "Genomsnittlig LTV-okning 22% vs kontrollgrupp"],
+    problem: "Nya medlemmar, många registrerade sig aldrig på appen efter skyltfönstervärvning.",
+    solution: "Vid kassan: \"Bli medlem, få en gratis glass nu.\" Kupong digitalt till telefonen, in i appen direkt.",
+    result: ["3,1x fler medlemsregistreringar vid kassan", "Av dessa: 61% aktiverade appen samma dag", "Genomsnittlig LTV-ökning 22% vs kontrollgrupp"],
     accent: "var(--clr-lilac)",
   },
 ];
@@ -58,10 +58,10 @@ export function UseCases() {
         <div style={{ maxWidth: 720, marginBottom: 48 }}>
           <div className="c-eyebrow" style={{ marginBottom: 16 }}>03 &middot; Riktiga kampanjer</div>
           <h2 className="c-h2" style={{ marginBottom: 16 }}>
-            Sex satt foretag faktiskt anvander ClearOn.
+            Sex sätt företag faktiskt använder ClearOn.
           </h2>
           <p className="c-body-lg">
-            Fran elbolag till HR-team. Siffrorna ar fran anonymiserade kampanjer under 2023 och 2024.
+            Från elbolag till HR-team. Siffrorna är från anonymiserade kampanjer under 2023 och 2024.
           </p>
         </div>
 
@@ -135,7 +135,7 @@ function UseCaseCard({ uc, expanded, onToggle }: {
               <p className="c-body" style={{ fontSize: 15 }}>{uc.problem}</p>
             </div>
             <div>
-              <div className="c-eyebrow" style={{ marginBottom: 10 }}>ClearOn-losningen</div>
+              <div className="c-eyebrow" style={{ marginBottom: 10 }}>ClearOn-lösningen</div>
               <p className="c-body" style={{ fontSize: 15 }}>{uc.solution}</p>
             </div>
             <div>
