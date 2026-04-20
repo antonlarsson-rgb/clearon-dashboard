@@ -8,6 +8,10 @@ const BASE = "https://power.upsales.com/api/v2";
 const cache = new Map<string, { data: unknown; ts: number }>();
 const CACHE_TTL = 5 * 60 * 1000;
 
+export function clearCache() {
+  cache.clear();
+}
+
 async function cachedFetch<T>(key: string, fetcher: () => Promise<T>, fallback: T): Promise<T> {
   const cached = cache.get(key);
   if (cached && Date.now() - cached.ts < CACHE_TTL) return cached.data as T;
