@@ -3,449 +3,268 @@
 import { useState } from "react";
 import { useSignal } from "./SignalProvider";
 
-const CAMPAIGNS = [
-  {
-    id: "ica",
-    brand: "ICA",
-    color: "#e3000b",
-    message: "Hej! Har ar din kupong pa 25 kr rabatt pa ditt nasta kop hos ICA. Klicka for att aktivera:",
-    landingTitle: "25 kr rabatt",
-    landingDesc: "Giltig i alla ICA-butiker",
-  },
-  {
-    id: "hm",
-    brand: "H&M",
-    color: "#222",
-    message: "Valkomstpresent fran H&M! 50 kr rabatt pa kop over 300 kr. Aktivera har:",
-    landingTitle: "50 kr rabatt",
-    landingDesc: "Kop over 300 kr",
-  },
-  {
-    id: "apoteket",
-    brand: "Apoteket",
-    color: "#00843d",
-    message: "Tack for ditt kop! Har ar 20% rabatt pa din nasta bestallning. Oppna kupong:",
-    landingTitle: "20% rabatt",
-    landingDesc: "Nasta bestallning",
-  },
-];
-
-type DemoStep = "select" | "sms" | "landing" | "redeemed";
+const campaigns: Record<string, { brand: string; offer: string; color: string; icon: string }> = {
+  ica: { brand: "ICA", offer: "20 kr pa OATLY Havredryck", color: "#e70713", icon: "ICA" },
+  hm: { brand: "H&M Home", offer: "150 kr valkomstcheck", color: "#222", icon: "H&M" },
+  apoteket: { brand: "Apoteket", offer: "Gratis Multivitamin (50 st)", color: "#00994d", icon: "Apo" },
+};
 
 export function SmsDemo() {
   const { track } = useSignal();
-  const [campaign, setCampaign] = useState(CAMPAIGNS[0]);
-  const [step, setStep] = useState<DemoStep>("select");
-  const [phone, setPhone] = useState("");
+  const [phone, setPhone] = useState("070-123 45 67");
+  const [step, setStep] = useState(0);
+  const [campaign, setCampaign] = useState("ica");
 
-  const handleSend = () => {
-    if (!phone) return;
-    track("sms:send", { campaign: campaign.id, phone_length: phone.length });
-    setStep("sms");
+  const c = campaigns[campaign];
+
+  const send = () => {
+    track("sms:send", { phone, campaign });
+    setStep(1);
+    setTimeout(() => setStep(2), 900);
+    setTimeout(() => setStep(3), 3800);
   };
 
-  const advance = () => {
-    const steps: DemoStep[] = ["select", "sms", "landing", "redeemed"];
-    const idx = steps.indexOf(step);
-    if (idx < steps.length - 1) {
-      setStep(steps[idx + 1]);
-    }
-  };
-
-  const reset = () => {
-    setStep("select");
-    setPhone("");
-  };
+  const reset = () => setStep(0);
 
   return (
-    <section
-      style={{
-        padding: "80px 0",
-        background: "var(--clr-surface-alt)",
-      }}
-    >
+    <section id="sms-demo" style={{ padding: "120px 0", background: "var(--clr-surface-alt)", borderTop: "1px solid var(--clr-line)", borderBottom: "1px solid var(--clr-line)" }}>
       <div className="c-container">
-        <div style={{ textAlign: "center", marginBottom: 40 }}>
-          <div className="c-eyebrow" style={{ marginBottom: 12 }}>
-            Prova sjalv
-          </div>
-          <h2 className="c-h2">Se hur en SMS-kupong fungerar</h2>
-          <p
-            className="c-body"
-            style={{
-              maxWidth: 480,
-              margin: "12px auto 0",
-              color: "var(--clr-muted)",
-            }}
-          >
-            Valj ett varumarke, fyll i ett telefonnummer (sparas ej) och se
-            hela flodet.
-          </p>
-        </div>
+        <div style={{ display: "grid", gridTemplateColumns: "1.1fr 1fr", gap: 80, alignItems: "center" }} className="smsdemo-grid">
+          <div>
+            <div className="c-eyebrow" style={{ marginBottom: 14 }}>Live demo, prova sjalv</div>
+            <h2 className="c-h2" style={{ marginBottom: 20 }}>Fran kampanj till kassa.<br/>Prova flodet.</h2>
+            <p className="c-body-lg" style={{ marginBottom: 32, maxWidth: 520 }}>
+              Skriv in ett (fiktivt) telefonnummer och skicka ett exempel-erbjudande.
+              Se hur mottagaren far SMS, oppnar sin vardebarare och loser in i butik.
+            </p>
 
-        <div
-          style={{
-            display: "flex",
-            gap: 40,
-            justifyContent: "center",
-            alignItems: "flex-start",
-            flexWrap: "wrap",
-          }}
-        >
-          {/* Left: controls */}
-          <div style={{ maxWidth: 360, flex: "1 1 320px" }}>
-            {/* Campaign selector */}
-            <div style={{ marginBottom: 24 }}>
-              <div
-                style={{
-                  fontSize: 12,
-                  fontWeight: 700,
-                  color: "var(--clr-muted)",
-                  marginBottom: 8,
-                  fontFamily: "var(--font-open-sans), sans-serif",
-                  textTransform: "uppercase",
-                  letterSpacing: "0.05em",
-                }}
-              >
-                Valj varumarke
-              </div>
-              <div style={{ display: "flex", gap: 8 }}>
-                {CAMPAIGNS.map((c) => (
+            <div style={{ marginBottom: 20 }}>
+              <label style={{ display: "block", fontSize: 13, fontWeight: 500, color: "var(--clr-ink-2)", marginBottom: 8 }}>
+                Valj kampanj
+              </label>
+              <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                {Object.entries(campaigns).map(([k, v]) => (
                   <button
-                    key={c.id}
-                    onClick={() => {
-                      setCampaign(c);
-                      reset();
-                    }}
+                    key={k}
+                    onClick={() => { setCampaign(k); reset(); }}
                     style={{
-                      padding: "8px 16px",
+                      padding: "10px 16px",
+                      background: campaign === k ? "var(--clr-navy)" : "#fff",
+                      color: campaign === k ? "#fff" : "var(--clr-ink)",
+                      border: `1px solid ${campaign === k ? "var(--clr-navy)" : "var(--clr-line)"}`,
                       borderRadius: "var(--r-pill)",
-                      border:
-                        campaign.id === c.id
-                          ? `2px solid ${c.color}`
-                          : "1.5px solid var(--clr-line)",
-                      background:
-                        campaign.id === c.id
-                          ? c.color
-                          : "var(--clr-cl-surface)",
-                      color: campaign.id === c.id ? "#fff" : "var(--clr-ink)",
-                      fontSize: 13,
-                      fontWeight: 700,
-                      cursor: "pointer",
-                      fontFamily: "var(--font-open-sans), sans-serif",
+                      fontSize: 13, fontWeight: 500, cursor: "pointer",
                     }}
-                  >
-                    {c.brand}
-                  </button>
+                  >{v.brand}</button>
                 ))}
               </div>
             </div>
 
-            {step === "select" && (
-              <div>
-                <div
+            <div style={{ display: "flex", gap: 10, alignItems: "end", flexWrap: "wrap" }}>
+              <div style={{ flex: 1, minWidth: 200 }}>
+                <label style={{ display: "block", fontSize: 13, fontWeight: 500, color: "var(--clr-ink-2)", marginBottom: 8 }}>
+                  Telefonnummer
+                </label>
+                <input
+                  value={phone}
+                  onChange={e => setPhone(e.target.value)}
                   style={{
-                    fontSize: 12,
-                    fontWeight: 700,
-                    color: "var(--clr-muted)",
-                    marginBottom: 8,
-                    fontFamily: "var(--font-open-sans), sans-serif",
-                    textTransform: "uppercase",
-                    letterSpacing: "0.05em",
+                    width: "100%", padding: "14px 16px",
+                    border: "1px solid var(--clr-line)", background: "#fff",
+                    borderRadius: "var(--r-sm)", fontSize: 15, fontFamily: "var(--font-mono)",
                   }}
-                >
-                  Telefonnummer (demo)
-                </div>
-                <div style={{ display: "flex", gap: 8 }}>
-                  <input
-                    type="tel"
-                    placeholder="070 123 45 67"
-                    value={phone}
-                    onChange={(e) => setPhone(e.target.value)}
-                    style={{
-                      flex: 1,
-                      padding: "10px 16px",
-                      borderRadius: "var(--r-sm)",
-                      border: "1.5px solid var(--clr-line)",
-                      fontFamily: "var(--font-open-sans), sans-serif",
-                      fontSize: 14,
-                      outline: "none",
-                      background: "var(--clr-cl-surface)",
-                    }}
-                  />
-                  <button
-                    onClick={handleSend}
-                    disabled={!phone}
-                    className="c-btn c-btn--primary"
-                    style={{
-                      padding: "10px 20px",
-                      fontSize: 13,
-                      opacity: phone ? 1 : 0.5,
-                    }}
-                  >
-                    Skicka
-                  </button>
-                </div>
-                <p
-                  style={{
-                    fontSize: 11,
-                    color: "var(--clr-muted)",
-                    marginTop: 8,
-                    fontFamily: "var(--font-open-sans), sans-serif",
-                  }}
-                >
-                  Inget SMS skickas. Det ar en visuell demo.
-                </p>
+                />
               </div>
-            )}
+              <button
+                onClick={send}
+                disabled={step > 0 && step < 3}
+                className="c-btn c-btn--primary"
+                style={{ height: 48, minWidth: 150, justifyContent: "center", opacity: step > 0 && step < 3 ? 0.5 : 1 }}
+              >
+                {step === 0 ? "Skicka SMS" : step < 3 ? "Skickar..." : "Skicka igen"}
+              </button>
+            </div>
 
-            {step !== "select" && (
-              <div>
-                <div style={{ display: "flex", gap: 8, marginBottom: 16 }}>
-                  {(["sms", "landing", "redeemed"] as DemoStep[]).map((s, i) => (
-                    <div
-                      key={s}
-                      style={{
-                        flex: 1,
-                        textAlign: "center",
-                        padding: "6px 0",
-                        borderBottom: `2px solid ${
-                          step === s
-                            ? "var(--clr-green)"
-                            : "var(--clr-line)"
-                        }`,
-                        fontSize: 11,
-                        fontWeight: 700,
-                        color:
-                          step === s
-                            ? "var(--clr-green)"
-                            : "var(--clr-muted)",
-                        fontFamily: "var(--font-open-sans), sans-serif",
-                        cursor: "pointer",
-                      }}
-                      onClick={() => setStep(s)}
-                    >
-                      {i + 1}. {s === "sms" ? "SMS" : s === "landing" ? "Kupong" : "Inlost"}
-                    </div>
-                  ))}
-                </div>
-                <button
-                  onClick={step === "redeemed" ? reset : advance}
-                  className="c-btn c-btn--primary"
-                  style={{ width: "100%", justifyContent: "center", fontSize: 13 }}
-                >
-                  {step === "redeemed" ? "Borja om" : "Nasta steg →"}
-                </button>
-              </div>
-            )}
+            <div style={{ marginTop: 28, display: "flex", gap: 24, color: "var(--clr-muted)", fontSize: 13, fontFamily: "var(--font-mono)", letterSpacing: "0.04em" }}>
+              <StepIndicator n="1" label="SKICKA" active={step >= 1} />
+              <StepIndicator n="2" label="SMS" active={step >= 2} />
+              <StepIndicator n="3" label="OPPNA" active={step >= 3} />
+              <StepIndicator n="4" label="BUTIK" active={step >= 4} />
+            </div>
           </div>
 
-          {/* Right: iPhone mock */}
-          <div
-            style={{
-              width: 280,
-              minHeight: 500,
-              background: "#1a1a1a",
-              borderRadius: 36,
-              padding: "48px 16px 32px",
-              position: "relative",
+          {/* Phone mock */}
+          <div style={{ display: "flex", justifyContent: "center" }}>
+            <div style={{
+              width: 300, height: 600,
+              background: "#0b1220",
+              borderRadius: 48,
+              padding: 10,
               boxShadow: "var(--sh-xl)",
-              flex: "0 0 280px",
-            }}
-          >
-            {/* Notch */}
-            <div
-              style={{
-                position: "absolute",
-                top: 12,
-                left: "50%",
-                transform: "translateX(-50%)",
-                width: 80,
-                height: 24,
-                borderRadius: 12,
-                background: "#000",
-              }}
-            />
-
-            {/* Screen content */}
-            <div
-              style={{
-                background: "#fff",
-                borderRadius: 20,
-                minHeight: 400,
+              position: "relative",
+              border: "1px solid #222",
+            }}>
+              <div style={{
+                width: "100%", height: "100%",
+                background: "#f5f5f7",
+                borderRadius: 38,
                 overflow: "hidden",
-              }}
-            >
-              {step === "select" && (
-                <div
-                  style={{
-                    padding: 24,
-                    textAlign: "center",
-                    color: "#999",
-                    fontSize: 14,
-                    fontFamily: "var(--font-open-sans), sans-serif",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    minHeight: 400,
-                  }}
-                >
-                  Skriv in ett nummer och klicka Skicka for att starta demon
-                </div>
-              )}
+                position: "relative",
+              }}>
+                {/* Notch */}
+                <div style={{
+                  position: "absolute", top: 0, left: "50%", transform: "translateX(-50%)",
+                  width: 110, height: 28, background: "#0b1220",
+                  borderRadius: "0 0 16px 16px", zIndex: 10,
+                }} />
 
-              {step === "sms" && (
-                <div style={{ padding: 16 }}>
-                  <div
-                    style={{
-                      textAlign: "center",
-                      fontSize: 11,
-                      color: "#999",
-                      marginBottom: 16,
-                      fontFamily: "var(--font-open-sans), sans-serif",
-                    }}
-                  >
-                    SMS fran {campaign.brand}
-                  </div>
-                  <div
-                    style={{
-                      background: "#e8e8e8",
-                      borderRadius: 16,
-                      padding: "12px 14px",
-                      fontSize: 14,
-                      lineHeight: 1.5,
-                      color: "#333",
-                      fontFamily: "var(--font-open-sans), sans-serif",
-                      maxWidth: "80%",
-                    }}
-                  >
-                    {campaign.message}
-                    <div
-                      style={{
-                        color: "#007AFF",
-                        fontSize: 13,
-                        marginTop: 8,
-                        textDecoration: "underline",
-                      }}
-                    >
-                      clearon.live/k/{campaign.id}
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {step === "landing" && (
-                <div>
-                  <div
-                    style={{
-                      background: campaign.color,
-                      padding: "32px 16px",
-                      textAlign: "center",
-                    }}
-                  >
-                    <div
-                      style={{
-                        color: "#fff",
-                        fontSize: 12,
-                        fontWeight: 700,
-                        marginBottom: 4,
-                        fontFamily: "var(--font-open-sans), sans-serif",
-                      }}
-                    >
-                      {campaign.brand}
-                    </div>
-                    <div
-                      style={{
-                        color: "#fff",
-                        fontSize: 28,
-                        fontWeight: 800,
-                        fontFamily: "var(--font-open-sans), sans-serif",
-                      }}
-                    >
-                      {campaign.landingTitle}
-                    </div>
-                    <div
-                      style={{
-                        color: "rgba(255,255,255,0.8)",
-                        fontSize: 13,
-                        marginTop: 4,
-                        fontFamily: "var(--font-open-sans), sans-serif",
-                      }}
-                    >
-                      {campaign.landingDesc}
-                    </div>
-                  </div>
-                  <div style={{ padding: 16, textAlign: "center" }}>
-                    <div
-                      style={{
-                        width: 120,
-                        height: 120,
-                        margin: "16px auto",
-                        background: "#f0f0f0",
-                        borderRadius: 8,
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        fontSize: 11,
-                        color: "#999",
-                        fontFamily: "var(--font-open-sans), sans-serif",
-                      }}
-                    >
-                      [QR-kod]
-                    </div>
-                    <p
-                      style={{
-                        fontSize: 12,
-                        color: "#666",
-                        fontFamily: "var(--font-open-sans), sans-serif",
-                      }}
-                    >
-                      Visa denna QR-kod i kassan
-                    </p>
-                  </div>
-                </div>
-              )}
-
-              {step === "redeemed" && (
-                <div
-                  style={{
-                    padding: 32,
-                    textAlign: "center",
-                    display: "flex",
-                    flexDirection: "column",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    minHeight: 400,
-                  }}
-                >
-                  <div style={{ fontSize: 48, marginBottom: 16 }}>✅</div>
-                  <div
-                    style={{
-                      fontSize: 20,
-                      fontWeight: 800,
-                      color: "#2D6A4F",
-                      fontFamily: "var(--font-open-sans), sans-serif",
-                      marginBottom: 8,
-                    }}
-                  >
-                    Inlost!
-                  </div>
-                  <p
-                    style={{
-                      fontSize: 13,
-                      color: "#666",
-                      fontFamily: "var(--font-open-sans), sans-serif",
-                    }}
-                  >
-                    Kupongen ar inlost och avraknad automatiskt via ClearOns
-                    clearing-infrastruktur.
-                  </p>
-                </div>
-              )}
+                {step <= 1 && <HomeScreen />}
+                {step === 2 && <SmsScreen campaign={c} onOpen={() => setStep(3)} />}
+                {step === 3 && <LandingScreen campaign={c} onRedeem={() => setStep(4)} />}
+                {step === 4 && <RedeemedScreen campaign={c} onBack={() => setStep(0)} />}
+              </div>
             </div>
           </div>
         </div>
       </div>
+
+      <style>{`
+        @media (max-width: 960px) {
+          .smsdemo-grid { grid-template-columns: 1fr !important; gap: 48px !important; }
+        }
+      `}</style>
     </section>
+  );
+}
+
+function StepIndicator({ n, label, active }: { n: string; label: string; active: boolean }) {
+  return (
+    <div style={{ display: "flex", alignItems: "center", gap: 6, opacity: active ? 1 : 0.4, transition: "opacity 0.3s" }}>
+      <span style={{
+        width: 18, height: 18, borderRadius: "50%",
+        background: active ? "var(--clr-teal)" : "var(--clr-line)",
+        display: "inline-flex", alignItems: "center", justifyContent: "center",
+        color: "#fff", fontSize: 10, fontWeight: 700,
+      }}>{n}</span>
+      <span>{label}</span>
+    </div>
+  );
+}
+
+function HomeScreen() {
+  const t = new Date();
+  const hh = String(t.getHours()).padStart(2, "0");
+  const mm = String(t.getMinutes()).padStart(2, "0");
+  return (
+    <div style={{
+      width: "100%", height: "100%",
+      background: "linear-gradient(180deg, #a5b8d6 0%, #4c6ea0 100%)",
+      display: "flex", flexDirection: "column", alignItems: "center", padding: "60px 0 0",
+      color: "#fff",
+    }}>
+      <div style={{ fontSize: 14, marginTop: 6 }}>fredag 20 april</div>
+      <div style={{ fontSize: 72, fontWeight: 200, letterSpacing: "-0.04em", marginTop: -4 }}>{hh}:{mm}</div>
+    </div>
+  );
+}
+
+function SmsScreen({ campaign, onOpen }: { campaign: { brand: string; offer: string; color: string }; onOpen: () => void }) {
+  return (
+    <div style={{ width: "100%", height: "100%", background: "#f5f5f7", padding: "36px 16px 16px" }}>
+      <div style={{ textAlign: "center", fontSize: 11, color: "#888", marginBottom: 14, fontFamily: "var(--font-mono)" }}>
+        SMS &middot; nu
+      </div>
+      <div style={{
+        background: "#fff", padding: 14, borderRadius: 16, boxShadow: "0 2px 8px rgba(0,0,0,0.06)",
+      }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
+          <div style={{ fontWeight: 600, fontSize: 14 }}>{campaign.brand}</div>
+          <div style={{ fontSize: 11, color: "#888" }}>nu</div>
+        </div>
+        <div style={{ fontSize: 13, lineHeight: 1.45, color: "#222" }}>
+          Tack for att du ar kund! Har ar en vardecheck pa {campaign.offer.toLowerCase()}. Galler i 30 dagar i 5 000+ butiker.
+          <br/><br/>
+          <span style={{ color: campaign.color, textDecoration: "underline", cursor: "pointer" }}
+            onClick={onOpen}>
+            clearon.se/v/7A3F9X
+          </span>
+        </div>
+      </div>
+      <button
+        onClick={onOpen}
+        style={{
+          marginTop: 20, width: "100%",
+          padding: 12, background: "var(--clr-navy)", color: "#fff",
+          border: "none", borderRadius: 12, fontSize: 13, fontWeight: 500, cursor: "pointer",
+        }}>
+        Oppna lanken &rarr;
+      </button>
+    </div>
+  );
+}
+
+function LandingScreen({ campaign, onRedeem }: { campaign: { brand: string; offer: string; color: string }; onRedeem: () => void }) {
+  return (
+    <div style={{ width: "100%", height: "100%", background: "#fff", padding: "36px 16px 16px", overflow: "auto" }}>
+      <div style={{
+        background: campaign.color, color: "#fff",
+        padding: 14, borderRadius: 12, marginBottom: 14, textAlign: "center",
+        fontWeight: 700, fontSize: 16,
+      }}>
+        {campaign.brand}
+      </div>
+      <div style={{ fontSize: 13, color: "#888", marginBottom: 6, fontFamily: "var(--font-mono)" }}>DIN VARDECHECK</div>
+      <div style={{ fontSize: 20, fontWeight: 600, lineHeight: 1.2, marginBottom: 14 }}>{campaign.offer}</div>
+
+      <div style={{
+        padding: 16, background: "#fafaf7",
+        border: "2px dashed var(--clr-line)", borderRadius: 12,
+        textAlign: "center", marginBottom: 14,
+      }}>
+        <div style={{ fontFamily: "var(--font-mono)", fontSize: 10, color: "#888", letterSpacing: "0.1em" }}>EAN</div>
+        <svg width="100%" height="60" viewBox="0 0 200 60" style={{ marginTop: 6 }}>
+          {Array.from({ length: 40 }).map((_, i) => (
+            <rect key={i} x={i * 5} y="0" width={i % 3 === 0 ? 3 : 1.5} height="50" fill="#0b1220" />
+          ))}
+        </svg>
+        <div style={{ fontFamily: "var(--font-mono)", fontSize: 11, marginTop: 6 }}>7 300123 45678 9</div>
+      </div>
+
+      <button onClick={onRedeem} style={{
+        width: "100%", padding: 14, background: "var(--clr-navy)", color: "#fff",
+        border: "none", borderRadius: 12, fontSize: 14, fontWeight: 500, cursor: "pointer",
+      }}>
+        Visa i kassan &rarr;
+      </button>
+      <div style={{ fontSize: 11, color: "#888", textAlign: "center", marginTop: 10 }}>
+        Giltig i 5 000+ butiker &middot; t.o.m. 20 maj
+      </div>
+    </div>
+  );
+}
+
+function RedeemedScreen({ campaign, onBack }: { campaign: { brand: string }; onBack: () => void }) {
+  return (
+    <div style={{
+      width: "100%", height: "100%",
+      background: "linear-gradient(160deg, var(--clr-teal) 0%, var(--clr-navy) 100%)",
+      display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
+      padding: 24, color: "#fff", textAlign: "center",
+    }}>
+      <div style={{
+        width: 64, height: 64, borderRadius: "50%", background: "rgba(255,255,255,0.2)",
+        display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 18,
+      }}>
+        <svg width="32" height="32" viewBox="0 0 32 32"><path d="M8 16 l5 5 L24 10" stroke="#fff" strokeWidth="3" fill="none" strokeLinecap="round" strokeLinejoin="round"/></svg>
+      </div>
+      <div style={{ fontSize: 22, fontWeight: 600, marginBottom: 8, letterSpacing: "-0.02em" }}>Inlost!</div>
+      <div style={{ fontSize: 13, opacity: 0.85, marginBottom: 20 }}>Clearingen sker automatiskt mellan butik och {campaign.brand}.</div>
+      <button onClick={onBack} style={{
+        padding: "10px 18px", background: "rgba(255,255,255,0.2)", color: "#fff",
+        border: "1px solid rgba(255,255,255,0.3)", borderRadius: 999, fontSize: 13, cursor: "pointer",
+      }}>
+        Borja om
+      </button>
+    </div>
   );
 }

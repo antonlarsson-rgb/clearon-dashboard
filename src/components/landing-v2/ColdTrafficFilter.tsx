@@ -4,92 +4,73 @@ import { useState, useEffect } from "react";
 import { useSignal } from "./SignalProvider";
 
 export function ColdTrafficFilter() {
+  const [answered, setAnswered] = useState<string | null>(null);
   const { track } = useSignal();
-  const [visible, setVisible] = useState(false);
-  const [answer, setAnswer] = useState<string | null>(null);
 
   useEffect(() => {
-    const stored = localStorage.getItem("clr_b2c_filter");
-    if (stored) {
-      setAnswer(stored);
-    } else {
-      setVisible(true);
+    try {
+      const stored = localStorage.getItem("clearon-ctf");
+      if (stored) setAnswered(stored);
+    } catch {
+      // ignore
     }
   }, []);
 
-  const handleAnswer = (val: "ja" | "nej") => {
-    localStorage.setItem("clr_b2c_filter", val);
-    setAnswer(val);
-    setVisible(false);
-    track("filter:b2c", { answer: val });
+  const answer = (v: string) => {
+    setAnswered(v);
+    try { localStorage.setItem("clearon-ctf", v); } catch {}
+    track("filter:b2c", { answer: v });
   };
 
-  if (!visible || answer) return null;
+  if (answered === "yes") return null;
+
+  if (answered === "no") {
+    return (
+      <div style={{
+        position: "sticky", top: 64, zIndex: 50,
+        background: "var(--clr-beige-warm)",
+        borderBottom: "1px solid var(--clr-line)",
+        padding: "12px 0",
+      }}>
+        <div className="c-container" style={{ display: "flex", gap: 16, alignItems: "center", flexWrap: "wrap", fontSize: 14 }}>
+          <span style={{ color: "var(--clr-ink-2)", flex: 1, minWidth: 200 }}>
+            Tack for att du tittade. ClearOn hjalper foretag som saljer till konsument i Sverige, kanske ar vi inte ratt match idag, men vi gor det garna om nagot andras.
+          </span>
+          <button onClick={() => answer("yes")} style={{
+            background: "transparent", border: "none", fontSize: 13, color: "var(--clr-green-dark)",
+            textDecoration: "underline", cursor: "pointer",
+          }}>
+            Fortsatt anda &rarr;
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <div
-      style={{
-        background: "var(--clr-green)",
-        color: "#fff",
-        padding: "10px 24px",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        gap: 16,
-        fontFamily: "var(--font-open-sans), sans-serif",
-        fontSize: 14,
-        fontWeight: 600,
-        position: "relative",
-        zIndex: 60,
-      }}
-    >
-      <span>Saljer ni till konsument i Sverige?</span>
-      <button
-        onClick={() => handleAnswer("ja")}
-        style={{
-          background: "#fff",
-          color: "var(--clr-green-deep)",
-          border: "none",
-          borderRadius: "var(--r-pill)",
-          padding: "5px 18px",
-          fontSize: 13,
-          fontWeight: 700,
-          cursor: "pointer",
-        }}
-      >
-        Ja
-      </button>
-      <button
-        onClick={() => handleAnswer("nej")}
-        style={{
-          background: "transparent",
-          color: "#fff",
-          border: "1.5px solid rgba(255,255,255,0.5)",
-          borderRadius: "var(--r-pill)",
-          padding: "5px 18px",
-          fontSize: 13,
-          fontWeight: 700,
-          cursor: "pointer",
-        }}
-      >
-        Nej
-      </button>
-      <button
-        onClick={() => setVisible(false)}
-        style={{
-          position: "absolute",
-          right: 16,
-          background: "none",
-          border: "none",
-          color: "rgba(255,255,255,0.6)",
-          fontSize: 18,
-          cursor: "pointer",
-          lineHeight: 1,
-        }}
-        aria-label="Stang"
-      >
-        x
-      </button>
+    <div style={{
+      background: "var(--clr-green-dark)", color: "#fff",
+      padding: "14px 0",
+    }}>
+      <div className="c-container" style={{ display: "flex", gap: 16, alignItems: "center", flexWrap: "wrap", fontSize: 14 }}>
+        <span style={{ fontFamily: "var(--font-mono)", fontSize: 11, letterSpacing: "0.08em", opacity: 0.7 }}>
+          SNABB KOLL
+        </span>
+        <span style={{ flex: 1, minWidth: 240 }}>
+          Saljer ni till konsument i Sverige? Det ar dar ClearOn fungerar bast.
+        </span>
+        <div style={{ display: "flex", gap: 8 }}>
+          <button onClick={() => answer("yes")} style={{
+            padding: "8px 16px", background: "var(--clr-lime)", color: "var(--clr-green-dark)",
+            border: "none", borderRadius: "var(--r-pill)", fontSize: 13, fontWeight: 600, cursor: "pointer",
+          }}>Ja</button>
+          <button onClick={() => answer("no")} style={{
+            padding: "8px 16px", background: "transparent", color: "#fff",
+            border: "1px solid rgba(255,255,255,0.4)", borderRadius: "var(--r-pill)",
+            fontSize: 13, fontWeight: 500, cursor: "pointer",
+          }}>Nej</button>
+        </div>
+      </div>
     </div>
   );
 }

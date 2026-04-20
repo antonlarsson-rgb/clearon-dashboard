@@ -19,13 +19,12 @@ import { Testimonials } from "@/components/landing-v2/Testimonials";
 import { CtaFooter } from "@/components/landing-v2/CtaFooter";
 
 export default function SiteLandingPage() {
-  const [role, setRole] = useState<string | null>(null);
+  const [role, setRole] = useState("default");
 
   return (
     <SignalProvider>
       <div
         style={{
-          fontFamily: "var(--font-open-sans), sans-serif",
           background: "var(--clr-beige)",
           minHeight: "100vh",
         }}

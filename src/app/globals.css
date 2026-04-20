@@ -121,11 +121,23 @@ body {
   --clr-surface-alt: #faf8f1;
   --clr-line: #e0dbcb;
   --clr-line-soft: #edeadd;
-  --clr-navy: #3a453a;
-  --clr-teal: #5e9732;
-  --clr-coral: #e8864c;
-  --clr-yellow: #c8e66b;
+  --clr-bg: var(--clr-beige);
+  --clr-bg-warm: var(--clr-beige-warm);
+  --clr-surface: #ffffff;
+  --clr-navy: var(--clr-green-dark);
+  --clr-navy-deep: #2a322a;
+  --clr-navy-soft: var(--clr-green-deep);
+  --clr-teal: var(--clr-green);
+  --clr-teal-soft: var(--clr-green-soft);
+  --clr-coral: var(--clr-orange);
+  --clr-coral-soft: var(--clr-orange-soft);
+  --clr-yellow: var(--clr-lime);
+  --clr-yellow-soft: var(--clr-lime-soft);
   --clr-lilac: #a8b896;
+
+  /* Type */
+  --font-sans: "Open Sans", "Helvetica Neue", Helvetica, Arial, sans-serif;
+  --font-display: "Open Sans", "Helvetica Neue", Helvetica, Arial, sans-serif;
 
   /* Radii */
   --r-xs: 6px;
@@ -150,11 +162,11 @@ body {
    ============================== */
 
 .c-container {
-  max-width: 1200px;
+  max-width: 1280px;
   margin-left: auto;
   margin-right: auto;
-  padding-left: 24px;
-  padding-right: 24px;
+  padding-left: 32px;
+  padding-right: 32px;
 }
 
 @media (max-width: 640px) {
@@ -165,37 +177,38 @@ body {
 }
 
 .c-eyebrow {
-  font-family: var(--font-jetbrains), monospace;
-  font-size: 11px;
-  font-weight: 600;
-  letter-spacing: 0.12em;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 0.14em;
   text-transform: uppercase;
-  color: var(--clr-green);
+  color: var(--clr-muted);
 }
 
 .c-h1 {
-  font-family: var(--font-open-sans), sans-serif;
-  font-size: clamp(2rem, 5vw, 3.25rem);
-  font-weight: 800;
+  font-family: var(--font-display);
+  font-size: clamp(34px, 6vw, 84px);
+  font-weight: 700;
+  line-height: 1.04;
+  letter-spacing: -0.025em;
+  color: var(--clr-ink);
+}
+
+.c-h2 {
+  font-family: var(--font-display);
+  font-size: clamp(28px, 4vw, 48px);
+  font-weight: 600;
   line-height: 1.1;
   letter-spacing: -0.02em;
   color: var(--clr-ink);
 }
 
-.c-h2 {
-  font-family: var(--font-open-sans), sans-serif;
-  font-size: clamp(1.5rem, 3.5vw, 2.25rem);
-  font-weight: 700;
-  line-height: 1.15;
-  letter-spacing: -0.01em;
-  color: var(--clr-ink);
-}
-
 .c-h3 {
-  font-family: var(--font-open-sans), sans-serif;
-  font-size: clamp(1.125rem, 2.5vw, 1.5rem);
-  font-weight: 700;
-  line-height: 1.25;
+  font-family: var(--font-display);
+  font-size: clamp(20px, 2.5vw, 28px);
+  font-weight: 600;
+  line-height: 1.2;
+  letter-spacing: -0.015em;
   color: var(--clr-ink);
 }
 

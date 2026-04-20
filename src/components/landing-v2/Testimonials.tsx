@@ -1,155 +1,99 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect } from "react";
+import { useSignal } from "./SignalProvider";
 
-const TESTIMONIALS = [
+const items = [
   {
-    quote:
-      "Vardecheckarna ar enkla att hantera och ger guldkant pa vardagen for mottagaren. Vi har halverat var administration for personalbeloning.",
-    name: "Lina Arwidsson",
-    title: "HR-chef, Vision",
-    avatar: "LA",
+    quote: "Vardecheckarna ar enkla att hantera och ger guldkant pa vardagen for mottagaren.",
+    author: "Lina Arwidsson",
+    role: "Kommunikationsstrateg, Vision",
+    accent: "var(--clr-teal)",
   },
   {
-    quote:
-      "ClearOn gav oss full sparbarhet fran kampanj till kassa. Vi ser exakt vilka butiker som presterar bast och kan optimera i realtid.",
-    name: "Erik Johansson",
-    title: "Trade Marketing Manager, Orkla",
-    avatar: "EJ",
+    quote: "Vi kompenserar drabbade kunder inom minuter istallet for dagar. NPS-kurvan vande helt.",
+    author: "Marcus Ek",
+    role: "Head of Customer Service, Retail Nord",
+    accent: "var(--clr-coral)",
   },
   {
-    quote:
-      "Interactive Engage okade var forsaljning med 16% utover vad en vanlig kupongkampanj ger. Spelmekaniken skapar ett engagemang vi aldrig sett forut.",
-    name: "Sara Lindqvist",
-    title: "Marknadschef, Axfood",
-    avatar: "SL",
+    quote: "Under Black Week skickade vi 280 000 kuponger. Inlosen lag pa 34%, tre ganger var print-kampanj.",
+    author: "Sara Lindqvist",
+    role: "Campaign Lead, FMCG-varumarke",
+    accent: "var(--clr-yellow)",
   },
   {
-    quote:
-      "Att kunna skicka digital kompensation direkt i kundtjanstsamtalet har forandrat hur vi hanterar klagomal. 70% av kunderna stannar kvar.",
-    name: "Marcus Berg",
-    title: "Kundtjanstchef, Telia",
-    avatar: "MB",
+    quote: "Personalbeloningen gick fran en logistikmardrom till ett knapptryck. Fantastiskt.",
+    author: "Johanna Berg",
+    role: "HR-chef, Serviceforetag",
+    accent: "var(--clr-lime)",
   },
 ];
 
-export function Testimonials() {
-  const [active, setActive] = useState(0);
+const arrowBtn: React.CSSProperties = {
+  width: 44, height: 44, borderRadius: "50%",
+  background: "transparent", border: "1px solid var(--clr-line)",
+  color: "var(--clr-ink)", cursor: "pointer", fontSize: 16,
+};
 
-  const next = useCallback(() => {
-    setActive((prev) => (prev + 1) % TESTIMONIALS.length);
-  }, []);
+export function Testimonials() {
+  const { track } = useSignal();
+  const [idx, setIdx] = useState(0);
 
   useEffect(() => {
-    const interval = setInterval(next, 6000);
-    return () => clearInterval(interval);
-  }, [next]);
+    const timer = setInterval(() => setIdx(i => (i + 1) % items.length), 6000);
+    return () => clearInterval(timer);
+  }, []);
 
   return (
-    <section
-      style={{
-        padding: "80px 0",
-        background: "var(--clr-cl-surface)",
-      }}
-    >
-      <div className="c-container" style={{ maxWidth: 700 }}>
-        <div style={{ textAlign: "center", marginBottom: 40 }}>
-          <div className="c-eyebrow" style={{ marginBottom: 12 }}>
-            Kundrosterna
+    <section id="kundcase" style={{ padding: "120px 0" }}>
+      <div className="c-container">
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "end", marginBottom: 48, flexWrap: "wrap", gap: 20 }}>
+          <div>
+            <div className="c-eyebrow" style={{ marginBottom: 14 }}>Kundcase</div>
+            <h2 className="c-h2">Vad kunder<br/>sager om oss.</h2>
           </div>
-          <h2 className="c-h2">Vad vara kunder sager</h2>
-        </div>
-
-        <div
-          style={{
-            background: "var(--clr-surface-alt)",
-            borderRadius: "var(--r-lg)",
-            padding: "40px 32px",
-            textAlign: "center",
-            position: "relative",
-            minHeight: 200,
-          }}
-        >
-          <div
-            style={{
-              width: 48,
-              height: 48,
-              borderRadius: "50%",
-              background: "var(--clr-green)",
-              color: "#fff",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              fontFamily: "var(--font-open-sans), sans-serif",
-              fontWeight: 700,
-              fontSize: 16,
-              margin: "0 auto 20px",
-            }}
-          >
-            {TESTIMONIALS[active].avatar}
-          </div>
-          <p
-            style={{
-              fontFamily: "var(--font-open-sans), sans-serif",
-              fontSize: 17,
-              fontStyle: "italic",
-              color: "var(--clr-ink)",
-              lineHeight: 1.7,
-              maxWidth: 540,
-              margin: "0 auto 20px",
-            }}
-          >
-            &ldquo;{TESTIMONIALS[active].quote}&rdquo;
-          </p>
-          <div
-            style={{
-              fontFamily: "var(--font-open-sans), sans-serif",
-              fontSize: 14,
-              fontWeight: 700,
-              color: "var(--clr-green-deep)",
-            }}
-          >
-            {TESTIMONIALS[active].name}
-          </div>
-          <div
-            style={{
-              fontFamily: "var(--font-open-sans), sans-serif",
-              fontSize: 12,
-              color: "var(--clr-muted)",
-              marginTop: 2,
-            }}
-          >
-            {TESTIMONIALS[active].title}
+          <div style={{ display: "flex", gap: 8 }}>
+            <button onClick={() => setIdx((idx - 1 + items.length) % items.length)} style={arrowBtn}>&larr;</button>
+            <button onClick={() => { setIdx((idx + 1) % items.length); track("module:engage", { id: "testimonial-next" }); }} style={arrowBtn}>&rarr;</button>
           </div>
         </div>
-
-        {/* Dots */}
-        <div
-          style={{
-            display: "flex",
-            justifyContent: "center",
-            gap: 8,
-            marginTop: 20,
-          }}
-        >
-          {TESTIMONIALS.map((_, i) => (
-            <button
-              key={i}
-              onClick={() => setActive(i)}
-              style={{
-                width: active === i ? 24 : 8,
-                height: 8,
-                borderRadius: 4,
-                background:
-                  active === i
-                    ? "var(--clr-green)"
-                    : "var(--clr-line)",
-                border: "none",
-                cursor: "pointer",
-                transition: "all 0.3s var(--ease-out)",
-              }}
-              aria-label={`Visa omdome ${i + 1}`}
-            />
+        <div style={{ position: "relative", overflow: "hidden", borderRadius: "var(--r-xl)" }}>
+          <div style={{ display: "flex", transform: `translateX(-${idx * 100}%)`, transition: "transform 0.6s var(--ease-out)" }}>
+            {items.map((it, i) => (
+              <div key={i} style={{ minWidth: "100%", padding: "60px 72px", background: "var(--clr-surface)", border: "1px solid var(--clr-line)", borderRadius: "var(--r-xl)" }}>
+                <div style={{ fontSize: 48, color: it.accent, marginBottom: 20, lineHeight: 0.5 }}>&ldquo;</div>
+                <blockquote style={{
+                  margin: 0, fontSize: "clamp(24px, 2.6vw, 36px)",
+                  fontFamily: "var(--font-display)", fontWeight: 500,
+                  letterSpacing: "-0.02em", lineHeight: 1.25, maxWidth: 880,
+                  marginBottom: 32,
+                }}>
+                  {it.quote}
+                </blockquote>
+                <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+                  <div style={{
+                    width: 48, height: 48, borderRadius: "50%",
+                    background: it.accent, opacity: 0.3,
+                    display: "flex", alignItems: "center", justifyContent: "center",
+                    fontWeight: 700, color: "var(--clr-navy)",
+                  }}>{it.author.split(" ").map(w => w[0]).join("")}</div>
+                  <div>
+                    <div style={{ fontWeight: 600 }}>{it.author}</div>
+                    <div style={{ fontSize: 13, color: "var(--clr-muted)" }}>{it.role}</div>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+        <div style={{ display: "flex", gap: 6, marginTop: 24, justifyContent: "center" }}>
+          {items.map((_, i) => (
+            <button key={i} onClick={() => setIdx(i)} style={{
+              width: i === idx ? 24 : 8, height: 8, borderRadius: 4,
+              background: i === idx ? "var(--clr-navy)" : "var(--clr-line)",
+              border: "none", cursor: "pointer", transition: "all 0.3s",
+            }} />
           ))}
         </div>
       </div>

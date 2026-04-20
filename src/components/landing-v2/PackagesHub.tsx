@@ -5,314 +5,288 @@ import { useSignal } from "./SignalProvider";
 
 const PACKAGES = [
   {
-    id: "sales-promotion",
-    name: "Sales Promotion",
-    desc: "Fysiska kuponger i butik. Driva kop via dagligvaruhandeln med full sparbarhet.",
-    color: "#2D6A4F",
-    icon: "🎫",
-    href: "/sales-promotion",
-  },
-  {
-    id: "interactive-engage",
-    name: "Interactive Engage",
-    desc: "Gamification som driver +16% extra forsaljning. Spel, tavlingar, scratch cards.",
-    color: "#E07A5F",
-    icon: "🎮",
-    href: "/interactive-engage",
+    id: "engage",
+    name: "Incitament",
+    tagline: "Locka, varva, konvertera",
+    who: "Marknad & Tillvaxt",
+    triggers: ["Ny prenumerant", "Cookie-consent", "Leadformular ifyllt", "Kampanjaktivering"],
+    mechanics: "SMS-kupong, digital vardecheck, kampanjsida",
+    productHref: "/engage",
+    example: "Elbolag ger 500 kr ICA-check till nya prenumeranter. Konvertering +34% vs rabattrad.",
+    color: "var(--clr-teal)",
+    colorSoft: "var(--clr-teal-soft)",
+    icon: "\u2197",
   },
   {
     id: "customer-care",
-    name: "Customer Care",
-    desc: "Digital kompensation via SMS. Vand missnoje till lojalitet pa sekunder.",
-    color: "#4A90A4",
-    icon: "💬",
-    href: "/customer-care",
+    name: "Kundvard",
+    tagline: "Plaster pa saret",
+    who: "CX & Support",
+    triggers: ["Klagomal registrerat", "Fordrojd leverans", "Servicefel", "Enkatsvar"],
+    mechanics: "SMS direkt ur arendesystemet, individuellt belopp",
+    productHref: "/customer-care",
+    example: "Telecom skickar glass-kupong nar kund vantat >10 min i chatt. NPS +38 punkter.",
+    color: "var(--clr-orange)",
+    colorSoft: "var(--clr-orange-soft)",
+    icon: "\u2665",
   },
   {
-    id: "send-a-gift",
-    name: "Send a Gift",
-    desc: "Digitala presentkort for personalbeloning. Skatteeffektivt, noll administration.",
-    color: "#D4A574",
-    icon: "🎁",
-    href: "/send-a-gift",
+    id: "personalbeloning",
+    name: "Personalbeloning",
+    tagline: "Tack for insatsen",
+    who: "HR & Ledning",
+    triggers: ["Manadens medarbetare", "Teamets mal natt", "Jubileum", "Jul/midsommar"],
+    mechanics: "Batch via CSV/API, skatteklassad, export till lonesystem",
+    productHref: "/personalbeloning",
+    example: "Bygg-kedja gav Sverigecheck till 4 200 anstallda pa 8 minuter. 94% inlosen.",
+    color: "#B8860B",
+    colorSoft: "var(--clr-lime-soft)",
+    icon: "\u2605",
   },
   {
-    id: "kampanja",
-    name: "Kampanja",
-    desc: "Bygg kampanjsidor och distribuera kuponger via SMS pa minuter.",
-    color: "#7B68EE",
-    icon: "📣",
-    href: "/kampanja",
+    id: "kuponger",
+    name: "Spel & kampanj",
+    tagline: "Gor det lekfullt",
+    who: "Brand & Digital",
+    triggers: ["Produktlansering", "Sasongskampanj", "Event", "Adventskampanj"],
+    mechanics: "Lyckohjul, skraplott, quiz, kalender, allt kopplat till kupong",
+    productHref: "/kuponger",
+    example: "FMCG-lansering med skraplott, 127 000 deltaganden pa 14 dagar, 41% inlosen.",
+    color: "var(--clr-navy)",
+    colorSoft: "#E8EEF6",
+    icon: "\u25C9",
   },
-];
-
-const INFRA_ITEMS = [
-  "20 000 kassasystem",
-  "5 000+ butiker",
-  "Realtidsclearing",
-  "SMS-gateway",
-  "API-integrationer",
+  {
+    id: "sverigechecken",
+    name: "Fysisk kupong",
+    tagline: "Klassikern i butik",
+    who: "Retail & FMCG",
+    triggers: ["Print-kampanj", "DR-utskick", "Butikskampanj", "Magasinsbilaga"],
+    mechanics: "Tryckt check med streckkod, inloses i kassan, clearas automatiskt",
+    productHref: "/sverigechecken",
+    example: "ICA-bilaga med Sverigecheck, 5 000+ butiker tar emot, clearing inom 48 h.",
+    color: "#6B5B95",
+    colorSoft: "#EFEBF5",
+    icon: "\u25A3",
+  },
 ];
 
 export function PackagesHub() {
   const { track } = useSignal();
-  const [activePackage, setActivePackage] = useState<string | null>(null);
-  const [hoveredPackage, setHoveredPackage] = useState<string | null>(null);
+  const [active, setActive] = useState<string | null>(null);
 
   return (
-    <section
-      id="produkter"
-      style={{
-        padding: "80px 0",
-        background: "var(--clr-cl-surface)",
-      }}
-    >
+    <section id="paketeringar" style={{ padding: "140px 0 120px", background: "var(--clr-surface-alt)", borderTop: "1px solid var(--clr-line)" }}>
       <div className="c-container">
-        <div style={{ textAlign: "center", marginBottom: 48 }}>
-          <div className="c-eyebrow" style={{ marginBottom: 12 }}>
-            Produkter
-          </div>
-          <h2 className="c-h2">Ett verktyg. Fem paketeringar.</h2>
-          <p
-            className="c-body"
-            style={{
-              maxWidth: 540,
-              margin: "12px auto 0",
-              color: "var(--clr-muted)",
-            }}
-          >
-            Alla bygger pa samma infrastruktur: 20 000 anslutna kassor, 5 000
-            butiker, och realtidsclearing.
+        {/* Intro */}
+        <div style={{ maxWidth: 780, marginBottom: 72 }}>
+          <div className="c-eyebrow" style={{ marginBottom: 14 }}>Samma plattform, olika affarer</div>
+          <h2 className="c-h2" style={{ marginBottom: 24 }}>
+            Ett verktyg.<br/>Fem paketeringar.
+          </h2>
+          <p className="c-body-lg" style={{ color: "var(--clr-ink-2)", maxWidth: 640 }}>
+            ClearOn ar en infrastruktur for beloningar, kuponger, presentkort, vardecheckar, som redan ror sig genom 5 000+ svenska butiker.
+            Samma motor levererar losningar for marknad, kundvard, HR, kampanj och retail. Ni valjer paketering utifran vilken affar ni vill flytta.
           </p>
         </div>
 
-        {/* Hub visualization */}
-        <div
-          style={{
-            display: "flex",
-            justifyContent: "center",
+        {/* Hub-and-spoke visualization */}
+        <div style={{
+          position: "relative",
+          padding: "64px 32px",
+          background: "#fff",
+          border: "1px solid var(--clr-line)",
+          borderRadius: "var(--r-lg)",
+          marginBottom: 80,
+          overflow: "hidden",
+        }}>
+          <div style={{
+            display: "grid",
+            gridTemplateColumns: "1fr auto 1fr",
+            gap: 40,
             alignItems: "center",
-            marginBottom: 48,
-            position: "relative",
-            minHeight: 200,
-          }}
-        >
-          {/* Center core */}
-          <div
-            style={{
-              width: 120,
-              height: 120,
-              borderRadius: "50%",
-              background: "var(--clr-green)",
-              display: "flex",
-              flexDirection: "column",
-              alignItems: "center",
-              justifyContent: "center",
-              color: "#fff",
-              fontFamily: "var(--font-open-sans), sans-serif",
-              fontWeight: 800,
-              fontSize: 14,
-              position: "relative",
-              zIndex: 2,
-              boxShadow: "var(--sh-lg)",
-            }}
-          >
-            <div style={{ fontSize: 11, opacity: 0.8, fontWeight: 600 }}>
-              ClearOn
+          }} className="hub-grid">
+            {/* Left: packages 1-2 */}
+            <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+              {PACKAGES.slice(0, 2).map(p => (
+                <PackagePill key={p.id} p={p} active={active === p.id} onEnter={() => setActive(p.id)} onLeave={() => setActive(null)} align="right" />
+              ))}
             </div>
-            <div>Core</div>
-            {/* Pulsing ring */}
-            <div
-              className="animate-pulse-ring"
-              style={{
-                position: "absolute",
-                inset: -8,
-                borderRadius: "50%",
-                border: "2px solid var(--clr-green)",
-                opacity: 0.3,
-              }}
-            />
+
+            {/* Center: core */}
+            <div style={{
+              width: 220, height: 220, borderRadius: "50%",
+              background: "linear-gradient(135deg, var(--clr-navy) 0%, #1A2840 100%)",
+              color: "#fff",
+              display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
+              padding: 24, textAlign: "center",
+              boxShadow: "0 20px 60px rgba(15, 28, 51, 0.25)",
+              position: "relative",
+            }}>
+              <div style={{ fontFamily: "var(--font-mono)", fontSize: 10, letterSpacing: "0.15em", opacity: 0.7, marginBottom: 8 }}>PLATTFORMEN</div>
+              <div style={{ fontSize: 22, fontWeight: 600, letterSpacing: "-0.02em", lineHeight: 1.15, marginBottom: 10 }}>ClearOn<br/>Core</div>
+              <div style={{ fontSize: 12, opacity: 0.8, lineHeight: 1.4 }}>Vardebarare,<br/>distribution, clearing</div>
+            </div>
+
+            {/* Right: packages 3-5 */}
+            <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+              {PACKAGES.slice(2).map(p => (
+                <PackagePill key={p.id} p={p} active={active === p.id} onEnter={() => setActive(p.id)} onLeave={() => setActive(null)} align="left" />
+              ))}
+            </div>
           </div>
 
-          {/* Spoke dots */}
-          {PACKAGES.map((pkg, i) => {
-            const angle = (i * 360) / PACKAGES.length - 90;
-            const rad = (angle * Math.PI) / 180;
-            const radius = 130;
-            const x = Math.cos(rad) * radius;
-            const y = Math.sin(rad) * radius;
-            return (
-              <div
-                key={pkg.id}
-                onMouseEnter={() => {
-                  setHoveredPackage(pkg.id);
-                  track("product:hover", { product: pkg.id });
-                }}
-                onMouseLeave={() => setHoveredPackage(null)}
-                onClick={() => {
-                  setActivePackage(
-                    activePackage === pkg.id ? null : pkg.id
-                  );
-                  track("product:expand", { product: pkg.id });
-                }}
-                style={{
-                  position: "absolute",
-                  left: `calc(50% + ${x}px)`,
-                  top: `calc(50% + ${y}px)`,
-                  transform: "translate(-50%, -50%)",
-                  width: 56,
-                  height: 56,
-                  borderRadius: "50%",
-                  background:
-                    hoveredPackage === pkg.id
-                      ? pkg.color
-                      : "var(--clr-cl-surface)",
-                  border: `2px solid ${pkg.color}`,
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  fontSize: 22,
-                  cursor: "pointer",
-                  transition: "all 0.25s var(--ease-out)",
-                  boxShadow:
-                    hoveredPackage === pkg.id ? "var(--sh-md)" : "var(--sh-sm)",
-                  zIndex: 3,
-                }}
-                title={pkg.name}
-              >
-                {pkg.icon}
-              </div>
-            );
-          })}
+          <style>{`
+            @media (max-width: 880px) {
+              .hub-grid { grid-template-columns: 1fr !important; gap: 32px !important; }
+              .hub-grid > div:nth-child(2) { margin: 0 auto; }
+            }
+          `}</style>
+
+          {/* Footer under hub */}
+          <div style={{ marginTop: 48, paddingTop: 28, borderTop: "1px solid var(--clr-line)", display: "flex", gap: 32, flexWrap: "wrap", fontSize: 12, color: "var(--clr-muted)", fontFamily: "var(--font-mono)", letterSpacing: "0.06em" }}>
+            <span>INFRASTRUKTUR: SMS &middot; API &middot; KAMPANJSIDOR &middot; TRYCKT KUPONG</span>
+            <span>INLOSEN: 5 000+ BUTIKER</span>
+            <span>CLEARING: AUTOMATISK, AUDITERBAR</span>
+          </div>
         </div>
 
-        {/* Package cards grid */}
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
-            gap: 16,
-            marginBottom: 40,
-          }}
-        >
-          {PACKAGES.map((pkg) => (
-            <div
-              key={pkg.id}
-              className="c-card"
-              onClick={() => {
-                setActivePackage(
-                  activePackage === pkg.id ? null : pkg.id
-                );
-                track("product:expand", { product: pkg.id });
-              }}
-              style={{
-                cursor: "pointer",
-                borderColor:
-                  activePackage === pkg.id
-                    ? pkg.color
-                    : "var(--clr-line-soft)",
-                borderWidth: activePackage === pkg.id ? 2 : 1,
-              }}
-            >
-              <div
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 10,
-                  marginBottom: 10,
-                }}
-              >
-                <span style={{ fontSize: 20 }}>{pkg.icon}</span>
-                <span
-                  style={{
-                    fontFamily: "var(--font-open-sans), sans-serif",
-                    fontWeight: 700,
-                    fontSize: 15,
-                    color: "var(--clr-ink)",
-                  }}
-                >
-                  {pkg.name}
-                </span>
-              </div>
-              <p
-                style={{
-                  fontFamily: "var(--font-open-sans), sans-serif",
-                  fontSize: 13,
-                  color: "var(--clr-muted)",
-                  lineHeight: 1.5,
-                  marginBottom: 12,
-                }}
-              >
-                {pkg.desc}
-              </p>
-              <a
-                href={pkg.href}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  track("product:cta", { product: pkg.id });
-                }}
-                style={{
-                  fontFamily: "var(--font-open-sans), sans-serif",
-                  fontSize: 13,
-                  fontWeight: 700,
-                  color: pkg.color,
-                  textDecoration: "none",
-                  display: "inline-flex",
-                  alignItems: "center",
-                  gap: 4,
-                }}
-              >
-                Las mer
-                <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
-                  <path
-                    d="M3 8H13M13 8L9 4M13 8L9 12"
-                    stroke="currentColor"
-                    strokeWidth="1.5"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  />
-                </svg>
-              </a>
-            </div>
-          ))}
+        {/* Five tracks, detailed */}
+        <div style={{ marginBottom: 40 }}>
+          <div className="c-eyebrow" style={{ marginBottom: 14 }}>Valj utgangspunkt</div>
+          <h3 className="c-h3" style={{ marginBottom: 8 }}>Vilken paketering passar er affar?</h3>
+          <p className="c-body" style={{ color: "var(--clr-ink-2)", maxWidth: 560, marginBottom: 40 }}>
+            De flesta kunder borjar i en paketering och vaxer in i fler. Ni behover inte valja allt fran borjan.
+          </p>
         </div>
 
-        {/* Infrastructure footer strip */}
-        <div
-          style={{
-            background: "var(--clr-green-tint)",
-            borderRadius: "var(--r-lg)",
-            padding: "16px 24px",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            gap: 24,
-            flexWrap: "wrap",
-          }}
-        >
-          <span
-            style={{
-              fontFamily: "var(--font-open-sans), sans-serif",
-              fontSize: 12,
-              fontWeight: 700,
-              color: "var(--clr-green-deep)",
-              textTransform: "uppercase",
-              letterSpacing: "0.05em",
-            }}
-          >
-            Infrastruktur:
-          </span>
-          {INFRA_ITEMS.map((item) => (
-            <span
-              key={item}
-              className="c-chip"
-              style={{ fontSize: 12, padding: "4px 12px" }}
-            >
-              {item}
-            </span>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))", gap: 20 }} className="paket-grid">
+          {PACKAGES.map(p => (
+            <PackageCard key={p.id} p={p} onOpen={() => track("paket:open", { id: p.id })} />
           ))}
         </div>
       </div>
     </section>
+  );
+}
+
+function PackagePill({ p, active, onEnter, onLeave, align }: {
+  p: typeof PACKAGES[0]; active: boolean; onEnter: () => void; onLeave: () => void; align: string;
+}) {
+  return (
+    <div
+      onMouseEnter={onEnter}
+      onMouseLeave={onLeave}
+      style={{
+        background: active ? p.colorSoft : "#fff",
+        border: `1px solid ${active ? p.color : "var(--clr-line)"}`,
+        borderRadius: "var(--r-md)",
+        padding: "18px 22px",
+        display: "flex",
+        alignItems: "center",
+        gap: 14,
+        textAlign: align === "right" ? "right" : "left",
+        flexDirection: align === "right" ? "row-reverse" : "row",
+        transition: "all 0.2s var(--ease-out)",
+        cursor: "default",
+      }}
+    >
+      <div style={{
+        width: 40, height: 40, borderRadius: "var(--r-xs)",
+        background: p.colorSoft, color: p.color,
+        display: "flex", alignItems: "center", justifyContent: "center",
+        fontSize: 18, fontWeight: 700, flexShrink: 0,
+      }}>{p.icon}</div>
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{ fontSize: 15, fontWeight: 600, letterSpacing: "-0.01em" }}>{p.name}</div>
+        <div style={{ fontSize: 12, color: "var(--clr-muted)", marginTop: 2 }}>{p.tagline}</div>
+      </div>
+    </div>
+  );
+}
+
+function PackageCard({ p, onOpen }: { p: typeof PACKAGES[0]; onOpen: () => void }) {
+  return (
+    <div style={{
+      background: "#fff",
+      border: "1px solid var(--clr-line)",
+      borderRadius: "var(--r-md)",
+      padding: 28,
+      display: "flex",
+      flexDirection: "column",
+      gap: 16,
+    }}>
+      {/* Header */}
+      <div style={{ display: "flex", alignItems: "flex-start", gap: 14 }}>
+        <div style={{
+          width: 44, height: 44, borderRadius: "var(--r-xs)",
+          background: p.colorSoft, color: p.color,
+          display: "flex", alignItems: "center", justifyContent: "center",
+          fontSize: 20, fontWeight: 700, flexShrink: 0,
+        }}>{p.icon}</div>
+        <div style={{ flex: 1 }}>
+          <div style={{ fontSize: 18, fontWeight: 600, letterSpacing: "-0.015em" }}>{p.name}</div>
+          <div style={{ fontSize: 13, color: "var(--clr-muted)", marginTop: 2 }}>{p.tagline}</div>
+        </div>
+      </div>
+
+      {/* Who buys */}
+      <div style={{ fontSize: 12, fontFamily: "var(--font-mono)", color: "var(--clr-muted)", letterSpacing: "0.08em" }}>
+        AGS AV &middot; {p.who.toUpperCase()}
+      </div>
+
+      {/* Triggers */}
+      <div>
+        <div style={{ fontSize: 11, fontFamily: "var(--font-mono)", color: "var(--clr-muted)", letterSpacing: "0.08em", marginBottom: 8 }}>TRIGGAS AV</div>
+        <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+          {p.triggers.map(t => (
+            <span key={t} style={{
+              fontSize: 12, padding: "4px 10px",
+              background: "var(--clr-surface-alt)",
+              border: "1px solid var(--clr-line)",
+              borderRadius: "var(--r-pill)",
+              color: "var(--clr-ink-2)",
+            }}>{t}</span>
+          ))}
+        </div>
+      </div>
+
+      {/* Mechanics */}
+      <div style={{
+        padding: 14,
+        background: p.colorSoft,
+        borderRadius: "var(--r-xs)",
+        fontSize: 13,
+        color: "var(--clr-ink-2)",
+        lineHeight: 1.5,
+      }}>
+        <div style={{ fontSize: 11, fontFamily: "var(--font-mono)", color: p.color, letterSpacing: "0.08em", marginBottom: 6, fontWeight: 600 }}>MEKANIK</div>
+        {p.mechanics}
+      </div>
+
+      {/* Case */}
+      <div style={{
+        paddingTop: 16,
+        borderTop: "1px solid var(--clr-line)",
+        fontSize: 13,
+        color: "var(--clr-ink-2)",
+        lineHeight: 1.5,
+        fontStyle: "italic",
+      }}>
+        &quot;{p.example}&quot;
+      </div>
+
+      {/* CTA */}
+      <a href={p.productHref} onClick={onOpen} style={{
+        marginTop: "auto",
+        display: "inline-flex",
+        alignItems: "center",
+        gap: 6,
+        fontSize: 14,
+        fontWeight: 600,
+        color: p.color,
+        textDecoration: "none",
+      }}>Las mer om {p.name.toLowerCase()} &rarr;</a>
+    </div>
   );
 }
