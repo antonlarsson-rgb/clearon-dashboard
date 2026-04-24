@@ -17,6 +17,7 @@ import { RoiCalculator } from "@/components/landing-v2/RoiCalculator";
 import { StoreFinder } from "@/components/landing-v2/StoreFinder";
 import { Testimonials } from "@/components/landing-v2/Testimonials";
 import { CtaFooter } from "@/components/landing-v2/CtaFooter";
+import { SmartIdentifyPopup } from "@/components/landing-v2/SmartIdentifyPopup";
 
 export default function SiteLandingPage() {
   const [role, setRole] = useState("default");
@@ -44,6 +45,7 @@ export default function SiteLandingPage() {
         <StoreFinder />
         <Testimonials />
         <CtaFooter />
+        <SmartIdentifyPopup />
       </div>
     </SignalProvider>
   );

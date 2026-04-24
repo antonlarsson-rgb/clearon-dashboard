@@ -2,6 +2,43 @@ import { v4 as uuidv4 } from "uuid";
 
 const SESSION_KEY = "clearon_session_id";
 const CONSENT_KEY = "clearon_consent";
+const VISITOR_COOKIE = "clearon_vid";
+const VISITOR_LOCAL_KEY = "clearon_vid";
+const VISITOR_MAX_AGE_DAYS = 400;
+
+function readCookie(name: string): string | null {
+  if (typeof document === "undefined") return null;
+  const match = document.cookie
+    .split("; ")
+    .find((row) => row.startsWith(`${name}=`));
+  return match ? decodeURIComponent(match.split("=")[1]) : null;
+}
+
+function writeCookie(name: string, value: string, days: number) {
+  if (typeof document === "undefined") return;
+  const maxAge = days * 24 * 60 * 60;
+  document.cookie = `${name}=${encodeURIComponent(
+    value
+  )}; max-age=${maxAge}; path=/; SameSite=Lax${
+    location.protocol === "https:" ? "; Secure" : ""
+  }`;
+}
+
+/**
+ * Long-lived visitor_id (400 dagar). Sätts av proxy.ts server-side, men vi
+ * fallback-skapar här om cookien saknas (t.ex. vid /api-anrop eller testing).
+ * localStorage fungerar som backup om cookien skulle rensas men localStorage
+ * finns kvar.
+ */
+export function getVisitorId(): string {
+  if (typeof window === "undefined") return "";
+  let vid = readCookie(VISITOR_COOKIE);
+  if (!vid) vid = localStorage.getItem(VISITOR_LOCAL_KEY);
+  if (!vid) vid = uuidv4();
+  writeCookie(VISITOR_COOKIE, vid, VISITOR_MAX_AGE_DAYS);
+  localStorage.setItem(VISITOR_LOCAL_KEY, vid);
+  return vid;
+}
 
 export interface TrackingProperties {
   role?: string;
@@ -94,6 +131,7 @@ export function trackLinkedIn(conversionId: number): void {
 
 export async function track(eventName: string, properties: TrackingProperties = {}): Promise<void> {
   const sessionId = getSessionId();
+  const visitorId = getVisitorId();
   const utmParams = getUtmParams();
 
   const enrichedProperties = {
@@ -110,6 +148,7 @@ export async function track(eventName: string, properties: TrackingProperties = 
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         sessionId,
+        visitorId,
         eventName,
         properties: enrichedProperties,
       }),

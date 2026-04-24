@@ -6,7 +6,9 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "import:vainu": "node scripts/import-vainu.mjs",
+    "migrate:visitors": "bash scripts/run-migration.sh supabase/migrations/20260424000000_visitor_tracking.sql"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.90.0",

@@ -1,5 +1,35 @@
 import { NextRequest, NextResponse } from "next/server";
 
+const VISITOR_COOKIE = "clearon_vid";
+const VISITOR_COOKIE_MAX_AGE = 60 * 60 * 24 * 400; // 400 dagar (browser-max)
+
+function randomVisitorId(): string {
+  // crypto.randomUUID finns i Edge runtime
+  try {
+    return crypto.randomUUID();
+  } catch {
+    return (
+      Date.now().toString(36) + "-" + Math.random().toString(36).slice(2, 10)
+    );
+  }
+}
+
+function attachVisitorCookie(request: NextRequest, response: NextResponse) {
+  const existing = request.cookies.get(VISITOR_COOKIE)?.value;
+  if (existing) return response;
+  const vid = randomVisitorId();
+  response.cookies.set({
+    name: VISITOR_COOKIE,
+    value: vid,
+    maxAge: VISITOR_COOKIE_MAX_AGE,
+    path: "/",
+    sameSite: "lax",
+    httpOnly: false, // behöver vara läsbar från JS för tracking
+    secure: true,
+  });
+  return response;
+}
+
 // Product URL slugs that should be accessible on clearon.live
 const productSlugs = new Set([
   "sales-promotion",
@@ -93,13 +123,13 @@ export function proxy(request: NextRequest) {
 
   // Root -> landing page
   if (pathname === "/") {
-    return NextResponse.rewrite(new URL("/site", request.url));
+    return attachVisitorCookie(request, NextResponse.rewrite(new URL("/site", request.url)));
   }
 
   // Product pages -> /site/[product]
   const slug = pathname.slice(1);
   if (productSlugs.has(slug)) {
-    return NextResponse.rewrite(new URL(`/site/${slug}`, request.url));
+    return attachVisitorCookie(request, NextResponse.rewrite(new URL(`/site/${slug}`, request.url)));
   }
 
   // /landing -> redirect to root
@@ -109,7 +139,7 @@ export function proxy(request: NextRequest) {
 
   // /site routes pass through (for direct access / testing)
   if (pathname.startsWith("/site")) {
-    return NextResponse.next();
+    return attachVisitorCookie(request, NextResponse.next());
   }
 
   // Dashboard routes on public domain -> redirect to dashboard subdomain
@@ -120,7 +150,7 @@ export function proxy(request: NextRequest) {
   }
 
   // Everything else -> show landing page (catch-all for public domain)
-  return NextResponse.rewrite(new URL("/site", request.url));
+  return attachVisitorCookie(request, NextResponse.rewrite(new URL("/site", request.url)));
 }
 
 export const config = {

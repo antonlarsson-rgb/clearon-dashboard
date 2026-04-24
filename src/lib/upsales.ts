@@ -1,12 +1,16 @@
 // Upsales API integration
 // Docs: https://api.upsales.com/
 
-const UPSALES_TOKEN = process.env.UPSALES_API_KEY || "";
 const BASE_URL = "https://power.upsales.com/api/v2";
+
+function getToken(): string {
+  // Läs env vid varje call — trim för att undvika trailing newline på Vercel
+  return (process.env.UPSALES_API_KEY || "").trim();
+}
 
 function url(path: string, params?: Record<string, string>) {
   const u = new URL(`${BASE_URL}${path}`);
-  u.searchParams.set("token", UPSALES_TOKEN);
+  u.searchParams.set("token", getToken());
   if (params) {
     for (const [k, v] of Object.entries(params)) {
       u.searchParams.set(k, v);
@@ -199,6 +203,101 @@ export async function createAccount(account: {
   } catch (e) {
     console.error("Upsales createAccount error:", e);
     return null;
+  }
+}
+
+// ---- VISITS (clearon.se web tracking via Upsales script) ----
+
+export interface UpsalesVisitPage {
+  page: string;
+  url: string;
+  score: number;
+  startDate: string;
+  endDate: string;
+  durationSeconds: number;
+}
+
+export interface UpsalesVisit {
+  id: number;
+  referer: string | null;
+  isFirst: number;
+  score: number;
+  startDate: string;
+  endDate: string;
+  anonymousId: string;
+  identifiedId: string;
+  client: {
+    id: number;
+    name: string;
+    prospectingId?: string;
+    dunsNo?: string;
+    journeyStep?: string;
+    turnover?: number | null;
+    mailAddress?: {
+      city?: string | null;
+      state?: string | null;
+      country?: string | null;
+    };
+  } | null;
+  contact: { id: number; name: string; email?: string } | null;
+  pages: UpsalesVisitPage[];
+}
+
+export async function getVisits(options?: {
+  sinceDate?: string; // ISO eller YYYY-MM-DD
+  limit?: number;
+  onlyIdentified?: boolean;
+  offset?: number;
+}): Promise<{ data: UpsalesVisit[]; total: number }> {
+  const { sinceDate, limit = 100, onlyIdentified = false, offset = 0 } = options || {};
+
+  const params: Record<string, string> = {
+    limit: String(limit),
+    offset: String(offset),
+    sort: "-startDate",
+  };
+
+  let qIdx = 0;
+  if (sinceDate) {
+    params[`q[${qIdx}][a]`] = "startDate";
+    params[`q[${qIdx}][c]`] = "gte";
+    params[`q[${qIdx}][v]`] = sinceDate;
+    qIdx++;
+  }
+  if (onlyIdentified) {
+    params[`q[${qIdx}][a]`] = "client";
+    params[`q[${qIdx}][c]`] = "ne";
+    params[`q[${qIdx}][v]`] = "";
+    qIdx++;
+  }
+
+  try {
+    const data = await upsalesFetch("/visits", { params });
+    return {
+      data: (data.data as UpsalesVisit[]) || [],
+      total: data.metadata?.total || 0,
+    };
+  } catch (e) {
+    console.error("Upsales getVisits error:", e);
+    return { data: [], total: 0 };
+  }
+}
+
+export async function getVisitsForClient(clientId: number, limit = 50): Promise<UpsalesVisit[]> {
+  try {
+    const data = await upsalesFetch("/visits", {
+      params: {
+        limit: String(limit),
+        sort: "-startDate",
+        "q[0][a]": "client.id",
+        "q[0][c]": "eq",
+        "q[0][v]": String(clientId),
+      },
+    });
+    return (data.data as UpsalesVisit[]) || [];
+  } catch (e) {
+    console.error("Upsales getVisitsForClient error:", e);
+    return [];
   }
 }
 

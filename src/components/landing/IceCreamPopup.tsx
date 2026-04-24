@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { X, IceCream } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { trackIceCreamCoupon, trackClick } from "@/lib/meta-pixel";
-import { trackLinkedIn, LINKEDIN_CONVERSIONS } from "@/lib/tracking";
+import { trackLinkedIn, LINKEDIN_CONVERSIONS, getVisitorId } from "@/lib/tracking";
 import confetti from "canvas-confetti";
 
 interface IceCreamPopupProps {
@@ -63,6 +63,7 @@ export function IceCreamPopup({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           sessionId,
+          visitorId: getVisitorId(),
           email,
           company: popupCompany || null,
           role: "unknown",
