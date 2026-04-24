@@ -7,6 +7,7 @@ import {
   Globe,
   Briefcase,
   Search,
+  Mail,
   Play,
   Pause,
   Check,
@@ -19,7 +20,7 @@ import { cn } from "@/lib/utils";
 
 interface Campaign {
   id: string;
-  platform: "meta" | "linkedin" | "google";
+  platform: "meta" | "linkedin" | "google" | "email";
   campaign_id: string | null;
   campaign_name: string;
   product_slug: string | null;
@@ -73,6 +74,13 @@ const PLATFORM_META = {
     bg: "rgba(234,67,53,0.08)",
     Icon: Search,
     logo: "G",
+  },
+  email: {
+    label: "Upsales Mail",
+    color: "#8bb347",
+    bg: "rgba(139,179,71,0.08)",
+    Icon: Mail,
+    logo: "@",
   },
 } as const;
 
@@ -135,7 +143,7 @@ export default function KampanjerPage() {
   }, [campaigns, statusFilter, productFilter]);
 
   const byPlatform = useMemo(() => {
-    const out: Record<string, Campaign[]> = { meta: [], linkedin: [], google: [] };
+    const out: Record<string, Campaign[]> = { meta: [], linkedin: [], google: [], email: [] };
     for (const c of filtered) {
       if (out[c.platform]) out[c.platform].push(c);
     }
@@ -208,10 +216,13 @@ export default function KampanjerPage() {
         />
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 lg:grid-cols-3 xl:grid-cols-4 gap-4">
         <PlatformColumn platform="meta" campaigns={byPlatform.meta} />
         <PlatformColumn platform="linkedin" campaigns={byPlatform.linkedin} />
-        <PlatformColumn platform="google" campaigns={byPlatform.google} />
+        {byPlatform.google.length > 0 && (
+          <PlatformColumn platform="google" campaigns={byPlatform.google} />
+        )}
+        <PlatformColumn platform="email" campaigns={byPlatform.email} />
       </div>
     </div>
   );
