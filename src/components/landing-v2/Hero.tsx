@@ -1,83 +1,72 @@
 "use client";
 
-import { useState } from "react";
 import { useSignal } from "./SignalProvider";
+import { ArrowRight } from "lucide-react";
 
 const PROBLEMS = [
   {
+    id: "boring",
+    label: "Kampanjerna engagerar inte",
+    sub: "Lekfull mekanik som driver inlösen",
+    accent: "var(--clr-coral)",
+    accentInk: "#7a3010",
+    segment: "playful-marketer",
+  },
+  {
     id: "consent",
-    label: "Cookie-consent-raten är låg",
-    sub: "Belöna besökare för att säga ja till data",
-    departments: ["Data / GDPR", "Digital"],
+    label: "Cookie-consent är låg",
+    sub: "Belöning för att säga ja till data",
     accent: "var(--clr-lime)",
     accentInk: "#4a5a1a",
-    icon: (
-      <svg width="22" height="22" viewBox="0 0 22 22" fill="none">
-        <circle cx="11" cy="11" r="9" stroke="currentColor" strokeWidth="1.6"/>
-        <circle cx="7" cy="9" r="1.2" fill="currentColor"/>
-        <circle cx="13" cy="8" r="1" fill="currentColor"/>
-        <circle cx="10" cy="14" r="1.3" fill="currentColor"/>
-      </svg>
-    ),
     segment: "consent-hunter",
   },
   {
-    id: "complaint",
-    label: "Kunder som klagar blir förbannade",
-    sub: "Ge plåster på såret i kundtjänst",
-    departments: ["Kundtjänst", "CX"],
+    id: "acquire",
+    label: "Svårt att locka nya kunder",
+    sub: "Lån värdet från något alla förstår",
+    accent: "var(--clr-yellow-accent)",
+    accentInk: "#4a3010",
+    segment: "acquisition-hunter",
+  },
+  {
+    id: "measure",
+    label: "Effekten går inte att mäta",
+    sub: "Spårbart från klick till kassa",
+    accent: "var(--clr-green)",
+    accentInk: "#1f3d13",
+    segment: "measure-seeker",
+  },
+  {
+    id: "sampling",
+    label: "Fler måste prova produkten",
+    sub: "Kupong som driver första köpet",
     accent: "var(--clr-orange)",
     accentInk: "#7a3810",
-    icon: (
-      <svg width="22" height="22" viewBox="0 0 22 22" fill="none">
-        <path d="M4 7a3 3 0 013-3h8a3 3 0 013 3v5a3 3 0 01-3 3H9l-4 3v-3a3 3 0 01-1-2V7z" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round"/>
-      </svg>
-    ),
+    segment: "trial-driver",
+  },
+  {
+    id: "loyalty",
+    label: "Kunderna återvänder inte",
+    sub: "Belöna andra och tredje köpet",
+    accent: "var(--clr-green-deep)",
+    accentInk: "#1f3d13",
+    segment: "loyalty-builder",
+  },
+  {
+    id: "complaint",
+    label: "Klagomål skadar relationen",
+    sub: "Plåster på såret i kundtjänst",
+    accent: "var(--clr-teal)",
+    accentInk: "#1f3d13",
     segment: "cx-rescuer",
   },
   {
     id: "staff",
     label: "Personalen känns osedd",
     sub: "Spontan erkänsla med verkligt värde",
-    departments: ["HR", "Ledning"],
-    accent: "var(--clr-teal)",
-    accentInk: "#1f3d13",
-    icon: (
-      <svg width="22" height="22" viewBox="0 0 22 22" fill="none">
-        <path d="M11 13a4 4 0 100-8 4 4 0 000 8z" stroke="currentColor" strokeWidth="1.6"/>
-        <path d="M4 19c1.5-3 4-4.5 7-4.5s5.5 1.5 7 4.5" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round"/>
-      </svg>
-    ),
+    accent: "var(--clr-lilac)",
+    accentInk: "#3a4a2a",
     segment: "hr-rewarder",
-  },
-  {
-    id: "boring",
-    label: "Våra kampanjer är tråkiga",
-    sub: "Gör det lekfullt med spel och skraplotter",
-    departments: ["Marknad", "Brand"],
-    accent: "var(--clr-coral)",
-    accentInk: "#7a3010",
-    icon: (
-      <svg width="22" height="22" viewBox="0 0 22 22" fill="none">
-        <path d="M11 2l2.5 5.5L19 8.5l-4 4 1 5.5L11 15l-5 3 1-5.5-4-4 5.5-1L11 2z" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round"/>
-      </svg>
-    ),
-    segment: "playful-marketer",
-  },
-  {
-    id: "acquire",
-    label: "Vi behöver locka kunder från nya branscher",
-    sub: "Elbolag? Telekom? Försäkring? Ge en ICA-check på köpet",
-    departments: ["Marknad", "Tillväxt"],
-    accent: "var(--clr-yellow)",
-    accentInk: "#4a5a1a",
-    icon: (
-      <svg width="22" height="22" viewBox="0 0 22 22" fill="none">
-        <path d="M3 11h13M11 6l5 5-5 5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
-        <circle cx="19" cy="11" r="1.6" fill="currentColor"/>
-      </svg>
-    ),
-    segment: "acquisition-hunter",
   },
 ];
 
@@ -85,34 +74,49 @@ export const ROLES = PROBLEMS.map(p => ({ id: p.id, label: p.label, accent: p.ac
 
 const HEROES: Record<string, { kicker: string; headline: string; sub: string }> = {
   default: {
-    kicker: "Reward platform for B2B",
-    headline: "Vi belönar dina kunder,\npersonal och besökare.",
-    sub: "ClearOn är Sveriges reward-plattform. Kupongen är valutan, fysisk eller digital, alltid kopplad till mat och vardagsvaror i 5 000+ butiker. Du bygger spel, skraplotter, kampanjer och belöningar, vi sköter infrastrukturen.",
+    kicker: "Belöningar som driver affär",
+    headline: "Få fler att interagera,\ninte bara titta.",
+    sub: "Förvandla passiva kampanjer till aktiverande upplevelser. Vi ger infrastrukturen och butiksnätverket, ni bygger affären.",
   },
   consent: {
-    kicker: "För Data & Digital",
-    headline: "Höj consent-raten\nmed ett riktigt värde.",
-    sub: "En ICA-check för att säga ja till cookies slår \"vi använder cookies för att förbättra din upplevelse\" varenda gång. Vi ser kunder gå från 42% till 78% consent.",
+    kicker: "Cookie-consent",
+    headline: "Få fler att säga ja\ntill data.",
+    sub: "Förvandla cookie-bannern till ett erbjudande mottagaren vill ta del av. Mer consent, mer first-party data.",
   },
   complaint: {
-    kicker: "För Kundtjänst",
-    headline: "Vänd ilska\ntill tacksamhet.",
-    sub: "Skicka en kupong direkt i chatten när något går fel. Det kostar mindre än en missnöjd kund på Trustpilot, och mottagaren får ett verkligt värde samma dag.",
+    kicker: "Kundvård",
+    headline: "Vänd irritation\ntill tacksamhet.",
+    sub: "Skicka ett påtagligt förlåt direkt i chatten. En verklig belöning väger tyngre än ett standardsvar.",
   },
   staff: {
-    kicker: "För HR & People",
-    headline: "En fredag.\nEn värdecheck.\nEn tårta på huset.",
-    sub: "Spontan erkänsla slår årliga bonusar. Skicka en 100-krona till dagligvaran när någon gjort något bra. Inga fakturor, ingen logistik, bara ett SMS.",
+    kicker: "Personalbelöning",
+    headline: "Säg tack\nmed ett SMS.",
+    sub: "Spontan uppskattning slår årlig bonus. Skicka en värdecheck när någon levererat. Ingen logistik.",
   },
   boring: {
-    kicker: "För Marknad & Brand",
+    kicker: "Engagemang",
     headline: "Kampanjer som\nkänns som spel.",
-    sub: "Lyckohjul, skraplott, quiz, adventskalender. Alla varianter kopplade till en riktig belöning som löses in i butik. Vi bygger spelet, du får engagemanget.",
+    sub: "Lyckohjul, skraplott, quiz. Mekanik som får mottagaren att stanna kvar, kopplat till en belöning som löses in i butik.",
   },
   acquire: {
-    kicker: "För Tillväxt & Förvärv",
+    kicker: "Förvärv",
     headline: "Låt maten\ngöra jobbet.",
-    sub: "Prenumerera på vårt elbolag, få 500 kr på ICA. Byt bank, få en månad gratis glass. När din produkt är abstrakt, lånar du värdet från något alla förstår.",
+    sub: "När er produkt är abstrakt, lånar ni värdet från något alla förstår. En ICA-check tar mottagaren från kanske till ja.",
+  },
+  measure: {
+    kicker: "Mätbarhet",
+    headline: "Spårbart från\nklick till kassa.",
+    sub: "Varje belöning är clearad i butiksledet. Ni ser vad som faktiskt löstes in, av vem och i vilken kanal.",
+  },
+  sampling: {
+    kicker: "Trial",
+    headline: "Få fler att\nprova produkten.",
+    sub: "Skicka ut en kupong som löses in på er hyllvara. Mottagaren möter produkten i butik, ni får data på första köpet.",
+  },
+  loyalty: {
+    kicker: "Lojalitet",
+    headline: "Belöna det\nandra köpet.",
+    sub: "Trigga andra och tredje köpet med en värdecheck efter första inlösen. Återköp som går att räkna hem.",
   },
 };
 
@@ -127,24 +131,7 @@ export function Hero({
   const hero = HEROES[role] || HEROES.default;
 
   return (
-    <section style={{ padding: "64px 0 40px", position: "relative", overflow: "hidden" }}>
-      {/* Background shapes */}
-      <div style={{
-        position: "absolute", top: 80, right: -80, width: 320, height: 320,
-        borderRadius: "50%", background: "var(--clr-lime)", opacity: 0.35,
-        filter: "blur(40px)", zIndex: 0, pointerEvents: "none",
-      }} />
-      <div style={{
-        position: "absolute", top: 280, right: 140, width: 180, height: 180,
-        borderRadius: "50%", background: "var(--clr-green-soft)", opacity: 0.55,
-        filter: "blur(30px)", zIndex: 0, pointerEvents: "none",
-      }} />
-      <div style={{
-        position: "absolute", top: 40, left: -60, width: 220, height: 220,
-        borderRadius: "50%", background: "var(--clr-orange-soft)", opacity: 0.5,
-        filter: "blur(34px)", zIndex: 0, pointerEvents: "none",
-      }} />
-
+    <section style={{ padding: "72px 0 56px", position: "relative", background: "var(--clr-beige)" }}>
       <div className="c-container" style={{ position: "relative" }}>
         <div className="c-eyebrow" style={{ marginBottom: 20 }}>
           <span className="dot" style={{ display: "inline-block", width: 8, height: 8, borderRadius: "50%", background: "var(--clr-green)", marginRight: 8 }} />
@@ -160,20 +147,20 @@ export function Hero({
         </p>
 
         <div style={{ display: "flex", gap: 12, flexWrap: "wrap", marginBottom: 56 }}>
-          <a href="#spela" className="c-btn c-btn--primary" onClick={() => track("module:engage", { id: "hero-games" })}>
-            Testa spelen
-            <svg width="14" height="14" viewBox="0 0 14 14"><path d="M2 7h10M8 3l4 4-4 4" stroke="currentColor" strokeWidth="1.8" fill="none" strokeLinecap="round" strokeLinejoin="round"/></svg>
+          <a href="#kontakt" className="c-btn c-btn--cta" onClick={() => track("module:engage", { id: "hero-cta-funka" })}>
+            Se hur det kan funka för er
+            <ArrowRight size={16} strokeWidth={2} />
           </a>
-          <a href="#quiz" className="c-btn c-btn--ghost" onClick={() => track("module:engage", { id: "hero-quiz" })}>
-            Vilken lösning passar mig?
+          <a href="#hur" className="c-btn c-btn--ghost" onClick={() => track("module:engage", { id: "hero-howitworks" })}>
+            Så fungerar det
           </a>
         </div>
 
         <div>
           <div className="c-eyebrow" style={{ marginBottom: 14 }}>
-            {role === "default" ? "Börja med problemet du brottas med" : "Byt problem"}
+            {role === "default" ? "Börja med ert problem" : "Byt problem"}
           </div>
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))", gap: 10 }}>
+          <div className="hero-problem-grid" style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 10 }}>
             {PROBLEMS.map(p => {
               const active = role === p.id;
               return (
@@ -184,8 +171,9 @@ export function Hero({
                     track("problem:pick", { id: p.id, segment: p.segment });
                   }}
                   style={{
-                    display: "flex", alignItems: "flex-start", gap: 12,
-                    padding: "16px 18px",
+                    display: "flex", alignItems: "stretch", gap: 0,
+                    padding: 0,
+                    minHeight: 96,
                     background: active ? p.accent : "var(--clr-surface)",
                     color: active ? p.accentInk : "var(--clr-ink)",
                     border: `1.5px solid ${active ? p.accentInk : "var(--clr-line)"}`,
@@ -194,20 +182,30 @@ export function Hero({
                     transition: "all 0.2s var(--ease-out)",
                     textAlign: "left",
                     boxShadow: active ? "var(--sh-md)" : "none",
+                    overflow: "hidden",
                   }}
                 >
                   <span style={{
-                    width: 36, height: 36, flexShrink: 0,
-                    borderRadius: "var(--r-sm)",
-                    background: active ? "rgba(255,255,255,0.35)" : p.accent,
-                    color: p.accentInk,
-                    display: "flex", alignItems: "center", justifyContent: "center",
-                  }}>{p.icon}</span>
-                  <span style={{ flex: 1, minWidth: 0 }}>
-                    <span style={{ display: "block", fontWeight: 600, fontSize: 14, lineHeight: 1.25, marginBottom: 3 }}>
+                    width: 4, flexShrink: 0,
+                    background: active ? p.accentInk : p.accent,
+                    transition: "background 0.2s var(--ease-out)",
+                  }} />
+                  <span style={{
+                    flex: 1, minWidth: 0,
+                    padding: "16px 18px",
+                    display: "flex", flexDirection: "column", justifyContent: "center",
+                  }}>
+                    <span style={{
+                      display: "block",
+                      fontFamily: "var(--font-display)",
+                      fontWeight: 700, fontSize: 15,
+                      lineHeight: 1.25,
+                      marginBottom: 4,
+                      letterSpacing: "-0.005em",
+                    }}>
                       {p.label}
                     </span>
-                    <span style={{ display: "block", fontSize: 12, lineHeight: 1.35, opacity: 0.75 }}>
+                    <span style={{ display: "block", fontSize: 13, lineHeight: 1.4, opacity: 0.75 }}>
                       {p.sub}
                     </span>
                   </span>
@@ -215,6 +213,17 @@ export function Hero({
               );
             })}
           </div>
+          <style>{`
+            @media (max-width: 1100px) {
+              .hero-problem-grid { grid-template-columns: repeat(3, 1fr) !important; }
+            }
+            @media (max-width: 780px) {
+              .hero-problem-grid { grid-template-columns: repeat(2, 1fr) !important; }
+            }
+            @media (max-width: 480px) {
+              .hero-problem-grid { grid-template-columns: 1fr !important; }
+            }
+          `}</style>
         </div>
 
         <HeroStats />
@@ -228,11 +237,10 @@ function HeroStats() {
     { v: "5 000+", l: "Butiker i Sverige" },
     { v: "30+ år", l: "Belönings\u00ADexpertis" },
     { v: "< 1 min", l: "Från SMS till inlöst" },
-    { v: "99,8%", l: "Clearing-tillförlitlighet" },
   ];
   return (
     <div style={{
-      display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 0,
+      display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 0,
       borderTop: "1px solid var(--clr-line)", borderBottom: "1px solid var(--clr-line)",
       marginTop: 56,
     }} className="hero-stats">
@@ -242,13 +250,14 @@ function HeroStats() {
           borderRight: i < stats.length - 1 ? "1px solid var(--clr-line)" : "none",
         }}>
           <div style={{ fontSize: 32, fontWeight: 700, letterSpacing: "-0.02em", fontFamily: "var(--font-display)" }}>{s.v}</div>
-          <div style={{ fontSize: 13, color: "var(--clr-muted)", marginTop: 4, fontFamily: "var(--font-mono)", letterSpacing: "0.04em" }}>{s.l}</div>
+          <div style={{ fontSize: 13, color: "var(--clr-muted)", marginTop: 4 }}>{s.l}</div>
         </div>
       ))}
       <style>{`
         @media (max-width: 960px) {
-          .hero-stats { grid-template-columns: 1fr 1fr !important; }
-          .hero-stats > div:nth-child(2n) { border-right: none !important; }
+          .hero-stats { grid-template-columns: 1fr !important; }
+          .hero-stats > div { border-right: none !important; border-bottom: 1px solid var(--clr-line); }
+          .hero-stats > div:last-child { border-bottom: none !important; }
         }
       `}</style>
     </div>

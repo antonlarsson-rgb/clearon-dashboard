@@ -9,19 +9,15 @@ export function CtaFooter() {
 
   return (
     <>
-      <section id="kontakt" style={{ padding: "120px 0 80px", background: "var(--clr-navy)", color: "#fff", position: "relative", overflow: "hidden" }}>
-        <div style={{
-          position: "absolute", bottom: -120, right: -120, width: 400, height: 400,
-          borderRadius: "50%", background: "var(--clr-coral)", opacity: 0.2, filter: "blur(60px)",
-        }} />
+      <section id="kontakt" style={{ padding: "120px 0 80px", background: "var(--clr-navy)", color: "#fff", position: "relative" }}>
         <div className="c-container" style={{ position: "relative" }}>
           <div style={{ maxWidth: 820, marginBottom: 56 }}>
-            <div className="c-eyebrow" style={{ color: "var(--clr-yellow)", marginBottom: 16 }}>Redo att komma igång?</div>
+            <div className="c-eyebrow" style={{ color: "var(--clr-yellow-accent)", marginBottom: 16 }}>Boka demo</div>
             <h2 className="c-h2" style={{ color: "#fff", marginBottom: 24 }}>
-              En timmes setup.<br/>Resten sköter vi.
+              Se hur det kan funka<br/>för er affär.
             </h2>
             <p className="c-body-lg" style={{ color: "rgba(255,255,255,0.75)", maxWidth: 560 }}>
-              Boka ett kort möte. Vi lyssnar på vad ni vill uppnå och visar exakt hur ClearOn löser det, med riktiga exempel från er bransch.
+              Ett kort möte. Vi visar konkret hur ClearOn passar er bransch.
             </p>
           </div>
 
@@ -33,15 +29,15 @@ export function CtaFooter() {
               borderRadius: "var(--r-lg)",
               padding: 32,
             }}>
-              <div className="c-eyebrow" style={{ color: "var(--clr-yellow)", marginBottom: 14 }}>Det vi redan vet om er</div>
+              <div className="c-eyebrow" style={{ color: "var(--clr-yellow-accent)", marginBottom: 14 }}>Det vi redan vet om er</div>
               <div style={{ display: "flex", flexDirection: "column", gap: 14, fontSize: 14 }}>
                 <FactRow label="Segment" value={segment || "ännu okänd"} />
                 <FactRow label="Score" value={`${score} poäng`} />
                 <FactRow label="Scroll" value={`${scrollDepth}%`} />
                 <FactRow label="Tid på sidan" value={`${dwellTime}s`} />
               </div>
-              <div style={{ marginTop: 20, padding: 14, background: "rgba(255, 199, 44, 0.12)", borderRadius: "var(--r-sm)", fontSize: 13, lineHeight: 1.5, color: "rgba(255,255,255,0.8)" }}>
-                Vi har märkt vad du läst. Så slipper du upprepa det i mötet.
+              <div style={{ marginTop: 20, padding: 14, background: "rgba(254, 187, 37, 0.12)", borderRadius: "var(--r-sm)", fontSize: 13, lineHeight: 1.5, color: "rgba(255,255,255,0.8)" }}>
+                Vi vet vad du läst. Du slipper upprepa det i mötet.
               </div>
             </div>
           </div>
@@ -120,7 +116,7 @@ function ContactForm({ track, sessionId, segment, score }: {
         padding: 40, background: "rgba(255,255,255,0.08)", borderRadius: "var(--r-lg)",
         textAlign: "center",
       }}>
-        <div style={{ fontSize: 48, marginBottom: 16, color: "var(--clr-yellow)" }}>&#x2713;</div>
+        <div style={{ fontSize: 48, marginBottom: 16, color: "var(--clr-yellow-accent)" }}>&#x2713;</div>
         <div style={{ fontSize: 22, fontWeight: 600, marginBottom: 8 }}>Tack!</div>
         <div style={{ color: "rgba(255,255,255,0.7)" }}>En säljare hör av sig inom en arbetsdag.</div>
       </div>
@@ -134,8 +130,8 @@ function ContactForm({ track, sessionId, segment, score }: {
       <Field label="Företag" value={form.company} onChange={v => setForm({ ...form, company: v })} />
       <Field label="Vad vill ni lösa?" multiline value={form.msg} onChange={v => setForm({ ...form, msg: v })} />
       <button type="submit" disabled={isSubmitting || !form.email} className="c-btn" style={{
-        background: "var(--clr-yellow)", color: "var(--clr-navy)",
-        justifyContent: "center", padding: "16px", fontSize: 15, fontWeight: 600, marginTop: 6,
+        background: "var(--clr-orange)", color: "#fff",
+        justifyContent: "center", padding: "16px", fontSize: 15, fontWeight: 700, marginTop: 6,
         opacity: isSubmitting || !form.email ? 0.6 : 1,
         border: "none", borderRadius: "var(--r-md)", cursor: "pointer",
       }}>
@@ -174,12 +170,12 @@ function Footer() {
         <div>
           <img src="/clearon-logo.png" alt="ClearOn" style={{ height: 34, width: "auto", filter: "brightness(0) invert(1)", opacity: 0.7 }} />
           <p style={{ marginTop: 16, color: "rgba(255,255,255,0.6)", fontSize: 14, maxWidth: 300, lineHeight: 1.5 }}>
-            Digitala kupong- och belöningslösningar för kundförvärv, kundvård och personalbelöning.
+            Digitala belöningar för kundförvärv, kundvård och personal.
           </p>
         </div>
-        <FooterCol title="Produkter" items={["Digitala kuponger", "Mobila presentkort", "Sverigechecken", "Customer Care", "Clearing Solutions"]} />
-        <FooterCol title="Företag" items={["Om ClearOn", "Karriär", "Event", "Artiklar", "Hållbarhet"]} />
-        <FooterCol title="Kontakt" items={["Kontakta oss", "Frågor och svar", "Hitta butik", "Kontrollera värdebärare", "Logga in"]} />
+        <FooterCol title="Sidan" items={["Så fungerar det", "För er", "Cases", "När det passar", "ROI"]} />
+        <FooterCol title="ClearOn" items={["Om ClearOn", "Alla tjänster", "Event", "Artiklar", "Hållbarhet"]} />
+        <FooterCol title="Kontakt" items={["Boka demo", "Frågor och svar", "Hitta butik", "Kontrollera värdebärare", "Logga in"]} />
       </div>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: 12, color: "rgba(255,255,255,0.4)", paddingTop: 20, borderTop: "1px solid rgba(255,255,255,0.08)" }}>
         <span>&copy; 2026 ClearOn AB &middot; Liljeholmsstranden 3, 117 61 Stockholm</span>
@@ -191,20 +187,20 @@ function Footer() {
 }
 
 const footerLinks: Record<string, string> = {
-  "Digitala kuponger": "/kuponger",
-  "Mobila presentkort": "/mobila-presentkort",
-  "Sverigechecken": "/sverigechecken",
-  "Customer Care": "/customer-care",
-  "Clearing Solutions": "/clearing",
+  "Så fungerar det": "#hur",
+  "För er": "#for-er",
+  "Cases": "#cases",
+  "När det passar": "#nar",
+  "ROI": "#roi",
   "Om ClearOn": "https://www.clearon.se",
-  "Karriar": "https://www.clearon.se",
+  "Alla tjänster": "https://www.clearon.se",
   "Event": "https://www.clearon.se",
   "Artiklar": "https://www.clearon.se",
-  "Hallbarhet": "https://www.clearon.se",
-  "Kontakta oss": "#kontakt",
-  "Fragor och svar": "https://www.clearon.se",
+  "Hållbarhet": "https://www.clearon.se",
+  "Boka demo": "#kontakt",
+  "Frågor och svar": "https://www.clearon.se",
   "Hitta butik": "#butiker",
-  "Kontrollera vardebarare": "https://www.clearon.se",
+  "Kontrollera värdebärare": "https://www.clearon.se",
   "Logga in": "https://dashboard.clearon.live",
 };
 
