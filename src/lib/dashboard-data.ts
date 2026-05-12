@@ -300,6 +300,238 @@ function resolveSourceChannel(c: {
 
 // ---- Data fetchers ----
 
+function mapUpsalesContactRecord(c: Record<string, unknown>): DashboardContact | null {
+  const client = (c.client as Record<string, unknown>) || {};
+  const segments = ((c.segments as Array<{ name: string }>) || []).map((s) => s.name);
+  const projects = ((c.projects as Array<{ name: string }>) || []).map((p) => p.name);
+  const score = (c.score as number) || 0;
+  const hasVisit = !!c.hasVisit;
+  const hasForm = !!c.hasForm;
+  const hasMail = !!c.hasMail;
+  const title = (c.title as string) || null;
+  const company = (client.name as string) || "";
+  const email = (c.email as string) || "";
+
+  const cat = categorizeContact({ email, company, projects, segments, hasVisit, hasMail, hasForm, score });
+  if (cat.category === "internal") return null;
+
+  const status = computeStatus(score, hasVisit, hasForm);
+  const cn = computeContactNow({ score, hasVisit, hasForm, hasMail, category: cat.category, segments });
+
+  return {
+    id: c.id as number,
+    name: c.name as string,
+    email,
+    phone: (c.cellPhone as string) || (c.phone as string) || null,
+    title,
+    company,
+    companyId: (client.id as number) || null,
+    score,
+    journeyStep: (c.journeyStep as string) || "unknown",
+    hasVisit,
+    hasForm,
+    hasMail,
+    segments,
+    projects,
+    regDate: (c.regDate as string) || "",
+    modDate: (c.modDate as string) || "",
+    category: cat.category,
+    categoryLabel: cat.label,
+    status,
+    contactNow: cn.should,
+    contactNowReason: cn.reason,
+    topProduct: resolveProduct(projects, title),
+    landingPage: resolveLandingPage(projects),
+    sourceChannel: resolveSourceChannel({ category: cat.category, hasVisit, hasMail, hasForm, projects }),
+  };
+}
+
+export interface DashboardLeadScore {
+  total_score: number;
+  engagement_score: number;
+  fit_score: number;
+  intent_score: number;
+}
+
+export interface DashboardSignal {
+  type: string;
+  value: number;
+  timestamp: string;
+  description: string;
+}
+
+export interface DashboardProductInterest {
+  product_slug: string;
+  score: number;
+}
+
+export function buildLeadScoreBreakdown(contact: DashboardContact): DashboardLeadScore {
+  const engagement = (contact.hasVisit ? 20 : 0) + (contact.hasMail ? 15 : 0);
+  const intent = (contact.hasForm ? 25 : 0) + Math.min(contact.score, 40);
+  const fit = Math.min(
+    40,
+    (contact.title ? 12 : 0) +
+      (contact.segments.length > 0 ? 10 : 0) +
+      (contact.topProduct ? 10 : 0) +
+      (contact.category === "landing_page" || contact.category === "glass_lead" ? 8 : 0)
+  );
+
+  return {
+    total_score: contact.score,
+    engagement_score: engagement,
+    fit_score: fit,
+    intent_score: intent,
+  };
+}
+
+export function buildLeadSignals(
+  contact: DashboardContact,
+  activities: DashboardActivity[]
+): DashboardSignal[] {
+  const signals: DashboardSignal[] = [];
+
+  if (contact.hasVisit) {
+    signals.push({
+      type: "page_view",
+      value: 20,
+      timestamp: contact.modDate || contact.regDate,
+      description: contact.landingPage
+        ? `Besokte landningssidan ${contact.landingPage}`
+        : "Har besokt webbplatsen",
+    });
+  }
+
+  if (contact.hasMail) {
+    signals.push({
+      type: "email_open",
+      value: 15,
+      timestamp: contact.modDate || contact.regDate,
+      description: "Engagerad via e-post",
+    });
+  }
+
+  if (contact.hasForm) {
+    signals.push({
+      type: "form",
+      value: 25,
+      timestamp: contact.modDate || contact.regDate,
+      description: "Har skickat in formulär",
+    });
+  }
+
+  for (const activity of activities) {
+    signals.push({
+      type: "crm",
+      value: 10,
+      timestamp: activity.date,
+      description: activity.description || activity.type,
+    });
+  }
+
+  return signals.sort(
+    (a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
+  );
+}
+
+export function buildLeadSummary(contact: DashboardContact): string {
+  const role = contact.title ? `${contact.title} på ${contact.company}` : `kontakt på ${contact.company}`;
+  const signals: string[] = [];
+
+  if (contact.hasForm) signals.push("har skickat in formulär");
+  if (contact.hasVisit) {
+    signals.push(
+      contact.landingPage
+        ? `har besökt landningssidan ${contact.landingPage}`
+        : "har besökt webbplatsen"
+    );
+  }
+  if (contact.hasMail) signals.push("engagerar via e-post");
+  if (contact.segments.length > 0) {
+    signals.push(`ligger i segmenten ${contact.segments.slice(0, 2).join(", ")}`);
+  }
+
+  const signalText =
+    signals.length > 0
+      ? `Baserat på Upsales-data ${signals.join(", ")}.`
+      : "Baserat på tillgänglig Upsales-data finns ännu få tydliga signaler.";
+
+  const productText = contact.topProduct
+    ? ` Starkast koppling just nu till ${contact.topProduct}.`
+    : "";
+
+  const action = contact.contactNow
+    ? ` Rekommendation: kontakta nu (${contact.contactNowReason.toLowerCase()}).`
+    : " Rekommendation: bevaka och följ upp vid mer aktivitet.";
+
+  return `${contact.name} är ${role}. ${signalText}${productText}${action}`;
+}
+
+export function getContactsForProduct(
+  contacts: DashboardContact[],
+  productSlug: string,
+  minScore = 0
+): DashboardContact[] {
+  return contacts
+    .filter((contact) => contact.topProduct === productSlug && contact.score >= minScore)
+    .sort((a, b) => {
+      if (a.contactNow && !b.contactNow) return -1;
+      if (!a.contactNow && b.contactNow) return 1;
+      return b.score - a.score;
+    });
+}
+
+export function getProductLandingStats(
+  contacts: DashboardContact[],
+  productSlug: string
+): {
+  visitors: number;
+  leads: number;
+  conversion_rate: number;
+  top_source: string;
+} {
+  const productContacts = contacts.filter((contact) => contact.topProduct === productSlug);
+  const visitors = productContacts.filter((contact) => contact.hasVisit).length;
+  const leads = productContacts.filter(
+    (contact) => contact.hasForm || contact.category === "landing_page" || contact.category === "glass_lead"
+  ).length;
+  const conversionRate = visitors > 0 ? Math.round((leads / visitors) * 1000) / 10 : 0;
+
+  const sourceCounts = new Map<string, number>();
+  for (const contact of productContacts) {
+    sourceCounts.set(contact.sourceChannel, (sourceCounts.get(contact.sourceChannel) || 0) + 1);
+  }
+
+  const topSource =
+    [...sourceCounts.entries()].sort((a, b) => b[1] - a[1])[0]?.[0] || "Ingen data";
+
+  return {
+    visitors,
+    leads,
+    conversion_rate: conversionRate,
+    top_source: topSource,
+  };
+}
+
+export function getProductChannelBreakdown(
+  contacts: DashboardContact[],
+  productSlug: string
+): Array<{ channel: string; leads: number; contactNow: number; hot: number }> {
+  const byChannel = new Map<string, { leads: number; contactNow: number; hot: number }>();
+
+  for (const contact of getContactsForProduct(contacts, productSlug)) {
+    const channel = contact.sourceChannel || "Okand";
+    const current = byChannel.get(channel) || { leads: 0, contactNow: 0, hot: 0 };
+    current.leads += 1;
+    if (contact.contactNow) current.contactNow += 1;
+    if (contact.status === "hot") current.hot += 1;
+    byChannel.set(channel, current);
+  }
+
+  return [...byChannel.entries()]
+    .map(([channel, stats]) => ({ channel, ...stats }))
+    .sort((a, b) => b.leads - a.leads);
+}
+
 export async function getContacts(limit = 200): Promise<DashboardContact[]> {
   // Fetch more than needed since we filter some out
   const fetchLimit = Math.min(limit * 3, 500);
@@ -310,50 +542,9 @@ export async function getContacts(limit = 200): Promise<DashboardContact[]> {
     const results: DashboardContact[] = [];
     for (const c of (data.data || [])) {
       try {
-        const client = ((c as Record<string, unknown>).client as Record<string, unknown>) || {};
-        const segments = (((c as Record<string, unknown>).segments as Array<{ name: string }>) || []).map((s) => s.name);
-        const projects = (((c as Record<string, unknown>).projects as Array<{ name: string }>) || []).map((p) => p.name);
-        const score = ((c as Record<string, unknown>).score as number) || 0;
-        const hasVisit = !!((c as Record<string, unknown>).hasVisit);
-        const hasForm = !!((c as Record<string, unknown>).hasForm);
-        const hasMail = !!((c as Record<string, unknown>).hasMail);
-        const title = ((c as Record<string, unknown>).title as string) || null;
-        const company = (client.name as string) || "";
-        const email = ((c as Record<string, unknown>).email as string) || "";
-
-        const cat = categorizeContact({ email, company, projects, segments, hasVisit, hasMail, hasForm, score });
-        if (cat.category === "internal") continue;
-
-        const status = computeStatus(score, hasVisit, hasForm);
-        const cn = computeContactNow({ score, hasVisit, hasForm, hasMail, category: cat.category, segments });
-
-        results.push({
-          id: (c as Record<string, unknown>).id as number,
-          name: (c as Record<string, unknown>).name as string,
-          email,
-          phone: ((c as Record<string, unknown>).cellPhone as string) || ((c as Record<string, unknown>).phone as string) || null,
-          title,
-          company,
-          companyId: (client.id as number) || null,
-          score,
-          journeyStep: ((c as Record<string, unknown>).journeyStep as string) || "unknown",
-          hasVisit,
-          hasForm,
-          hasMail,
-          segments,
-          projects,
-          regDate: ((c as Record<string, unknown>).regDate as string) || "",
-          modDate: ((c as Record<string, unknown>).modDate as string) || "",
-          category: cat.category,
-          categoryLabel: cat.label,
-          status,
-          contactNow: cn.should,
-          contactNowReason: cn.reason,
-          topProduct: resolveProduct(projects, title),
-          landingPage: resolveLandingPage(projects),
-          sourceChannel: resolveSourceChannel({ category: cat.category, hasVisit, hasMail, hasForm, projects }),
-        });
-
+        const mapped = mapUpsalesContactRecord(c as Record<string, unknown>);
+        if (!mapped) continue;
+        results.push(mapped);
         if (results.length >= limit) break;
       } catch (e) {
         console.error("Error processing contact:", (c as Record<string, unknown>).name, e);
@@ -361,6 +552,47 @@ export async function getContacts(limit = 200): Promise<DashboardContact[]> {
       }
     }
     return results;
+  }, []);
+}
+
+export async function getContactById(id: number): Promise<DashboardContact | null> {
+  return cachedFetch(`contact-${id}`, async () => {
+    if (!process.env.UPSALES_API_KEY) return null;
+    const data = await upsalesGet(`/contacts/${id}`);
+    const record = data.data as Record<string, unknown> | undefined;
+    if (!record) return null;
+    return mapUpsalesContactRecord(record);
+  }, null);
+}
+
+export async function getContactActivities(
+  contactId: number,
+  limit = 20
+): Promise<DashboardActivity[]> {
+  return cachedFetch(`contact-activities-${contactId}-${limit}`, async () => {
+    if (!process.env.UPSALES_API_KEY) return [];
+    const data = await upsalesGet("/activities", { limit: "200", sort: "-date" });
+
+    return (data.data || [])
+      .filter((activity: Record<string, unknown>) => {
+        const contacts = (activity.contacts as Array<{ id: number }>) || [];
+        return contacts.some((contact) => contact.id === contactId);
+      })
+      .slice(0, limit)
+      .map((activity: Record<string, unknown>) => {
+        const client = (activity.client as Record<string, unknown>) || {};
+        const contacts = (activity.contacts as Array<{ name: string }>) || [];
+        const activityType = (activity.activityType as Record<string, unknown>) || {};
+
+        return {
+          id: activity.id as number,
+          date: (activity.date as string) || "",
+          description: (activity.description as string) || "",
+          type: (activityType.name as string) || "Aktivitet",
+          contactName: contacts[0]?.name || "",
+          company: (client.name as string) || "",
+        };
+      });
   }, []);
 }
 

@@ -69,14 +69,14 @@ export function RoiCalculator() {
             </div>
 
             <Slider
-              label="Antal skickade värdebärare"
+              label="Antal skickade värdecheckar"
               value={volume}
               min={1000} max={500000} step={1000}
               onChange={setVolume}
               format={v => fmt(v) + " st"}
             />
             <Slider
-              label="Värde per värdebärare"
+              label="Värde per värdecheck"
               value={value}
               min={5} max={500} step={5}
               onChange={setValue}

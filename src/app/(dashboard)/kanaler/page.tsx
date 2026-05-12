@@ -1,9 +1,19 @@
-import { adCampaigns, channelFlows, landingPageStats } from "@/lib/mock-data";
+// Datakallor:
+// - Webbkanaler: clearon.live (Supabase web_events) + clearon.se (Upsales)
+// - Annonskanaler: tills annons-API:er ar pa plats kommer Meta/Google/LinkedIn
+//   fran src/lib/mock-data.ts och markeras med "Mockdata" i UI:t.
+import { adCampaigns } from "@/lib/mock-data";
+import { getContacts } from "@/lib/dashboard-data";
+import {
+  buildWebChannelFlows,
+  getClearonSeWebTraffic,
+  getLandingPageAnalytics,
+} from "@/lib/web-analytics";
 import { products } from "@/lib/products";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { formatNumber, formatCurrency } from "@/lib/utils";
-import { Sparkles, ExternalLink, ArrowRight, Eye, Users, Target, TrendingUp } from "lucide-react";
+import { Sparkles, ExternalLink, ArrowRight, Eye, Users, Target, TrendingUp, FlaskConical } from "lucide-react";
 
 type ChannelData = {
   label: string;
@@ -102,7 +112,15 @@ function getProductColor(slug: string) {
   return products.find((p) => p.slug === slug)?.color ?? "#6B7280";
 }
 
-export default function KanalerPage() {
+export const dynamic = "force-dynamic";
+
+export default async function KanalerPage() {
+  const [landingPageStats, contacts] = await Promise.all([
+    getLandingPageAnalytics(30),
+    getContacts(200),
+  ]);
+  const clearonSeTraffic = getClearonSeWebTraffic(contacts);
+  const channelFlows = buildWebChannelFlows(landingPageStats, clearonSeTraffic);
   const channels = aggregateChannels();
 
   // Add email and organic with empty byProduct
@@ -124,14 +142,14 @@ export default function KanalerPage() {
         <span className="section-prefix">/ Kanaler</span>
         <h1 className="font-display text-2xl mt-1">Kanaloversikt</h1>
         <p className="text-text-secondary text-sm mt-1">
-          Flode fran kanal till landningssida till lead till konvertering
+          clearon.live fran landningssidans tracking, clearon.se fran Upsales webbbesok
         </p>
       </div>
 
       {/* Channel flow funnel */}
       <Card>
         <CardHeader>
-          <CardTitle>Kanalflode</CardTitle>
+          <CardTitle>Webbkanaler</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="overflow-x-auto">
@@ -153,6 +171,13 @@ export default function KanalerPage() {
                 </tr>
               </thead>
               <tbody>
+                {channelFlows.length === 0 && (
+                  <tr>
+                    <td colSpan={12} className="py-6 text-center text-sm text-text-muted">
+                      Ingen webbdata än. Landningssidans events och Upsales webbbesök visas här när de finns.
+                    </td>
+                  </tr>
+                )}
                 {channelFlows.map((flow) => (
                   <tr key={flow.channel} className="border-b border-border/50 last:border-0">
                     <td className="py-3 pr-4 font-medium">{flow.channel}</td>
@@ -207,8 +232,17 @@ export default function KanalerPage() {
                 <div key={lp.path} className="border border-border rounded-lg p-4 hover:border-accent/30 transition-colors">
                   <div className="flex items-center justify-between mb-3">
                     <div className="flex items-center gap-2">
-                      <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: getProductColor(lp.product_slug) }} />
-                      <span className="text-sm font-medium">{product?.name}</span>
+                      <span
+                        className="h-2.5 w-2.5 rounded-full"
+                        style={{
+                          backgroundColor: lp.product_slug
+                            ? getProductColor(lp.product_slug)
+                            : "#6B7280",
+                        }}
+                      />
+                      <span className="text-sm font-medium">
+                        {product?.name || lp.path}
+                      </span>
                     </div>
                     <a
                       href={product?.landingPageUrl}
@@ -257,7 +291,20 @@ export default function KanalerPage() {
         </CardContent>
       </Card>
 
-      {/* Channel cards */}
+      {/* Annonskanaler (mock tills Meta/Google/LinkedIn API:er ar paslagna) */}
+      <div>
+        <div className="flex items-center gap-2 mb-3">
+          <h2 className="font-display text-lg">Annonskanaler</h2>
+          <Badge className="bg-amber-100 text-amber-800 border border-amber-200">
+            <FlaskConical className="h-3 w-3 mr-1" />
+            Mockdata
+          </Badge>
+        </div>
+        <p className="text-xs text-text-muted mb-3">
+          Meta, Google och LinkedIn visas tills annons-API:er ar paslagna. Email och organic ar planeringsvarden.
+        </p>
+      </div>
+
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
         {allChannels.map((channel) => {
           const cpl =

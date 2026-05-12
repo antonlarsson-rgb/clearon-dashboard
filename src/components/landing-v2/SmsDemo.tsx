@@ -5,7 +5,7 @@ import { useSignal } from "./SignalProvider";
 
 const campaigns: Record<string, { brand: string; offer: string; color: string; icon: string }> = {
   ica: { brand: "ICA", offer: "20 kr på OATLY Havredryck", color: "#e70713", icon: "ICA" },
-  hm: { brand: "H&M Home", offer: "150 kr välkomstcheck", color: "#222", icon: "H&M" },
+  coop: { brand: "Coop", offer: "25 kr rabatt på valfri vara", color: "#00a651", icon: "Coop" },
   apoteket: { brand: "Apoteket", offer: "Gratis Multivitamin (50 st)", color: "#00994d", icon: "Apo" },
 };
 
@@ -35,7 +35,7 @@ export function SmsDemo() {
             <h2 className="c-h2" style={{ marginBottom: 20 }}>Från kampanj till kassa.<br/>Prova flödet.</h2>
             <p className="c-body-lg" style={{ marginBottom: 32, maxWidth: 520 }}>
               Skriv in ett (fiktivt) telefonnummer och skicka ett exempel-erbjudande.
-              Se hur mottagaren får SMS, öppnar sin värdebärare och löser in i butik.
+              Se hur mottagaren får SMS, öppnar sin värdecheck och löser in i butik.
             </p>
 
             <div style={{ marginBottom: 20 }}>
@@ -221,13 +221,19 @@ function LandingScreen({ campaign, onRedeem }: { campaign: { brand: string; offe
         border: "2px dashed var(--clr-line)", borderRadius: 12,
         textAlign: "center", marginBottom: 14,
       }}>
-        <div style={{ fontFamily: "var(--font-mono)", fontSize: 10, color: "#888", letterSpacing: "0.1em" }}>EAN</div>
-        <svg width="100%" height="60" viewBox="0 0 200 60" style={{ marginTop: 6 }}>
-          {Array.from({ length: 40 }).map((_, i) => (
-            <rect key={i} x={i * 5} y="0" width={i % 3 === 0 ? 3 : 1.5} height="50" fill="#0b1220" />
-          ))}
+        <div style={{ fontFamily: "var(--font-mono)", fontSize: 10, color: "#888", letterSpacing: "0.1em" }}>QR-KOD</div>
+        <svg width="120" height="120" viewBox="0 0 120 120" style={{ margin: "10px auto 0" }}>
+          <rect x="8" y="8" width="28" height="28" fill="#0b1220" />
+          <rect x="84" y="8" width="28" height="28" fill="#0b1220" />
+          <rect x="8" y="84" width="28" height="28" fill="#0b1220" />
+          <rect x="44" y="44" width="12" height="12" fill="#0b1220" />
+          <rect x="60" y="44" width="8" height="8" fill="#0b1220" />
+          <rect x="44" y="60" width="8" height="8" fill="#0b1220" />
+          <rect x="64" y="64" width="16" height="16" fill="#0b1220" />
+          <rect x="88" y="52" width="10" height="10" fill="#0b1220" />
+          <rect x="52" y="88" width="10" height="10" fill="#0b1220" />
         </svg>
-        <div style={{ fontFamily: "var(--font-mono)", fontSize: 11, marginTop: 6 }}>7 300123 45678 9</div>
+        <div style={{ fontFamily: "var(--font-mono)", fontSize: 11, marginTop: 6 }}>clearon.se/v/7A3F9X</div>
       </div>
 
       <button onClick={onRedeem} style={{

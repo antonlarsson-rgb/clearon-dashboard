@@ -6,6 +6,7 @@ import { ArrowRight } from "lucide-react";
 const PROBLEMS = [
   {
     id: "boring",
+    tag: "Aktivering",
     label: "Kampanjerna engagerar inte",
     sub: "Lekfull mekanik som driver inlösen",
     accent: "var(--clr-coral)",
@@ -14,6 +15,7 @@ const PROBLEMS = [
   },
   {
     id: "consent",
+    tag: "Consent",
     label: "Cookie-consent är låg",
     sub: "Belöning för att säga ja till data",
     accent: "var(--clr-lime)",
@@ -22,14 +24,16 @@ const PROBLEMS = [
   },
   {
     id: "acquire",
+    tag: "Tillväxt",
     label: "Svårt att locka nya kunder",
-    sub: "Lån värdet från något alla förstår",
+    sub: "Gör erbjudandet konkret med mat och vardagsvaror som mottagaren redan förstår.",
     accent: "var(--clr-yellow-accent)",
     accentInk: "#4a3010",
     segment: "acquisition-hunter",
   },
   {
     id: "measure",
+    tag: "Mätning",
     label: "Effekten går inte att mäta",
     sub: "Spårbart från klick till kassa",
     accent: "var(--clr-green)",
@@ -38,6 +42,7 @@ const PROBLEMS = [
   },
   {
     id: "sampling",
+    tag: "Trial",
     label: "Fler måste prova produkten",
     sub: "Kupong som driver första köpet",
     accent: "var(--clr-orange)",
@@ -46,6 +51,7 @@ const PROBLEMS = [
   },
   {
     id: "loyalty",
+    tag: "Lojalitet",
     label: "Kunderna återvänder inte",
     sub: "Belöna andra och tredje köpet",
     accent: "var(--clr-green-deep)",
@@ -54,6 +60,7 @@ const PROBLEMS = [
   },
   {
     id: "complaint",
+    tag: "Kundvård",
     label: "Klagomål skadar relationen",
     sub: "Plåster på såret i kundtjänst",
     accent: "var(--clr-teal)",
@@ -62,6 +69,7 @@ const PROBLEMS = [
   },
   {
     id: "staff",
+    tag: "HR",
     label: "Personalen känns osedd",
     sub: "Spontan erkänsla med verkligt värde",
     accent: "var(--clr-lilac)",
@@ -195,6 +203,17 @@ export function Hero({
                     padding: "16px 18px",
                     display: "flex", flexDirection: "column", justifyContent: "center",
                   }}>
+                    <span style={{
+                      display: "block",
+                      fontSize: 10,
+                      fontFamily: "var(--font-mono)",
+                      letterSpacing: "0.08em",
+                      textTransform: "uppercase",
+                      opacity: 0.7,
+                      marginBottom: 4,
+                    }}>
+                      {p.tag}
+                    </span>
                     <span style={{
                       display: "block",
                       fontFamily: "var(--font-display)",

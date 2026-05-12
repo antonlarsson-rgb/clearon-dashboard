@@ -68,12 +68,23 @@ export function SignalProvider({ children }: { children: React.ReactNode }) {
   const [showPanel, setShowPanel] = useState(false);
   const eventsRef = useRef<string[]>([]);
   const startTimeRef = useRef(Date.now());
+  const pageLoadTracked = useRef(false);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
     const params = new URLSearchParams(window.location.search);
     setShowPanel(params.get("debug") === "1");
   }, []);
+
+  // Emit page_load once per mount sa att web-analytics fangar besokare per sida
+  useEffect(() => {
+    if (pageLoadTracked.current || !sessionId) return;
+    pageLoadTracked.current = true;
+    const path =
+      typeof window !== "undefined" ? window.location.pathname : "";
+    const product = path.split("/").filter(Boolean).pop() || "";
+    trackEvent("page_load", product ? { product } : {});
+  }, [sessionId, trackEvent]);
 
   // Scroll depth tracking
   useEffect(() => {

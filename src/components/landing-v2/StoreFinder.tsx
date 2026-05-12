@@ -42,7 +42,6 @@ export function StoreFinder() {
   }, []);
 
   const filtered = cities.filter(c => c.name.toLowerCase().includes(query.toLowerCase()) || c.type.toLowerCase().includes(query.toLowerCase()));
-  const total = cities.reduce((s, c) => s + c.count, 0);
 
   return (
     <section id="butiker" style={{ padding: "120px 0", background: "var(--clr-surface-alt)", borderTop: "1px solid var(--clr-line)", borderBottom: "1px solid var(--clr-line)" }}>
@@ -108,16 +107,6 @@ export function StoreFinder() {
                 </g>
               ))}
             </svg>
-            <div style={{
-              position: "absolute", bottom: 0, right: 0,
-              background: "#fff", padding: "14px 18px",
-              borderRadius: "var(--r-sm)", border: "1px solid var(--clr-line)",
-              fontSize: 13,
-            }}>
-              <div style={{ fontFamily: "var(--font-mono)", fontSize: 11, color: "var(--clr-muted)", letterSpacing: "0.06em" }}>TOTAL TÄCKNING</div>
-              <div style={{ fontSize: 22, fontWeight: 600, marginTop: 2 }}>{total.toLocaleString("sv-SE")}+</div>
-              <div style={{ color: "var(--clr-muted)", fontSize: 12 }}>anslutna inlösenställen</div>
-            </div>
           </div>
         </div>
       </div>

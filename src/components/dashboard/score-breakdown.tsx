@@ -3,10 +3,10 @@
 import { Card } from "@/components/ui/card";
 import { ScoreBadge } from "@/components/ui/score-badge";
 import { cn, scoreColor } from "@/lib/utils";
-import type { LeadScore } from "@/lib/mock-data";
+import type { DashboardLeadScore } from "@/lib/dashboard-data";
 
 interface ScoreBreakdownProps {
-  score: LeadScore;
+  score: DashboardLeadScore;
 }
 
 function ProgressBar({

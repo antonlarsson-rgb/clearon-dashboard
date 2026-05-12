@@ -1024,7 +1024,7 @@ export default function LandingPage() {
 
       <Footer />
 
-      <IceCreamPopup sessionId={sessionId} variant="main" trackEvent={trackEvent} delayMs={7000} />
+      <IceCreamPopup sessionId={sessionId} variant="main" trackEvent={trackEvent} delayMs={3000} />
 
       <ConsentBanner
         visible={consent === null}

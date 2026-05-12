@@ -4,18 +4,18 @@ const MARKNAD = {
   title: "För marknadschefen",
   sub: "Marknadschefer och marknadsförare i dagligvaruhandeln",
   accentBar: "var(--clr-green)",
-  bullets: [
+    bullets: [
     {
-      headline: "Högre konvertering på kampanjer",
-      body: "En riktig belöning slår en rabattrad. Kampanjer som annars dör blir aktiverade.",
+      headline: "Starkare varumärkesbyggande i kampanjerna",
+      body: "Belöningar som känns i vardagen stärker varumärket utan att offra mätbarhet.",
     },
     {
       headline: "Mer first-party data ni äger",
       body: "Consent, klick och inlösen blir mätbart hela vägen. Slut på att gissa.",
     },
     {
-      headline: "Tydligare ROI på aktiveringar",
-      body: "Varje spenderad krona kan följas till en transaktion i butik.",
+      headline: "Tydligare effekt på aktiveringar",
+      body: "Se hur branding och aktivering hänger ihop från första klick till inlösen.",
     },
   ],
 };
@@ -34,8 +34,8 @@ const BYRA = {
       body: "Färdig infrastruktur. Visa hela funneln, från exponering till transaktion.",
     },
     {
-      headline: "Branding som blir försäljning",
-      body: "Koppla branding till ett mätbart kvitto i kassan.",
+      headline: "Branding som blir konvertering",
+      body: "Koppla varumärkesbyggande till mätbar konvertering i butik.",
     },
   ],
 };

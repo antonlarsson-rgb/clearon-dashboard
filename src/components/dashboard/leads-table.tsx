@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useMemo } from "react";
+import Link from "next/link";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -277,9 +278,12 @@ export function LeadsTable({ contacts }: LeadsTableProps) {
                       <ScoreBadge score={Math.min(lead.score, 100)} size="sm" />
                     </td>
                     <td className="py-3 px-4">
-                      <span className="font-medium text-text-primary">
+                      <Link
+                        href={`/leads/${lead.id}`}
+                        className="font-medium text-text-primary hover:text-accent transition-colors"
+                      >
                         {lead.name}
-                      </span>
+                      </Link>
                       {lead.email && (
                         <p className="text-[10px] text-text-muted truncate max-w-[180px]">{lead.email}</p>
                       )}

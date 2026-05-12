@@ -39,7 +39,7 @@ const PLACEHOLDER_CASES: Case[] = [
   },
   {
     id: "case-3",
-    industry: "Bank",
+    industry: "Fackförbund",
     challenge: "Svårt att engagera kring abstrakt erbjudande.",
     solution: "ICA-check som påtaglig belöning vid byte av tjänst.",
     results: [

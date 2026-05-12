@@ -1,9 +1,17 @@
 import Link from "next/link";
 import { products } from "@/lib/products";
-import { productScores, contacts, leadScores, landingPageStats, shouldContactNow } from "@/lib/mock-data";
+import {
+  getContacts,
+  getContactsForProduct,
+  getProductLandingStats,
+} from "@/lib/dashboard-data";
+import {
+  getLandingAnalyticsForProduct,
+  getLandingPageAnalytics,
+  mergeLandingStats,
+} from "@/lib/web-analytics";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { ScoreBadge } from "@/components/ui/score-badge";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   Ticket,
@@ -12,13 +20,13 @@ import {
   Megaphone,
   Gift,
   ArrowLeftRight,
-  TrendingUp,
-  TrendingDown,
   ArrowRight,
   ExternalLink,
   Zap,
 } from "lucide-react";
 import { formatNumber } from "@/lib/utils";
+
+export const dynamic = "force-dynamic";
 
 const iconMap: Record<string, React.ElementType> = {
   ticket: Ticket,
@@ -29,45 +37,32 @@ const iconMap: Record<string, React.ElementType> = {
   "arrow-left-right": ArrowLeftRight,
 };
 
-const trendData: Record<string, number> = {
-  "sales-promotion": 12,
-  "customer-care": 8,
-  "interactive-engage": -3,
-  kampanja: 22,
-  "send-a-gift": 15,
-  "clearing-solutions": -5,
-};
+export default async function ProdukterPage() {
+  const [contacts, landingPageStats] = await Promise.all([
+    getContacts(200),
+    getLandingPageAnalytics(30),
+  ]);
 
-function getProductLeads(slug: string) {
-  const scores = productScores
-    .filter((ps) => ps.product_slug === slug && ps.score > 50)
-    .sort((a, b) => b.score - a.score);
-
-  return scores.map((ps) => {
-    const contact = contacts.find((c) => c.id === ps.contact_id);
-    return { ...ps, contact };
-  });
-}
-
-export default function ProdukterPage() {
   return (
     <div className="space-y-6">
       <div>
         <span className="section-prefix">/ Produkter</span>
         <h1 className="font-display text-2xl mt-1">Produktportfolj</h1>
         <p className="text-text-secondary text-sm mt-1">
-          ClearOns sex produkter och deras lead-intresse
+          ClearOns sex produkter och deras lead-intresse fran Upsales CRM
         </p>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
         {products.map((product) => {
           const Icon = iconMap[product.icon];
-          const hotLeads = getProductLeads(product.slug);
-          const trend = trendData[product.slug] ?? 0;
+          const hotLeads = getContactsForProduct(contacts, product.slug, 50);
           const top3 = hotLeads.slice(0, 3);
-          const lpStat = landingPageStats.find((lp) => lp.product_slug === product.slug);
-          const contactNowCount = hotLeads.filter((l) => shouldContactNow(l.contact_id).should).length;
+          const lpStat = mergeLandingStats(
+            getLandingAnalyticsForProduct(landingPageStats, product.slug),
+            getProductLandingStats(contacts, product.slug)
+          );
+          const contactNowCount = hotLeads.filter((lead) => lead.contactNow).length;
 
           return (
             <Card key={product.slug}>
@@ -94,24 +89,10 @@ export default function ProdukterPage() {
                       </p>
                     </div>
                   </div>
-                  <div className="flex items-center gap-1 text-xs font-mono">
-                    {trend >= 0 ? (
-                      <TrendingUp className="h-3.5 w-3.5 text-success" />
-                    ) : (
-                      <TrendingDown className="h-3.5 w-3.5 text-danger" />
-                    )}
-                    <span
-                      className={trend >= 0 ? "text-success" : "text-danger"}
-                    >
-                      {trend >= 0 ? "+" : ""}
-                      {trend}% vs fg. manad
-                    </span>
-                  </div>
                 </div>
               </CardHeader>
               <CardContent>
-                {/* Landing page stats */}
-                {lpStat && (
+                {lpStat.visitors > 0 || lpStat.leads > 0 ? (
                   <div className="grid grid-cols-3 gap-2 mb-3 pb-3 border-b border-border">
                     <div>
                       <p className="text-[10px] text-text-muted uppercase tracking-wide">Besokare</p>
@@ -126,7 +107,7 @@ export default function ProdukterPage() {
                       <p className="font-mono text-sm">{lpStat.leads}</p>
                     </div>
                   </div>
-                )}
+                ) : null}
 
                 {contactNowCount > 0 && (
                   <div className="flex items-center gap-1.5 mb-3 text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-md px-2.5 py-1.5">
@@ -140,30 +121,27 @@ export default function ProdukterPage() {
                     <p className="text-xs font-medium text-text-muted uppercase tracking-wide">
                       Hetaste leads
                     </p>
-                    {top3.map((lead) => {
-                      const cn = shouldContactNow(lead.contact_id);
-                      return (
-                        <div
-                          key={lead.contact_id}
-                          className="flex items-center justify-between"
-                        >
-                          <div className="min-w-0 flex items-center gap-1.5">
-                            <div>
-                              <p className="text-sm font-body truncate">
-                                {lead.contact?.name ?? "Okand"}
-                              </p>
-                              <p className="text-xs text-text-secondary truncate">
-                                {lead.contact?.account_name}
-                              </p>
-                            </div>
-                            {cn.should && (
-                              <Zap className="h-3 w-3 text-amber-500 shrink-0" />
-                            )}
+                    {top3.map((lead) => (
+                      <div
+                        key={lead.id}
+                        className="flex items-center justify-between"
+                      >
+                        <div className="min-w-0 flex items-center gap-1.5">
+                          <div>
+                            <p className="text-sm font-body truncate">
+                              {lead.name}
+                            </p>
+                            <p className="text-xs text-text-secondary truncate">
+                              {lead.company}
+                            </p>
                           </div>
-                          <ScoreBadge score={lead.score} size="sm" />
+                          {lead.contactNow && (
+                            <Zap className="h-3 w-3 text-amber-500 shrink-0" />
+                          )}
                         </div>
-                      );
-                    })}
+                        <ScoreBadge score={lead.score} size="sm" />
+                      </div>
+                    ))}
                   </div>
                 ) : (
                   <p className="text-sm text-text-muted">

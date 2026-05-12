@@ -3,7 +3,7 @@
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { timeAgo } from "@/lib/utils";
-import type { Signal } from "@/lib/mock-data";
+import type { DashboardSignal } from "@/lib/dashboard-data";
 import {
   Eye,
   Download,
@@ -14,7 +14,7 @@ import {
 } from "lucide-react";
 
 interface LeadTimelineProps {
-  signals: Signal[];
+  signals: DashboardSignal[];
 }
 
 function getSignalIcon(type: string) {

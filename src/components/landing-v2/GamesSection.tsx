@@ -107,7 +107,7 @@ function WheelGame() {
   const slices = [
     { label: "50 kr ICA", color: "#5e9732", ink: "#fff" },
     { label: "Försök igen", color: "#ece7d8", ink: "#4a5344" },
-    { label: "Glass gratis", color: "#e8864c", ink: "#fff" },
+    { label: "25% rabatt Oatly", color: "#e8864c", ink: "#fff" },
     { label: "Försök igen", color: "#f4f1e9", ink: "#4a5344" },
     { label: "20 kr Apotek", color: "#c8e66b", ink: "#4a5a1a" },
     { label: "Försök igen", color: "#ece7d8", ink: "#4a5344" },
@@ -145,7 +145,7 @@ function WheelGame() {
           eyebrow="Lyckohjul"
           title="Varje snurr en ny chans."
           desc="Perfekt för kundklubbs-aktivering, mässor, eller för att väcka en sovande CRM-bas. Sätt vinstchansen, sätt budgeten, vi sköter clearing."
-          usecases={["Black Friday-teaser", "Sommarkampanj", "Aktivera vilande kunder", "Mässa / event"]}
+          usecases={["Julkampanj", "Sommarkampanj", "Aktivera vilande kunder", "Mässa / event"]}
         />
       </div>
 

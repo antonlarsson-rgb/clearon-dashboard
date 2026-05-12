@@ -7,6 +7,7 @@ import { ScoreBadge } from "@/components/ui/score-badge";
 import type { DashboardContact } from "@/lib/dashboard-data";
 import { products } from "@/lib/products";
 import { Phone, Mail, Zap } from "lucide-react";
+import Link from "next/link";
 
 interface HotLeadsProps {
   leads: DashboardContact[];
@@ -38,9 +39,12 @@ export function HotLeads({ leads }: HotLeadsProps) {
               <ScoreBadge score={Math.min(lead.score, 100)} size="md" />
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2">
-                  <span className="text-sm font-medium text-text-primary truncate">
+                  <Link
+                    href={`/leads/${lead.id}`}
+                    className="text-sm font-medium text-text-primary truncate hover:text-accent transition-colors"
+                  >
                     {lead.name}
-                  </span>
+                  </Link>
                   {lead.contactNow && (
                     <Badge className="bg-amber-50 text-amber-700 border border-amber-200 text-[10px] px-1.5 py-0">
                       <Zap className="h-2.5 w-2.5 mr-0.5" />

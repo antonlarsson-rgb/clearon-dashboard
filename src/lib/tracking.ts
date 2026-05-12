@@ -45,6 +45,10 @@ export interface TrackingProperties {
   choice?: string;
   step?: number;
   page_section?: string;
+  page_path?: string;
+  host?: string;
+  product?: string;
+  variant?: string;
   utm_source?: string;
   utm_medium?: string;
   utm_campaign?: string;
@@ -133,9 +137,17 @@ export async function track(eventName: string, properties: TrackingProperties = 
   const sessionId = getSessionId();
   const visitorId = getVisitorId();
   const utmParams = getUtmParams();
+  const pageContext =
+    typeof window !== "undefined"
+      ? {
+          page_path: window.location.pathname,
+          host: window.location.host,
+        }
+      : {};
 
   const enrichedProperties = {
     ...properties,
+    ...pageContext,
     ...utmParams,
     referrer: getReferrer(),
     device_type: getDeviceType(),
@@ -160,6 +172,8 @@ export async function track(eventName: string, properties: TrackingProperties = 
 
 export const trackingEvents = {
   pageView: (section: string) => track("page_view", { page_section: section }),
+  pageLoad: (product?: string) =>
+    track("page_load", product ? { product } : {}),
   roleSelected: (role: string) => track("role_selected", { role }),
   scenarioChoice: (scenarioId: string, choice: string, step: number) =>
     track("scenario_choice", { choice, step, page_section: scenarioId }),

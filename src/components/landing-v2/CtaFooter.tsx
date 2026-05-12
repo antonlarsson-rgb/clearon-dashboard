@@ -173,9 +173,9 @@ function Footer() {
             Digitala belöningar för kundförvärv, kundvård och personal.
           </p>
         </div>
-        <FooterCol title="Sidan" items={["Så fungerar det", "För er", "Cases", "När det passar", "ROI"]} />
+        <FooterCol title="Sidan" items={["Så fungerar det", "För er", "Cases", "När det passar"]} />
         <FooterCol title="ClearOn" items={["Om ClearOn", "Alla tjänster", "Event", "Artiklar", "Hållbarhet"]} />
-        <FooterCol title="Kontakt" items={["Boka demo", "Frågor och svar", "Hitta butik", "Kontrollera värdebärare", "Logga in"]} />
+        <FooterCol title="Kontakt" items={["Boka demo", "Frågor och svar", "Hitta butik", "Kontrollera värdecheck", "Logga in"]} />
       </div>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: 12, color: "rgba(255,255,255,0.4)", paddingTop: 20, borderTop: "1px solid rgba(255,255,255,0.08)" }}>
         <span>&copy; 2026 ClearOn AB &middot; Liljeholmsstranden 3, 117 61 Stockholm</span>
@@ -191,7 +191,6 @@ const footerLinks: Record<string, string> = {
   "För er": "#for-er",
   "Cases": "#cases",
   "När det passar": "#nar",
-  "ROI": "#roi",
   "Om ClearOn": "https://www.clearon.se",
   "Alla tjänster": "https://www.clearon.se",
   "Event": "https://www.clearon.se",
@@ -200,7 +199,7 @@ const footerLinks: Record<string, string> = {
   "Boka demo": "#kontakt",
   "Frågor och svar": "https://www.clearon.se",
   "Hitta butik": "#butiker",
-  "Kontrollera värdebärare": "https://www.clearon.se",
+  "Kontrollera värdecheck": "https://www.clearon.se",
   "Logga in": "https://dashboard.clearon.live",
 };
 
