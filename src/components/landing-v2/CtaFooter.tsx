@@ -1,11 +1,19 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useSignal } from "./SignalProvider";
 import { trackClick, trackLead } from "@/lib/meta-pixel";
 
 export function CtaFooter() {
   const { track, sessionId, segment, score, scrollDepth, dwellTime } = useSignal();
+
+  // Intelligence-panelen syns BARA med ?debug=1 i URL:en (intern QA).
+  // Aldrig publikt - vi visar inte tracking-data oppet for besokare.
+  // Avgors client-side efter mount sa vi undviker hydration mismatch.
+  const [showDebugPanel, setShowDebugPanel] = useState(false);
+  useEffect(() => {
+    setShowDebugPanel(new URLSearchParams(window.location.search).has("debug"));
+  }, []);
 
   return (
     <>
@@ -21,25 +29,40 @@ export function CtaFooter() {
             </p>
           </div>
 
-          <div style={{ display: "grid", gridTemplateColumns: "1.2fr 1fr", gap: 48, alignItems: "start" }} className="cta-grid">
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: showDebugPanel ? "1.2fr 1fr" : "1fr",
+              maxWidth: showDebugPanel ? "none" : 720,
+              gap: 48,
+              alignItems: "start",
+            }}
+            className="cta-grid"
+          >
             <ContactForm track={track} sessionId={sessionId} segment={segment} score={score} />
-            <div style={{
-              background: "rgba(255,255,255,0.05)",
-              border: "1px solid rgba(255,255,255,0.1)",
-              borderRadius: "var(--r-lg)",
-              padding: 32,
-            }}>
-              <div className="c-eyebrow" style={{ color: "var(--clr-yellow-accent)", marginBottom: 14 }}>Det vi redan vet om er</div>
-              <div style={{ display: "flex", flexDirection: "column", gap: 14, fontSize: 14 }}>
-                <FactRow label="Segment" value={segment || "ännu okänd"} />
-                <FactRow label="Score" value={`${score} poäng`} />
-                <FactRow label="Scroll" value={`${scrollDepth}%`} />
-                <FactRow label="Tid på sidan" value={`${dwellTime}s`} />
+            {showDebugPanel && (
+              <div
+                style={{
+                  background: "rgba(255,255,255,0.05)",
+                  border: "1px solid rgba(255,255,255,0.1)",
+                  borderRadius: "var(--r-lg)",
+                  padding: 32,
+                }}
+              >
+                <div className="c-eyebrow" style={{ color: "var(--clr-yellow-accent)", marginBottom: 14 }}>
+                  Debug · Intelligence (?debug=1)
+                </div>
+                <div style={{ display: "flex", flexDirection: "column", gap: 14, fontSize: 14 }}>
+                  <FactRow label="Segment" value={segment || "ännu okänd"} />
+                  <FactRow label="Score" value={`${score} poäng`} />
+                  <FactRow label="Scroll" value={`${scrollDepth}%`} />
+                  <FactRow label="Tid på sidan" value={`${dwellTime}s`} />
+                </div>
+                <div style={{ marginTop: 20, padding: 14, background: "rgba(254, 187, 37, 0.12)", borderRadius: "var(--r-sm)", fontSize: 13, lineHeight: 1.5, color: "rgba(255,255,255,0.8)" }}>
+                  Endast synligt for ClearOn-teamet. Skickas till dashboarden for varje besok.
+                </div>
               </div>
-              <div style={{ marginTop: 20, padding: 14, background: "rgba(254, 187, 37, 0.12)", borderRadius: "var(--r-sm)", fontSize: 13, lineHeight: 1.5, color: "rgba(255,255,255,0.8)" }}>
-                Vi vet vad du läst. Du slipper upprepa det i mötet.
-              </div>
-            </div>
+            )}
           </div>
 
           <Footer />
