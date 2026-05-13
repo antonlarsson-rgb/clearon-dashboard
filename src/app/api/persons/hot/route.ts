@@ -29,7 +29,7 @@ export async function GET(request: Request) {
       const { data: pps } = await supabase
         .from("person_product_scores")
         .select(
-          "score, engagement_score, intent_score, event_count, last_event_at, person:persons!inner(id, name, primary_email, title, segment, lifecycle_stage, is_customer, has_purchased, demo_readiness, visits_count, last_event_at, account:accounts(name, industry, website))"
+          "score, engagement_score, intent_score, event_count, last_event_at, person:persons!inner(id, name, primary_email, title, segment, lifecycle_stage, is_customer, has_purchased, demo_readiness, visits_count, last_event_at, account:accounts!persons_account_id_fkey(name, industry, website))"
         )
         .eq("product_slug", product)
         .gte("last_event_at", since)
@@ -70,7 +70,7 @@ export async function GET(request: Request) {
     let q = supabase
       .from("persons")
       .select(
-        "id, name, primary_email, title, segment, lifecycle_stage, is_customer, has_purchased, score, engagement_score, intent_score, demo_readiness, top_product_slug, top_product_score, visits_count, last_event_at, total_events, behavior_pattern, identification_method, suggested_account_id, account:accounts(name, industry, website)"
+        "id, name, primary_email, title, segment, lifecycle_stage, is_customer, has_purchased, score, engagement_score, intent_score, demo_readiness, top_product_slug, top_product_score, visits_count, last_event_at, total_events, behavior_pattern, identification_method, suggested_account_id, account:accounts!persons_account_id_fkey(name, industry, website)"
       )
       .order("score", { ascending: false })
       .gte("last_event_at", since)

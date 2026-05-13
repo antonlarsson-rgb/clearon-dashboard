@@ -1,20 +1,20 @@
 "use client";
 
-import { useEffect, useState, useMemo } from "react";
-import Image from "next/image";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import {
   Globe,
   Briefcase,
-  Search,
   Mail,
+  Search,
   Play,
   Pause,
   Check,
   ExternalLink,
-  Target,
   Users,
   Megaphone,
+  Calendar,
+  DollarSign,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -55,32 +55,28 @@ const PRODUCT_LABELS: Record<string, string> = {
 
 const PLATFORM_META = {
   meta: {
-    label: "Meta Ads",
+    label: "Meta",
     color: "#1877F2",
     bg: "rgba(24,119,242,0.08)",
     Icon: Globe,
-    logo: "M",
   },
   linkedin: {
-    label: "LinkedIn Ads",
+    label: "LinkedIn",
     color: "#0A66C2",
     bg: "rgba(10,102,194,0.08)",
     Icon: Briefcase,
-    logo: "in",
   },
   google: {
-    label: "Google Ads",
+    label: "Google",
     color: "#EA4335",
     bg: "rgba(234,67,53,0.08)",
     Icon: Search,
-    logo: "G",
   },
   email: {
     label: "Upsales Mail",
     color: "#8bb347",
     bg: "rgba(139,179,71,0.08)",
     Icon: Mail,
-    logo: "@",
   },
 } as const;
 
@@ -88,240 +84,279 @@ const STATUS_META: Record<
   string,
   { label: string; color: string; bg: string; Icon: React.ComponentType<{ className?: string }> }
 > = {
-  active: {
-    label: "LIVE",
-    color: "#8bb347",
-    bg: "rgba(139,179,71,0.15)",
-    Icon: Play,
-  },
-  paused: {
-    label: "Pausad",
-    color: "#e8864c",
-    bg: "rgba(232,134,76,0.15)",
-    Icon: Pause,
-  },
-  completed: {
-    label: "Avslutad",
-    color: "#888",
-    bg: "rgba(136,136,136,0.15)",
-    Icon: Check,
-  },
+  active: { label: "LIVE", color: "#8bb347", bg: "rgba(139,179,71,0.15)", Icon: Play },
+  paused: { label: "Pausad", color: "#e8864c", bg: "rgba(232,134,76,0.15)", Icon: Pause },
+  completed: { label: "Avslutad", color: "#888", bg: "rgba(136,136,136,0.15)", Icon: Check },
 };
 
-function money(n: number | null): string {
-  if (n == null) return "—";
-  if (n >= 1000) return `${(n / 1000).toFixed(1)}k`;
-  return String(n);
+type Platform = keyof typeof PLATFORM_META;
+
+function formatKr(n: number | null): string {
+  if (n == null || n === 0) return "—";
+  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)} MSEK`;
+  if (n >= 1000) return `${(n / 1000).toFixed(1)}k kr`;
+  return `${n} kr`;
 }
 
-function pct(a: number | null, b: number | null): string {
-  if (!a || !b) return "—";
-  return `${((a / b) * 100).toFixed(1)}%`;
+function formatInt(n: number | null): string {
+  if (n == null) return "—";
+  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
+  if (n >= 1000) return `${(n / 1000).toFixed(0)}k`;
+  return n.toLocaleString("sv-SE");
+}
+
+function formatDate(iso: string | null): string {
+  if (!iso) return "—";
+  try {
+    return new Date(iso).toLocaleDateString("sv-SE", { day: "numeric", month: "short" });
+  } catch {
+    return "—";
+  }
+}
+
+function dateRange(start: string | null, end: string | null): string {
+  if (!start && !end) return "—";
+  if (start && end) return `${formatDate(start)} – ${formatDate(end)}`;
+  if (start) return `från ${formatDate(start)}`;
+  return `till ${formatDate(end)}`;
 }
 
 export default function KampanjerPage() {
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
   const [loading, setLoading] = useState(true);
+  const [platform, setPlatform] = useState<Platform>("meta");
   const [statusFilter, setStatusFilter] = useState<string>("all");
-  const [productFilter, setProductFilter] = useState<string>("all");
 
   useEffect(() => {
-    fetch("/api/campaigns")
-      .then((r) => r.json())
-      .then((d) => {
-        setCampaigns(d.campaigns || []);
-        setLoading(false);
-      });
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetch("/api/campaigns");
+        const data = await res.json();
+        if (!cancelled) setCampaigns(data.campaigns || []);
+      } catch {
+        if (!cancelled) setCampaigns([]);
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
-  const filtered = useMemo(() => {
-    return campaigns.filter((c) => {
-      if (statusFilter !== "all" && c.status !== statusFilter) return false;
-      if (productFilter !== "all" && c.product_slug !== productFilter) return false;
-      return true;
-    });
-  }, [campaigns, statusFilter, productFilter]);
-
+  // Plattform-aggregat
   const byPlatform = useMemo(() => {
-    const out: Record<string, Campaign[]> = { meta: [], linkedin: [], google: [], email: [] };
-    for (const c of filtered) {
-      if (out[c.platform]) out[c.platform].push(c);
+    const out: Record<Platform, Campaign[]> = {
+      meta: [],
+      linkedin: [],
+      google: [],
+      email: [],
+    };
+    for (const c of campaigns) {
+      if (out[c.platform as Platform]) out[c.platform as Platform].push(c);
     }
     return out;
-  }, [filtered]);
+  }, [campaigns]);
 
-  // KPIs
-  const totals = useMemo(() => {
-    const active = filtered.filter((c) => c.status === "active");
-    return {
-      active: active.length,
-      paused: filtered.filter((c) => c.status === "paused").length,
-      spend: filtered.reduce((s, c) => s + (c.spend || 0), 0),
-      leads: filtered.reduce((s, c) => s + (c.leads_generated || 0), 0),
-      impressions: filtered.reduce((s, c) => s + (c.impressions || 0), 0),
-      clicks: filtered.reduce((s, c) => s + (c.clicks || 0), 0),
+  const platformSummary = useMemo(() => {
+    const result: Record<
+      Platform,
+      {
+        count: number;
+        active: number;
+        paused: number;
+        spend: number;
+        impressions: number;
+        clicks: number;
+        firstStart: string | null;
+        lastEnd: string | null;
+      }
+    > = {
+      meta: emptySummary(),
+      linkedin: emptySummary(),
+      google: emptySummary(),
+      email: emptySummary(),
     };
-  }, [filtered]);
+    for (const c of campaigns) {
+      const p = c.platform as Platform;
+      if (!result[p]) continue;
+      result[p].count++;
+      if (c.status === "active") result[p].active++;
+      if (c.status === "paused") result[p].paused++;
+      result[p].spend += c.spend || 0;
+      result[p].impressions += c.impressions || 0;
+      result[p].clicks += c.clicks || 0;
+      if (c.start_date && (!result[p].firstStart || c.start_date < result[p].firstStart!)) {
+        result[p].firstStart = c.start_date;
+      }
+      if (c.end_date && (!result[p].lastEnd || c.end_date > result[p].lastEnd!)) {
+        result[p].lastEnd = c.end_date;
+      }
+    }
+    return result;
+  }, [campaigns]);
 
-  const cpl = totals.leads > 0 ? Math.round(totals.spend / totals.leads) : 0;
-
-  const uniqueProducts = Array.from(
-    new Set(campaigns.map((c) => c.product_slug).filter(Boolean))
-  ) as string[];
+  // Filtrerade kampanjer för aktiv plattform
+  const visibleCampaigns = useMemo(() => {
+    const list = byPlatform[platform] || [];
+    return list
+      .filter((c) => statusFilter === "all" || c.status === statusFilter)
+      .sort((a, b) => (b.spend || 0) - (a.spend || 0));
+  }, [byPlatform, platform, statusFilter]);
 
   if (loading) {
-    return <div className="p-12 text-center text-sm text-text-muted">Laddar...</div>;
+    return (
+      <div className="p-12 text-center text-sm text-text-muted">
+        Laddar kampanjer...
+      </div>
+    );
+  }
+
+  if (campaigns.length === 0) {
+    return (
+      <div className="flex flex-col gap-6">
+        <Header />
+        <div className="rounded-lg border border-dashed border-border p-12 text-center text-sm text-text-muted">
+          Inga kampanjer i databasen. Kor sync-jobben for att hamta fran Meta/LinkedIn/Upsales.
+        </div>
+      </div>
+    );
   }
 
   return (
     <div className="flex flex-col gap-6">
-      <div>
-        <h1 className="flex items-center gap-2 text-2xl font-bold text-text-primary">
-          <Megaphone className="h-6 w-6 text-accent" />
-          Kampanjer — live-översikt
-        </h1>
-        <p className="mt-1 text-sm text-text-secondary">
-          Alla annonser fördelat per plattform, mappat mot produkter på clearon.live.
-        </p>
-      </div>
+      <Header />
 
-      <div className="grid grid-cols-5 gap-3">
-        <KpiBox label="Live" value={totals.active} color="#8bb347" />
-        <KpiBox label="Pausade" value={totals.paused} color="#e8864c" />
-        <KpiBox label="Totala intryck" value={`${(totals.impressions / 1000).toFixed(0)}k`} />
-        <KpiBox label="Totala klick" value={totals.clicks.toLocaleString("sv-SE")} />
-        <KpiBox label="Snitt-CPL" value={`${cpl} kr`} />
-      </div>
-
-      <div className="flex flex-wrap items-center gap-3 rounded-lg border border-border bg-surface p-3">
-        <FilterChips
-          label="Status"
-          value={statusFilter}
-          onChange={setStatusFilter}
-          options={[
-            { v: "all", label: "Alla" },
-            { v: "active", label: "Live" },
-            { v: "paused", label: "Pausade" },
-            { v: "completed", label: "Avslutade" },
-          ]}
-        />
-        <FilterChips
-          label="Produkt"
-          value={productFilter}
-          onChange={setProductFilter}
-          options={[
-            { v: "all", label: "Alla" },
-            ...uniqueProducts.map((p) => ({ v: p, label: PRODUCT_LABELS[p] || p })),
-          ]}
-        />
-      </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-        <PlatformColumn platform="meta" campaigns={byPlatform.meta} />
-        <PlatformColumn platform="linkedin" campaigns={byPlatform.linkedin} />
-        {byPlatform.google.length > 0 && (
-          <PlatformColumn platform="google" campaigns={byPlatform.google} />
-        )}
-        <PlatformColumn platform="email" campaigns={byPlatform.email} />
-      </div>
-    </div>
-  );
-}
-
-function PlatformColumn({
-  platform,
-  campaigns,
-}: {
-  platform: keyof typeof PLATFORM_META;
-  campaigns: Campaign[];
-}) {
-  const meta = PLATFORM_META[platform];
-  const active = campaigns.filter((c) => c.status === "active");
-  const paused = campaigns.filter((c) => c.status === "paused");
-  const completed = campaigns.filter((c) => c.status === "completed");
-  const totalSpend = campaigns.reduce((s, c) => s + (c.spend || 0), 0);
-  const totalLeads = campaigns.reduce((s, c) => s + (c.leads_generated || 0), 0);
-
-  // Gruppera per produkt
-  const byProduct = new Map<string, Campaign[]>();
-  for (const c of campaigns) {
-    const key = c.product_slug || "other";
-    if (!byProduct.has(key)) byProduct.set(key, []);
-    byProduct.get(key)!.push(c);
-  }
-
-  return (
-    <div className="flex flex-col gap-3">
-      <div
-        className="rounded-lg border p-4"
-        style={{ borderColor: `${meta.color}33`, background: meta.bg }}
-      >
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <div
-              className="flex h-7 w-7 items-center justify-center rounded-md font-bold text-white text-xs"
-              style={{ background: meta.color }}
+      {/* Plattform-sammanfattning: spend + period + antal kampanjer */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+        {(Object.keys(PLATFORM_META) as Platform[]).map((p) => {
+          const meta = PLATFORM_META[p];
+          const s = platformSummary[p];
+          const isActive = platform === p;
+          const hasData = s.count > 0;
+          return (
+            <button
+              key={p}
+              onClick={() => setPlatform(p)}
+              disabled={!hasData}
+              className={cn(
+                "text-left rounded-lg border p-4 transition-all",
+                isActive
+                  ? "border-text-primary bg-surface-elevated"
+                  : hasData
+                    ? "border-border bg-surface hover:bg-surface-elevated/50"
+                    : "border-border/50 bg-surface opacity-50 cursor-not-allowed",
+              )}
             >
-              {meta.logo}
-            </div>
-            <span className="font-bold text-text-primary">{meta.label}</span>
-          </div>
-          <div className="flex items-center gap-1.5 text-[11px]">
-            {active.length > 0 && (
-              <span
-                className="rounded-full px-2 py-0.5 font-semibold uppercase"
-                style={{ background: "rgba(139,179,71,0.15)", color: "#8bb347" }}
-              >
-                {active.length} live
-              </span>
-            )}
-            {paused.length > 0 && (
-              <span
-                className="rounded-full px-2 py-0.5 uppercase"
-                style={{ background: "rgba(232,134,76,0.15)", color: "#e8864c" }}
-              >
-                {paused.length} pausad
-              </span>
-            )}
-            {completed.length > 0 && (
-              <span className="rounded-full px-2 py-0.5 text-text-muted bg-surface-elevated uppercase">
-                {completed.length} avsl.
-              </span>
-            )}
-          </div>
-        </div>
-        <div className="mt-2 flex items-center gap-4 text-[11px] text-text-muted">
-          <span>{totalSpend.toLocaleString("sv-SE")} kr spend</span>
-          <span className="h-1 w-1 rounded-full bg-text-muted/30" />
-          <span>{totalLeads} leads</span>
-        </div>
+              <div className="flex items-center justify-between gap-2 mb-2">
+                <div className="flex items-center gap-2">
+                  <span
+                    className="h-2.5 w-2.5 rounded-full"
+                    style={{ backgroundColor: meta.color }}
+                  />
+                  <span className="text-sm font-semibold">{meta.label}</span>
+                </div>
+                {s.active > 0 && (
+                  <span
+                    className="rounded-full px-1.5 py-0.5 text-[9px] font-bold uppercase"
+                    style={{ background: "rgba(139,179,71,0.15)", color: "#8bb347" }}
+                  >
+                    {s.active} live
+                  </span>
+                )}
+              </div>
+              {hasData ? (
+                <>
+                  <div className="text-[10px] uppercase tracking-wide text-text-muted">
+                    Spenderat
+                  </div>
+                  <div className="mt-0.5 font-display text-2xl tabular-nums">
+                    {p === "email" ? "—" : formatKr(s.spend)}
+                  </div>
+                  <div className="mt-2 flex items-center gap-3 text-[10px] text-text-muted">
+                    <span>{s.count} kampanjer</span>
+                    {(s.firstStart || s.lastEnd) && (
+                      <span className="flex items-center gap-1">
+                        <Calendar className="h-2.5 w-2.5" />
+                        {dateRange(s.firstStart, s.lastEnd)}
+                      </span>
+                    )}
+                  </div>
+                </>
+              ) : (
+                <div className="text-[10px] text-text-muted">Ingen data</div>
+              )}
+            </button>
+          );
+        })}
       </div>
 
-      {campaigns.length === 0 && (
-        <div className="rounded-lg border border-dashed border-border p-6 text-center text-xs text-text-muted">
-          Inga kampanjer
-        </div>
-      )}
-
-      {Array.from(byProduct.entries()).map(([slug, camps]) => (
-        <div key={slug} className="space-y-2">
-          <div className="flex items-center gap-2 px-1">
-            <Target className="h-3 w-3 text-text-muted" />
-            <span className="text-[10px] font-semibold uppercase tracking-wide text-text-muted">
-              {PRODUCT_LABELS[slug] || slug}
-            </span>
-            <span className="text-[10px] text-text-muted">({camps.length})</span>
-          </div>
-          {camps.map((c) => (
-            <CampaignCard key={c.id} campaign={c} accentColor={meta.color} />
+      {/* Status-filter */}
+      <div className="flex items-center justify-between gap-3">
+        <div className="flex items-center gap-2">
+          <span className="text-[10px] uppercase tracking-wide text-text-muted">
+            Status
+          </span>
+          {["all", "active", "paused", "completed"].map((s) => (
+            <button
+              key={s}
+              onClick={() => setStatusFilter(s)}
+              className={cn(
+                "rounded-full px-2.5 py-1 text-[11px] font-medium transition-colors",
+                statusFilter === s
+                  ? "bg-text-primary text-surface"
+                  : "bg-surface-elevated text-text-secondary hover:text-text-primary",
+              )}
+            >
+              {s === "all"
+                ? "Alla"
+                : s === "active"
+                  ? "Live"
+                  : s === "paused"
+                    ? "Pausad"
+                    : "Avslutad"}
+            </button>
           ))}
         </div>
-      ))}
+        <div className="text-xs text-text-muted">
+          {visibleCampaigns.length} kampanjer pa {PLATFORM_META[platform].label}
+        </div>
+      </div>
+
+      {/* Kampanj-grid för aktiv plattform */}
+      {visibleCampaigns.length === 0 ? (
+        <div className="rounded-lg border border-dashed border-border p-12 text-center text-sm text-text-muted">
+          Inga kampanjer matchar valt filter.
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {visibleCampaigns.map((c) => (
+            <CampaignCard key={c.id} c={c} />
+          ))}
+        </div>
+      )}
     </div>
   );
 }
 
-function CampaignCard({ campaign: c, accentColor }: { campaign: Campaign; accentColor: string }) {
+function Header() {
+  return (
+    <div>
+      <h1 className="flex items-center gap-2 text-2xl font-bold text-text-primary">
+        <Megaphone className="h-6 w-6 text-accent" />
+        Kampanjer
+      </h1>
+      <p className="mt-1 text-sm text-text-secondary">
+        Annonser per plattform med kreativ, period och spend. Valj plattform overst,
+        filter pa status, klick pa kampanj for landningssida.
+      </p>
+    </div>
+  );
+}
+
+function CampaignCard({ c }: { c: Campaign }) {
+  const platformMeta = PLATFORM_META[c.platform as Platform] || PLATFORM_META.meta;
   const statusMeta = STATUS_META[c.status] || STATUS_META.completed;
   const isActive = c.status === "active";
   const ctr = c.clicks && c.impressions ? (c.clicks / c.impressions) * 100 : 0;
@@ -331,11 +366,11 @@ function CampaignCard({ campaign: c, accentColor }: { campaign: Campaign; accent
   return (
     <div
       className={cn(
-        "group relative overflow-hidden rounded-lg border bg-surface transition-all",
-        isActive ? "border-border hover:border-accent/40" : "border-border/50 opacity-90"
+        "group relative overflow-hidden rounded-lg border bg-surface transition-all flex flex-col",
+        isActive ? "border-border hover:border-accent/40" : "border-border/50",
       )}
     >
-      {/* Status pill i hörnet */}
+      {/* Status-pill */}
       <div className="absolute top-2 right-2 z-10">
         <div
           className="flex items-center gap-1 rounded-full px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide backdrop-blur-sm"
@@ -358,27 +393,44 @@ function CampaignCard({ campaign: c, accentColor }: { campaign: Campaign; accent
         </div>
       </div>
 
-      {/* Creative image */}
-      {c.creative_image_url && (
+      {/* Creative-bild */}
+      {c.creative_image_url ? (
         // eslint-disable-next-line @next/next/no-img-element
         <img
           src={c.creative_image_url}
           alt={c.campaign_name}
-          className={cn(
-            "w-full object-cover",
-            isActive ? "" : "grayscale",
-          )}
-          style={{ aspectRatio: "800 / 420" }}
+          className={cn("w-full object-cover", isActive ? "" : "grayscale")}
+          style={{ aspectRatio: "16 / 9" }}
         />
+      ) : (
+        <div
+          className="w-full flex items-center justify-center bg-surface-elevated"
+          style={{ aspectRatio: "16 / 9" }}
+        >
+          <platformMeta.Icon className="h-8 w-8 text-text-muted" />
+        </div>
       )}
 
-      <div className="p-3 space-y-2">
+      <div className="p-3 flex flex-col gap-2 flex-1">
         <div>
-          <div className="text-[10px] font-semibold uppercase tracking-wide text-text-muted">
+          <div className="flex items-center gap-1.5 text-[10px] text-text-muted">
+            <span
+              className="h-1.5 w-1.5 rounded-full"
+              style={{ backgroundColor: platformMeta.color }}
+            />
+            <span className="font-medium">{platformMeta.label}</span>
+            {c.product_slug && (
+              <>
+                <span>·</span>
+                <span>{PRODUCT_LABELS[c.product_slug] || c.product_slug}</span>
+              </>
+            )}
+          </div>
+          <div className="mt-1 text-xs font-semibold text-text-primary truncate">
             {c.campaign_name}
           </div>
           {c.headline && (
-            <div className="mt-1 text-sm font-bold leading-tight text-text-primary">
+            <div className="mt-1 text-sm font-bold leading-tight text-text-primary line-clamp-2">
               {c.headline}
             </div>
           )}
@@ -394,52 +446,74 @@ function CampaignCard({ campaign: c, accentColor }: { campaign: Campaign; accent
             href={c.destination_url}
             target="_blank"
             rel="noreferrer"
-            className="inline-flex items-center gap-1 text-[11px] font-medium hover:underline"
-            style={{ color: accentColor }}
+            className="inline-flex items-center gap-1 text-[11px] font-medium hover:underline w-fit"
+            style={{ color: platformMeta.color }}
           >
             {c.cta_text} <ExternalLink className="h-2.5 w-2.5" />
           </Link>
         )}
 
+        {/* Period */}
+        {(c.start_date || c.end_date) && (
+          <div className="flex items-center gap-1 text-[10px] text-text-muted">
+            <Calendar className="h-2.5 w-2.5" />
+            {dateRange(c.start_date, c.end_date)}
+          </div>
+        )}
+
         {c.audience_name && (
           <div className="flex items-start gap-1 text-[10px] text-text-muted">
             <Users className="h-3 w-3 shrink-0 mt-0.5" />
-            <span className="leading-tight">{c.audience_name}</span>
+            <span className="leading-tight line-clamp-2">{c.audience_name}</span>
           </div>
         )}
 
-        {/* Budget bar */}
-        {c.budget && (
-          <div>
-            <div className="flex items-center justify-between text-[10px] text-text-muted mb-0.5">
-              <span>
-                {(c.spend || 0).toLocaleString("sv-SE")} / {c.budget.toLocaleString("sv-SE")} kr
-              </span>
-              <span>{spendPct.toFixed(0)}%</span>
+        {/* Spend */}
+        {c.spend != null && c.spend > 0 && (
+          <div className="mt-auto pt-2 border-t border-border/50">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-1 text-[10px] uppercase tracking-wide text-text-muted">
+                <DollarSign className="h-2.5 w-2.5" />
+                Spend
+              </div>
+              <div className="text-sm font-bold tabular-nums text-text-primary">
+                {formatKr(c.spend)}
+                {c.budget && (
+                  <span className="text-[10px] text-text-muted font-normal ml-1">
+                    / {formatKr(c.budget)}
+                  </span>
+                )}
+              </div>
             </div>
-            <div className="h-1 overflow-hidden rounded-full bg-surface-elevated">
-              <div
-                className="h-full rounded-full transition-all"
-                style={{ width: `${spendPct}%`, background: accentColor }}
-              />
-            </div>
+            {c.budget && (
+              <div className="mt-1 h-1 overflow-hidden rounded-full bg-surface-elevated">
+                <div
+                  className="h-full rounded-full"
+                  style={{ width: `${spendPct}%`, background: platformMeta.color }}
+                />
+              </div>
+            )}
           </div>
         )}
 
-        {/* Metrics grid */}
-        <div className="grid grid-cols-4 gap-2 pt-2 border-t border-border/50">
-          <Metric label="Impr" value={money(c.impressions)} />
-          <Metric label="Klick" value={money(c.clicks)} />
+        {/* Metrics-rad */}
+        <div className="grid grid-cols-4 gap-1 text-[10px]">
+          <Metric label="Impr" value={formatInt(c.impressions)} />
+          <Metric label="Klick" value={formatInt(c.clicks)} />
           <Metric label="CTR" value={ctr > 0 ? `${ctr.toFixed(1)}%` : "—"} />
-          <Metric label="CPL" value={cpl > 0 ? `${cpl}kr` : "—"} highlight={cpl > 0 && cpl < 500} />
+          <Metric
+            label="CPL"
+            value={cpl > 0 ? `${cpl}kr` : "—"}
+            highlight={cpl > 0 && cpl < 500}
+          />
         </div>
 
-        <div className="flex items-center justify-between text-[10px] text-text-muted">
-          <span>{c.leads_generated || 0} leads</span>
-          {c.creative_format && (
-            <span className="uppercase text-[9px]">{c.creative_format}</span>
-          )}
-        </div>
+        {(c.leads_generated || 0) > 0 && (
+          <div className="flex items-center gap-1 text-[10px] text-text-muted">
+            <Users className="h-2.5 w-2.5" />
+            {c.leads_generated} leads
+          </div>
+        )}
       </div>
     </div>
   );
@@ -455,12 +529,12 @@ function Metric({
   highlight?: boolean;
 }) {
   return (
-    <div className="flex flex-col gap-0.5">
+    <div className="flex flex-col">
       <span className="text-[9px] uppercase tracking-wide text-text-muted">{label}</span>
       <span
         className={cn(
           "text-xs font-semibold tabular-nums",
-          highlight ? "text-[#8bb347]" : "text-text-primary"
+          highlight ? "text-[#8bb347]" : "text-text-primary",
         )}
       >
         {value}
@@ -469,57 +543,15 @@ function Metric({
   );
 }
 
-function KpiBox({
-  label,
-  value,
-  color,
-}: {
-  label: string;
-  value: number | string;
-  color?: string;
-}) {
-  return (
-    <div className="rounded-lg border border-border bg-surface p-3">
-      <div className="text-[10px] font-medium uppercase tracking-wide text-text-muted">
-        {label}
-      </div>
-      <div className="mt-1 text-2xl font-bold tabular-nums" style={{ color }}>
-        {value}
-      </div>
-    </div>
-  );
-}
-
-function FilterChips({
-  label,
-  value,
-  onChange,
-  options,
-}: {
-  label: string;
-  value: string;
-  onChange: (v: string) => void;
-  options: Array<{ v: string; label: string }>;
-}) {
-  return (
-    <div className="flex items-center gap-1">
-      <span className="text-[10px] uppercase tracking-wide text-text-muted">{label}:</span>
-      <div className="flex flex-wrap gap-1">
-        {options.map((opt) => (
-          <button
-            key={opt.v}
-            onClick={() => onChange(opt.v)}
-            className={cn(
-              "rounded-full px-2.5 py-1 text-[11px] font-medium transition-colors",
-              value === opt.v
-                ? "bg-accent text-white"
-                : "bg-surface-elevated text-text-secondary hover:text-text-primary"
-            )}
-          >
-            {opt.label}
-          </button>
-        ))}
-      </div>
-    </div>
-  );
+function emptySummary() {
+  return {
+    count: 0,
+    active: 0,
+    paused: 0,
+    spend: 0,
+    impressions: 0,
+    clicks: 0,
+    firstStart: null,
+    lastEnd: null,
+  };
 }

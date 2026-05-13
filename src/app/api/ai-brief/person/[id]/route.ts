@@ -13,7 +13,7 @@ export async function POST(_req: Request, context: { params: Promise<{ id: strin
     const { data: person } = await supabase
       .from("persons")
       .select(
-        "name, primary_email, title, journey_step, score, demo_readiness, segment, lifecycle_stage, is_customer, total_events, account:accounts(name, industry)"
+        "name, primary_email, title, journey_step, score, demo_readiness, segment, lifecycle_stage, is_customer, total_events, account:accounts!persons_account_id_fkey(name, industry)"
       )
       .eq("id", id)
       .maybeSingle();

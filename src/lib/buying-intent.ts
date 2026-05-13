@@ -723,7 +723,7 @@ export async function getTopBuyingIntent(
   const { data: recent } = await supabase
     .from("persons")
     .select(
-      "id, name, primary_email, title, score, account_id, is_customer, ai_segment, ai_buy_probability, ai_urgency, behavior_pattern, account:accounts(name)",
+      "id, name, primary_email, title, score, account_id, is_customer, ai_segment, ai_buy_probability, ai_urgency, behavior_pattern, account:accounts!persons_account_id_fkey(name)",
     )
     .gte("last_event_at", since)
     .order("last_event_at", { ascending: false })

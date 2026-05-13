@@ -5,7 +5,6 @@ import { usePathname } from "next/navigation";
 import {
   LayoutDashboard,
   UserCircle,
-  Package,
   Building2,
   Flame,
   Bot,
@@ -21,7 +20,6 @@ const navItems = [
   { href: "/hot", label: "Hot Now", icon: Flame, pulse: true },
   { href: "/accounts", label: "Foretag", icon: Building2 },
   { href: "/persons", label: "Leads & Personer", icon: UserCircle },
-  { href: "/produkter", label: "Produkter", icon: Package },
   { href: "/kampanjer", label: "Kampanjer", icon: Megaphone },
   { href: "/kanaler", label: "Kanaler", icon: BarChart3 },
   { href: "/ai-agent", label: "AI Agent", icon: Bot },

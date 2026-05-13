@@ -14,7 +14,7 @@ export async function GET(_req: Request, context: { params: Promise<{ id: string
     const { data: person } = await supabase
       .from("persons")
       .select(
-        "id, name, first_name, last_name, primary_email, primary_phone, title, role_category, linkedin_url, journey_step, upsales_contact_id, score, engagement_score, intent_score, demo_readiness, segment, lifecycle_stage, is_customer, has_purchased, top_product_slug, top_product_score, total_events, visits_count, first_event_at, last_event_at, first_utm_source, first_utm_campaign, first_referrer, account:accounts(id, name, industry, website, upsales_id)"
+        "id, name, first_name, last_name, primary_email, primary_phone, title, role_category, linkedin_url, journey_step, upsales_contact_id, score, engagement_score, intent_score, demo_readiness, segment, lifecycle_stage, is_customer, has_purchased, top_product_slug, top_product_score, total_events, visits_count, first_event_at, last_event_at, first_utm_source, first_utm_campaign, first_referrer, account:accounts!persons_account_id_fkey(id, name, industry, website, upsales_id)"
       )
       .eq("id", id)
       .maybeSingle();
