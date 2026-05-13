@@ -5,7 +5,13 @@
  * som svarar pa JSON-RPC over Streamable HTTP. Vi anropar tools/call direkt utan
  * initialize-handshake - det funkar for stateless calls.
  *
- * Endpoint svarar med text/event-stream (en single event-frame) eller application/json.
+ * Tre kritiska detaljer:
+ * 1. LinkedIn ar bakom ett router-tool kallat "linkedin_ads" som kraver
+ *    {action: "execute", tool_name, arguments} for varje verklig operation.
+ * 2. Med raw_data: true returnerar performance-tools en JSON-kodblock istallet
+ *    for formaterad Markdown - vi parsar JSON for strukturerad dashboard-data.
+ * 3. Custom date ranges via start_date + end_date (YYYY-MM-DD) overrider
+ *    lookback_days. Ger oss exakt manadsfilter.
  *
  * Quota: Plus tier = 150 calls/manad. Cache aggressivt.
  */
@@ -40,11 +46,9 @@ export interface AdspirerCallResult {
   errorMessage: string | null;
   toolNotFound: boolean;
   quota: McpToolResult["_quota_data"] | null;
-  raw: McpResponse | null;
 }
 
 function parseSseOrJson(body: string): McpResponse | null {
-  // SSE-format: "data: {json}\n\n" possibly med "event: message\n" pa raden ovanfor
   const dataLine = body
     .split(/\r?\n/)
     .find((line) => line.startsWith("data:"));
@@ -58,7 +62,7 @@ function parseSseOrJson(body: string): McpResponse | null {
 }
 
 /**
- * Anropa ett Adspirer MCP-tool. Cachar svaret i Next.js fetch-cache.
+ * Lagniva-anrop mot MCP. Tar tool-namn + args, returnerar normaliserat svar.
  */
 export async function callAdspirerTool(
   toolName: string,
@@ -74,7 +78,6 @@ export async function callAdspirerTool(
       errorMessage: "ADSPIRER_TOKEN saknas",
       toolNotFound: false,
       quota: null,
-      raw: null,
     };
   }
 
@@ -86,8 +89,7 @@ export async function callAdspirerTool(
     params: { name: toolName, arguments: args },
   };
 
-  // Cache-key bygger pa tool + args + revalidate-fonster
-  const revalidate = options.revalidateSeconds ?? 1800; // 30 min default
+  const revalidate = options.revalidateSeconds ?? 1800;
 
   const res = await fetch(ADSPIRER_URL, {
     method: "POST",
@@ -109,7 +111,6 @@ export async function callAdspirerTool(
       errorMessage: `Adspirer HTTP ${res.status}: ${res.statusText}`,
       toolNotFound: false,
       quota: null,
-      raw: null,
     };
   }
 
@@ -124,7 +125,6 @@ export async function callAdspirerTool(
       errorMessage: "Kunde inte parsa Adspirer-svar",
       toolNotFound: false,
       quota: null,
-      raw: null,
     };
   }
 
@@ -137,7 +137,6 @@ export async function callAdspirerTool(
       errorMessage: parsed.error.message,
       toolNotFound: isToolNotFound,
       quota: null,
-      raw: parsed,
     };
   }
 
@@ -155,12 +154,26 @@ export async function callAdspirerTool(
     errorMessage: null,
     toolNotFound: false,
     quota: result?._quota_data ?? null,
-    raw: parsed,
   };
 }
 
 /**
- * Hamtar status for alla kopplade plattformar (Meta, Google, LinkedIn, TikTok).
+ * Kor ett LinkedIn-tool genom router-wrappern "linkedin_ads".
+ */
+export async function callLinkedInTool(
+  toolName: string,
+  args: Record<string, unknown> = {},
+  options: { revalidateSeconds?: number; signal?: AbortSignal } = {},
+): Promise<AdspirerCallResult> {
+  return callAdspirerTool(
+    "linkedin_ads",
+    { action: "execute", tool_name: toolName, arguments: args },
+    options,
+  );
+}
+
+/**
+ * Connections-status (vilka konton som ar kopplade).
  */
 export interface ConnectionInfo {
   platform: string;
@@ -183,184 +196,380 @@ export async function getConnections(revalidateSeconds = 3600): Promise<{
 }
 
 /**
- * Plattformsspecifika campaign-performance fetchers.
- *
- * Adspirer-tools tar lookback_days (7, 14, 30, 60, 90 typiskt). Custom datum-intervall
- * stods inte direkt - vi mappar UI:s "manad/period" till narmaste lookback.
+ * Period-konfiguration. Stoder antingen lookback_days, date_range-preset,
+ * eller exakta start_date + end_date (YYYY-MM-DD).
  */
+export interface PeriodArgs {
+  lookback_days?: number;
+  date_range?: "last_7_days" | "last_14_days" | "last_30_days" | "last_60_days" | "last_90_days";
+  start_date?: string;
+  end_date?: string;
+}
+
+function buildPeriodArgs(period: PeriodArgs, extra: Record<string, unknown> = {}): Record<string, unknown> {
+  const out: Record<string, unknown> = { raw_data: true, ...extra };
+  if (period.start_date && period.end_date) {
+    out.start_date = period.start_date;
+    out.end_date = period.end_date;
+  } else if (period.date_range) {
+    out.date_range = period.date_range;
+  } else {
+    out.lookback_days = period.lookback_days ?? 30;
+  }
+  return out;
+}
+
+/**
+ * Plattformsspecifika typer.
+ */
+
+export interface CampaignRow {
+  campaign_id: string;
+  name: string;
+  status?: string | null;
+  spend: number;
+  impressions: number;
+  clicks: number;
+  conversions: number;
+  ctr: number | null;
+  cpc: number | null;
+  cpm: number | null;
+  conversion_rate: number | null;
+  cost_per_conversion: number | null;
+  conversion_value?: number | null;
+  roas?: number | null;
+  leads?: number | null;
+  engagement_rate?: number | null;
+  type?: string | null;
+}
 
 export interface PlatformPerformance {
   platform: "google" | "meta" | "linkedin";
   available: boolean;
+  status: "live" | "no_data" | "syncing" | "unavailable" | "error";
   reason: string | null;
-  reportText: string | null;
-  structured: unknown;
+  currency: string;
+  dateRange: { start: string | null; end: string | null };
+  totals: {
+    spend: number;
+    impressions: number;
+    clicks: number;
+    conversions: number;
+    campaigns: number;
+    ctr: number | null;
+    cpc: number | null;
+    cpm: number | null;
+    conversion_rate: number | null;
+    cost_per_conversion: number | null;
+    roas: number | null;
+  };
+  campaigns: CampaignRow[];
+  rawJson: unknown;
   quota: McpToolResult["_quota_data"] | null;
 }
 
-export async function getGooglePerformance(
-  lookbackDays: number,
-  revalidateSeconds = 1800,
-): Promise<PlatformPerformance> {
-  const result = await callAdspirerTool(
-    "get_campaign_performance",
-    { lookback_days: lookbackDays },
-    { revalidateSeconds },
-  );
-  if (result.toolNotFound) {
-    return platformUnavailable("google", "Verktyget inte tillgangligt i din Adspirer-tier");
+/**
+ * Extrahera JSON-blocket ur ett ```json ... ``` Markdown-svar.
+ */
+function extractJsonBlock(text: string | null): unknown {
+  if (!text) return null;
+  const match = text.match(/```json\s*\n([\s\S]*?)\n```/);
+  if (!match) {
+    // Forsok parsa hela texten (vissa svar har ren JSON utan code fence)
+    try {
+      return JSON.parse(text);
+    } catch {
+      return null;
+    }
   }
-  if (result.isError) {
-    return platformUnavailable("google", result.errorMessage || "Okant fel");
+  try {
+    return JSON.parse(match[1]);
+  } catch {
+    return null;
   }
+}
+
+interface RawPerformanceShape {
+  account_summary?: {
+    total_spend?: number;
+    total_impressions?: number;
+    total_clicks?: number;
+    total_conversions?: number;
+    total_campaigns?: number;
+    active_campaigns?: number;
+    avg_ctr?: number;
+    avg_cpc?: number;
+    avg_cpm?: number;
+    avg_conversion_rate?: number;
+    avg_cost_per_conversion?: number;
+    overall_roas?: number;
+    total_conversion_value?: number;
+  };
+  totals?: {
+    spend?: number;
+    impressions?: number;
+    clicks?: number;
+    conversions?: number;
+    cost?: number;
+  };
+  average_metrics?: {
+    ctr?: number;
+    cpc?: number;
+    cpm?: number;
+    conversion_rate?: number;
+    cost_per_conversion?: number;
+  };
+  account_overview?: Record<string, unknown>;
+  campaigns?: Array<Record<string, unknown>>;
+  best_campaign?: Record<string, unknown>;
+  campaign_count?: number;
+  currency?: string;
+  date_range?: { start?: string; end?: string };
+  analysis_period?: string;
+  status?: string;
+  message?: string;
+}
+
+function num(v: unknown): number {
+  return typeof v === "number" && Number.isFinite(v) ? v : 0;
+}
+function nullableNum(v: unknown): number | null {
+  return typeof v === "number" && Number.isFinite(v) ? v : null;
+}
+function str(v: unknown): string {
+  return typeof v === "string" ? v : "";
+}
+
+function normalizeCampaign(c: Record<string, unknown>): CampaignRow {
   return {
-    platform: "google",
-    available: true,
-    reason: null,
-    reportText: result.text,
-    structured: result.structured,
-    quota: result.quota,
+    campaign_id: str(c.campaign_id || c.id || ""),
+    name: str(c.name || c.campaign_name || "Unnamed"),
+    status: (c.status as string) || null,
+    spend: num(c.spend ?? c.cost),
+    impressions: num(c.impressions),
+    clicks: num(c.clicks),
+    conversions: num(c.conversions),
+    ctr: nullableNum(c.ctr),
+    cpc: nullableNum(c.cpc),
+    cpm: nullableNum(c.cpm),
+    conversion_rate: nullableNum(c.conversion_rate ?? c.conv_rate),
+    cost_per_conversion: nullableNum(c.cost_per_conversion ?? c.cpa),
+    conversion_value: nullableNum(c.conversion_value),
+    roas: nullableNum(c.roas),
+    leads: nullableNum(c.leads),
+    engagement_rate: nullableNum(c.engagement_rate),
+    type: (c.type as string) || null,
   };
 }
 
-export async function getMetaPerformance(
-  lookbackDays: number,
-  revalidateSeconds = 1800,
-): Promise<PlatformPerformance> {
-  const result = await callAdspirerTool(
-    "get_meta_campaign_performance",
-    { lookback_days: lookbackDays },
-    { revalidateSeconds },
-  );
-  if (result.toolNotFound) {
-    return platformUnavailable("meta", "Verktyget inte tillgangligt i din Adspirer-tier");
-  }
-  if (result.isError) {
-    return platformUnavailable("meta", result.errorMessage || "Okant fel");
-  }
-  // Meta returnerar text "no data yet" tills initial sync ar klar
-  const isStillSyncing =
-    result.text?.toLowerCase().includes("not completed its initial data sync") ||
-    result.text?.toLowerCase().includes("no campaign data available yet");
-  if (isStillSyncing) {
+function buildPerformance(
+  platform: PlatformPerformance["platform"],
+  raw: RawPerformanceShape | null,
+  defaultCurrency: string,
+  result: AdspirerCallResult,
+): PlatformPerformance {
+  // Empty / no_data response
+  if (!raw || raw.status === "no_data" || raw.campaign_count === 0) {
     return {
-      platform: "meta",
+      platform,
       available: true,
-      reason:
-        "Meta-kontot ar kopplat men Adspirer slutfor fortfarande initial datasynk. Detta tar typiskt nagra timmar efter forsta anslutningen.",
-      reportText: result.text,
-      structured: result.structured,
+      status: raw?.status === "no_data" ? "syncing" : "no_data",
+      reason: raw?.message || "Ingen kampanjdata for vald period.",
+      currency: raw?.currency || defaultCurrency,
+      dateRange: { start: raw?.date_range?.start || null, end: raw?.date_range?.end || null },
+      totals: emptyTotals(),
+      campaigns: [],
+      rawJson: raw,
       quota: result.quota,
     };
   }
+
+  const summary = raw.account_summary || {};
+  const avg = raw.average_metrics || {};
+  let campaigns = (raw.campaigns || []).map(normalizeCampaign);
+
+  // Google har inte campaigns-array i raw_data - falla tillbaka till best_campaign.
+  // best_campaign har bara namn/ctr/conv, sa nar det bara finns 1 kampanj
+  // fyller vi i resten fran account_summary sa raden inte ar mestadels nollor.
+  if (campaigns.length === 0 && raw.best_campaign) {
+    const c = normalizeCampaign(raw.best_campaign);
+    const onlyOne = (summary.total_campaigns ?? raw.campaign_count ?? 0) === 1;
+    if (onlyOne) {
+      c.spend = c.spend || num(summary.total_spend);
+      c.impressions = c.impressions || num(summary.total_impressions);
+      c.clicks = c.clicks || num(summary.total_clicks);
+      c.conversions = c.conversions || num(summary.total_conversions);
+      c.cpc = c.cpc ?? avg.cpc ?? null;
+      c.cpm = c.cpm ?? avg.cpm ?? null;
+      c.cost_per_conversion = c.cost_per_conversion ?? avg.cost_per_conversion ?? null;
+    }
+    campaigns = [c];
+  }
+
+  // Falla tillbaka till summa over campaigns om account_summary saknas
+  const totalSpend = summary.total_spend ?? campaigns.reduce((s, c) => s + c.spend, 0);
+  const totalImpressions = summary.total_impressions ?? campaigns.reduce((s, c) => s + c.impressions, 0);
+  const totalClicks = summary.total_clicks ?? campaigns.reduce((s, c) => s + c.clicks, 0);
+  const totalConversions = summary.total_conversions ?? campaigns.reduce((s, c) => s + c.conversions, 0);
+  const totalCampaigns = summary.total_campaigns ?? raw.campaign_count ?? campaigns.length;
+
+  const ctr =
+    avg.ctr ??
+    summary.avg_ctr ??
+    (totalImpressions > 0 ? (totalClicks / totalImpressions) * 100 : null);
+  const cpc = avg.cpc ?? summary.avg_cpc ?? (totalClicks > 0 ? totalSpend / totalClicks : null);
+  const cpm =
+    avg.cpm ??
+    summary.avg_cpm ??
+    (totalImpressions > 0 ? (totalSpend / totalImpressions) * 1000 : null);
+  const conversionRate =
+    avg.conversion_rate ??
+    summary.avg_conversion_rate ??
+    (totalClicks > 0 ? (totalConversions / totalClicks) * 100 : null);
+  const costPerConversion =
+    avg.cost_per_conversion ??
+    summary.avg_cost_per_conversion ??
+    (totalConversions > 0 ? totalSpend / totalConversions : null);
+
   return {
-    platform: "meta",
+    platform,
     available: true,
+    status: "live",
     reason: null,
-    reportText: result.text,
-    structured: result.structured,
+    currency: raw.currency || defaultCurrency,
+    dateRange: { start: raw.date_range?.start || null, end: raw.date_range?.end || null },
+    totals: {
+      spend: totalSpend,
+      impressions: totalImpressions,
+      clicks: totalClicks,
+      conversions: totalConversions,
+      campaigns: totalCampaigns,
+      ctr,
+      cpc,
+      cpm,
+      conversion_rate: conversionRate,
+      cost_per_conversion: costPerConversion,
+      roas: summary.overall_roas ?? null,
+    },
+    campaigns,
+    rawJson: raw,
     quota: result.quota,
   };
 }
 
-export async function getLinkedInPerformance(
-  lookbackDays: number,
-  revalidateSeconds = 1800,
-): Promise<PlatformPerformance> {
-  const result = await callAdspirerTool(
-    "get_linkedin_campaign_performance",
-    { lookback_days: lookbackDays },
-    { revalidateSeconds },
-  );
-  if (result.toolNotFound) {
-    return platformUnavailable(
-      "linkedin",
-      "Adspirer exponerar inga LinkedIn-verktyg pa nuvarande tier. LinkedIn-kontot ar kopplat men data hamtas inte automatiskt.",
-    );
-  }
-  if (result.isError) {
-    return platformUnavailable("linkedin", result.errorMessage || "Okant fel");
-  }
+function emptyTotals(): PlatformPerformance["totals"] {
   return {
-    platform: "linkedin",
-    available: true,
-    reason: null,
-    reportText: result.text,
-    structured: result.structured,
-    quota: result.quota,
+    spend: 0,
+    impressions: 0,
+    clicks: 0,
+    conversions: 0,
+    campaigns: 0,
+    ctr: null,
+    cpc: null,
+    cpm: null,
+    conversion_rate: null,
+    cost_per_conversion: null,
+    roas: null,
   };
 }
 
-function platformUnavailable(
+function unavailable(
   platform: PlatformPerformance["platform"],
   reason: string,
 ): PlatformPerformance {
   return {
     platform,
     available: false,
+    status: "unavailable",
     reason,
-    reportText: null,
-    structured: null,
+    currency: "SEK",
+    dateRange: { start: null, end: null },
+    totals: emptyTotals(),
+    campaigns: [],
+    rawJson: null,
     quota: null,
   };
 }
 
-/**
- * Parsa Adspirers Markdown-rapport for att extrahera nyckelsiffror.
- * Adspirer formaterar rapporter konsekvent med "**Key:** value" och tabeller.
- */
-export interface ParsedReport {
-  totalSpend: number | null;
-  totalImpressions: number | null;
-  totalClicks: number | null;
-  totalConversions: number | null;
-  totalCampaigns: number | null;
-  ctr: number | null;
-  cpc: number | null;
-  conversionRate: number | null;
-  costPerConversion: number | null;
-  topCampaign: string | null;
-  currency: string;
-  rawSnippet: string;
+function errorResult(
+  platform: PlatformPerformance["platform"],
+  reason: string,
+): PlatformPerformance {
+  return {
+    platform,
+    available: true,
+    status: "error",
+    reason,
+    currency: "SEK",
+    dateRange: { start: null, end: null },
+    totals: emptyTotals(),
+    campaigns: [],
+    rawJson: null,
+    quota: null,
+  };
 }
 
-export function parseAdspirerReport(text: string | null): ParsedReport | null {
-  if (!text) return null;
-  const num = (re: RegExp): number | null => {
-    const m = text.match(re);
-    if (!m) return null;
-    const cleaned = m[1].replace(/[^0-9.,-]/g, "").replace(/,/g, "");
-    const n = parseFloat(cleaned);
-    return Number.isFinite(n) ? n : null;
-  };
-  const str = (re: RegExp): string | null => {
-    const m = text.match(re);
-    return m ? m[1].trim() : null;
-  };
+export async function getGooglePerformance(
+  period: PeriodArgs,
+  revalidateSeconds = 1800,
+): Promise<PlatformPerformance> {
+  // Google's get_campaign_performance har en backend-bug for custom dates
+  // ("'str' object has no attribute 'isoformat'"). Falla tillbaka till
+  // narmaste lookback_days nar custom dates ges.
+  let safePeriod = period;
+  if (period.start_date && period.end_date) {
+    const days = Math.max(
+      7,
+      Math.min(
+        90,
+        Math.ceil(
+          (Date.parse(period.end_date) - Date.parse(period.start_date)) /
+            (1000 * 60 * 60 * 24),
+        ) + 1,
+      ),
+    );
+    const allowed = [7, 30, 60, 90];
+    const closest = allowed.reduce((prev, curr) =>
+      Math.abs(curr - days) < Math.abs(prev - days) ? curr : prev,
+    );
+    safePeriod = { lookback_days: closest };
+  }
+  const args = buildPeriodArgs(safePeriod);
+  const result = await callAdspirerTool("get_campaign_performance", args, { revalidateSeconds });
+  if (result.toolNotFound) return unavailable("google", "Verktyget inte tillgangligt");
+  if (result.isError) return errorResult("google", result.errorMessage || "Okant fel");
+  const raw = extractJsonBlock(result.text) as RawPerformanceShape | null;
+  return buildPerformance("google", raw, "USD", result);
+}
 
-  // Heuristisk valutadetektering (USD/SEK/EUR)
-  const currencyMatch = text.match(/Total Spend:\*\*\s*([\$€])/i) || text.match(/(\bSEK\b|\bUSD\b|\bEUR\b)/);
-  const currency =
-    currencyMatch?.[1] === "$" || currencyMatch?.[1] === "USD"
-      ? "USD"
-      : currencyMatch?.[1] === "€" || currencyMatch?.[1] === "EUR"
-        ? "EUR"
-        : currencyMatch?.[1]
-          ? currencyMatch[1].toUpperCase()
-          : "USD";
+export async function getMetaPerformance(
+  period: PeriodArgs,
+  revalidateSeconds = 1800,
+): Promise<PlatformPerformance> {
+  const args = buildPeriodArgs(period);
+  const result = await callAdspirerTool(
+    "get_meta_campaign_performance",
+    args,
+    { revalidateSeconds },
+  );
+  if (result.toolNotFound) return unavailable("meta", "Verktyget inte tillgangligt");
+  if (result.isError) return errorResult("meta", result.errorMessage || "Okant fel");
+  const raw = extractJsonBlock(result.text) as RawPerformanceShape | null;
+  return buildPerformance("meta", raw, "SEK", result);
+}
 
-  return {
-    totalSpend: num(/Total Spend:\*\*\s*[\$€]?([0-9,]+\.?[0-9]*)/i),
-    totalImpressions: num(/Total Impressions:\*\*\s*([0-9,]+)/i),
-    totalClicks: num(/Total Clicks:\*\*\s*([0-9,]+)/i),
-    totalConversions: num(/Total Conversions:\*\*\s*([0-9.,]+)/i),
-    totalCampaigns: num(/Total Campaigns:\*\*\s*([0-9,]+)/i),
-    ctr: num(/CTR.*?:\*\*\s*([0-9.,]+)\s*%/i),
-    cpc: num(/CPC.*?:\*\*\s*[\$€]?([0-9.,]+)/i),
-    conversionRate: num(/Conversion Rate:\*\*\s*([0-9.,]+)\s*%/i),
-    costPerConversion: num(/Cost Per Conversion:\*\*\s*[\$€]?([0-9.,]+)/i),
-    topCampaign: str(/## .*?Top Performing Campaign\s*\n+\*\*\[?([^\]\n*]+?)\]?\*\*/i),
-    currency,
-    rawSnippet: text.slice(0, 3000),
-  };
+export async function getLinkedInPerformance(
+  period: PeriodArgs,
+  revalidateSeconds = 1800,
+): Promise<PlatformPerformance> {
+  const args = buildPeriodArgs(period);
+  const result = await callLinkedInTool(
+    "get_linkedin_campaign_performance",
+    args,
+    { revalidateSeconds },
+  );
+  if (result.toolNotFound) return unavailable("linkedin", "LinkedIn router-tool saknas");
+  if (result.isError) return errorResult("linkedin", result.errorMessage || "Okant fel");
+  const raw = extractJsonBlock(result.text) as RawPerformanceShape | null;
+  return buildPerformance("linkedin", raw, "SEK", result);
 }

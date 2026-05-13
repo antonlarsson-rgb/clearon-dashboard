@@ -1,12 +1,8 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
-import ReactMarkdown from "react-markdown";
-import remarkGfm from "remark-gfm";
+import { useEffect, useState, useCallback, useMemo } from "react";
 import {
-  Megaphone,
   RefreshCw,
-  ExternalLink,
   AlertCircle,
   Loader2,
   TrendingUp,
@@ -14,15 +10,10 @@ import {
   DollarSign,
   Target,
   Layers,
+  Calendar,
+  ChevronDown,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-
-const PERIODS = [
-  { lookback: 7, label: "7 dagar" },
-  { lookback: 30, label: "30 dagar" },
-  { lookback: 60, label: "60 dagar" },
-  { lookback: 90, label: "90 dagar" },
-];
 
 const PLATFORM_META: Record<string, { label: string; color: string }> = {
   google: { label: "Google Ads", color: "#4285f4" },
@@ -30,40 +21,83 @@ const PLATFORM_META: Record<string, { label: string; color: string }> = {
   linkedin: { label: "LinkedIn Ads", color: "#0a66c2" },
 };
 
-interface ParsedReport {
-  totalSpend: number | null;
-  totalImpressions: number | null;
-  totalClicks: number | null;
-  totalConversions: number | null;
-  totalCampaigns: number | null;
+const STATUS_BADGE: Record<
+  string,
+  { label: string; bg: string; text: string }
+> = {
+  live: { label: "Live", bg: "bg-success/15", text: "text-success" },
+  syncing: { label: "Synkar", bg: "bg-warning/15", text: "text-warning" },
+  no_data: { label: "Ingen data", bg: "bg-text-muted/15", text: "text-text-muted" },
+  unavailable: { label: "Ej tillganglig", bg: "bg-text-muted/15", text: "text-text-muted" },
+  error: { label: "Fel", bg: "bg-danger/15", text: "text-danger" },
+};
+
+interface CampaignRow {
+  campaign_id: string;
+  name: string;
+  status?: string | null;
+  spend: number;
+  impressions: number;
+  clicks: number;
+  conversions: number;
   ctr: number | null;
   cpc: number | null;
-  conversionRate: number | null;
-  costPerConversion: number | null;
-  topCampaign: string | null;
-  currency: string;
+  cpm: number | null;
+  conversion_rate: number | null;
+  cost_per_conversion: number | null;
+  conversion_value?: number | null;
+  roas?: number | null;
+  leads?: number | null;
+  engagement_rate?: number | null;
+  type?: string | null;
 }
 
 interface PlatformBlock {
   platform: "google" | "meta" | "linkedin";
   available: boolean;
+  status: string;
   reason: string | null;
-  reportText: string | null;
-  parsed: ParsedReport | null;
-}
-
-interface OverviewData {
-  lookback_days: number;
-  fetched_at: string;
-  connections: Array<{ platform: string; account_name: string; status: string }>;
-  platforms: PlatformBlock[];
+  currency: string;
+  dateRange: { start: string | null; end: string | null };
   totals: {
     spend: number;
     impressions: number;
     clicks: number;
     conversions: number;
     campaigns: number;
+    ctr: number | null;
+    cpc: number | null;
+    cpm: number | null;
+    conversion_rate: number | null;
+    cost_per_conversion: number | null;
+    roas: number | null;
   };
+  campaigns: CampaignRow[];
+}
+
+interface CurrencyTotals {
+  currency: string;
+  spend: number;
+  impressions: number;
+  clicks: number;
+  conversions: number;
+  campaigns: number;
+  ctr: number | null;
+  cpc: number | null;
+  cost_per_conversion: number | null;
+}
+
+interface OverviewData {
+  period: {
+    label: string;
+    lookback_days: number | null;
+    start_date: string | null;
+    end_date: string | null;
+  };
+  fetched_at: string;
+  connections: Array<{ platform: string; account_name: string; status: string }>;
+  platforms: PlatformBlock[];
+  totalsByCurrency: CurrencyTotals[];
   quota: {
     used: number;
     limit: number;
@@ -73,6 +107,50 @@ interface OverviewData {
   } | null;
 }
 
+const SWEDISH_MONTHS = [
+  "januari", "februari", "mars", "april", "maj", "juni",
+  "juli", "augusti", "september", "oktober", "november", "december",
+];
+
+interface PeriodSelection {
+  type: "lookback" | "month" | "custom";
+  lookback?: number;
+  year?: number;
+  month?: number; // 0-11
+  startDate?: string;
+  endDate?: string;
+  label: string;
+}
+
+function buildMonthOptions(): PeriodSelection[] {
+  const now = new Date();
+  const options: PeriodSelection[] = [];
+  for (let i = 0; i < 12; i++) {
+    const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+    const year = d.getFullYear();
+    const month = d.getMonth();
+    const start = new Date(year, month, 1);
+    const end = new Date(year, month + 1, 0);
+    const fmt = (x: Date) => x.toISOString().slice(0, 10);
+    options.push({
+      type: "month",
+      year,
+      month,
+      startDate: fmt(start),
+      endDate: fmt(end),
+      label: `${SWEDISH_MONTHS[month]} ${year}`,
+    });
+  }
+  return options;
+}
+
+const LOOKBACK_OPTIONS: PeriodSelection[] = [
+  { type: "lookback", lookback: 7, label: "7 dagar" },
+  { type: "lookback", lookback: 30, label: "30 dagar" },
+  { type: "lookback", lookback: 60, label: "60 dagar" },
+  { type: "lookback", lookback: 90, label: "90 dagar" },
+];
+
 function formatNumber(n: number | null | undefined, decimals = 0): string {
   if (n == null || !Number.isFinite(n)) return "-";
   return n.toLocaleString("sv-SE", {
@@ -81,34 +159,44 @@ function formatNumber(n: number | null | undefined, decimals = 0): string {
   });
 }
 
-function formatCurrency(n: number | null | undefined, currency = "USD"): string {
+function formatCurrency(n: number | null | undefined, currency = "SEK"): string {
   if (n == null || !Number.isFinite(n)) return "-";
   const symbol = currency === "USD" ? "$" : currency === "EUR" ? "€" : currency + " ";
-  return `${symbol}${n.toLocaleString("sv-SE", { maximumFractionDigits: 0 })}`;
+  const sep = currency === "USD" || currency === "EUR" ? "" : "";
+  return `${symbol}${sep}${n.toLocaleString("sv-SE", { maximumFractionDigits: 0 })}`;
 }
 
 export function AdsOverview() {
-  const [lookback, setLookback] = useState(30);
+  const monthOptions = useMemo(buildMonthOptions, []);
+  const [period, setPeriod] = useState<PeriodSelection>(LOOKBACK_OPTIONS[1]); // 30 dagar default
   const [data, setData] = useState<OverviewData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [expanded, setExpanded] = useState<Record<string, boolean>>({});
+  const [showMonthPicker, setShowMonthPicker] = useState(false);
+  const [expandedCampaigns, setExpandedCampaigns] = useState<Record<string, boolean>>({});
 
   const load = useCallback(
     async (refresh = false) => {
       setLoading(true);
       setError(null);
       try {
-        const url = `/api/ads/overview?lookback=${lookback}${refresh ? "&_t=" + Date.now() : ""}`;
-        const res = await fetch(url, { cache: refresh ? "no-store" : "default" });
+        const params = new URLSearchParams();
+        if (period.type === "lookback") {
+          params.set("lookback", String(period.lookback));
+        } else if (period.startDate && period.endDate) {
+          params.set("start_date", period.startDate);
+          params.set("end_date", period.endDate);
+        }
+        if (refresh) params.set("_t", String(Date.now()));
+        const res = await fetch(`/api/ads/overview?${params.toString()}`, {
+          cache: refresh ? "no-store" : "default",
+        });
         if (res.status === 503) {
           setError("not-configured");
           setData(null);
           return;
         }
-        if (!res.ok) {
-          throw new Error(`HTTP ${res.status}`);
-        }
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
         const json = (await res.json()) as OverviewData;
         setData(json);
       } catch (err) {
@@ -117,14 +205,12 @@ export function AdsOverview() {
         setLoading(false);
       }
     },
-    [lookback],
+    [period],
   );
 
   useEffect(() => {
     load();
   }, [load]);
-
-  const currency = data?.platforms.find((p) => p.parsed?.currency)?.parsed?.currency || "USD";
 
   if (error === "not-configured") {
     return (
@@ -154,18 +240,21 @@ export function AdsOverview() {
 
   return (
     <div className="space-y-5">
-      {/* Header med period + refresh */}
+      {/* Period-valjare */}
       <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-border bg-surface p-3">
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <span className="text-[10px] uppercase tracking-wide text-text-muted">Period:</span>
           <div className="flex flex-wrap gap-1">
-            {PERIODS.map((p) => (
+            {LOOKBACK_OPTIONS.map((p) => (
               <button
-                key={p.lookback}
-                onClick={() => setLookback(p.lookback)}
+                key={p.label}
+                onClick={() => {
+                  setPeriod(p);
+                  setShowMonthPicker(false);
+                }}
                 className={cn(
                   "rounded-full px-3 py-1 text-[11px] font-medium transition-colors",
-                  lookback === p.lookback
+                  period.type === "lookback" && period.lookback === p.lookback
                     ? "bg-accent text-white"
                     : "bg-surface-elevated text-text-secondary hover:text-text-primary",
                 )}
@@ -173,12 +262,52 @@ export function AdsOverview() {
                 {p.label}
               </button>
             ))}
+            <div className="relative">
+              <button
+                onClick={() => setShowMonthPicker((s) => !s)}
+                className={cn(
+                  "rounded-full px-3 py-1 text-[11px] font-medium transition-colors inline-flex items-center gap-1",
+                  period.type === "month"
+                    ? "bg-accent text-white"
+                    : "bg-surface-elevated text-text-secondary hover:text-text-primary",
+                )}
+              >
+                <Calendar className="h-3 w-3" />
+                {period.type === "month" ? period.label : "Manad"}
+                <ChevronDown className="h-3 w-3" />
+              </button>
+              {showMonthPicker && (
+                <div className="absolute z-20 mt-1 right-0 max-h-72 overflow-y-auto rounded-md border border-border bg-surface shadow-lg min-w-[180px]">
+                  {monthOptions.map((m) => (
+                    <button
+                      key={m.label}
+                      onClick={() => {
+                        setPeriod(m);
+                        setShowMonthPicker(false);
+                      }}
+                      className={cn(
+                        "block w-full px-3 py-1.5 text-left text-xs hover:bg-surface-elevated transition-colors",
+                        period.type === "month" && period.label === m.label
+                          ? "bg-accent/10 text-accent font-medium"
+                          : "text-text-secondary",
+                      )}
+                    >
+                      {m.label}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
         </div>
         <div className="flex items-center gap-3">
           {data?.fetched_at && (
             <span className="text-[11px] text-text-muted">
-              Hamtat {new Date(data.fetched_at).toLocaleTimeString("sv-SE", { hour: "2-digit", minute: "2-digit" })}
+              Hamtat{" "}
+              {new Date(data.fetched_at).toLocaleTimeString("sv-SE", {
+                hour: "2-digit",
+                minute: "2-digit",
+              })}
             </span>
           )}
           <button
@@ -196,69 +325,106 @@ export function AdsOverview() {
         </div>
       </div>
 
-      {/* Aggregate stats */}
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
-        <StatCard
-          icon={DollarSign}
-          label="Total spend"
-          value={data ? formatCurrency(data.totals.spend, currency) : "-"}
-          loading={loading}
-        />
-        <StatCard
-          icon={Layers}
-          label="Kampanjer"
-          value={data ? formatNumber(data.totals.campaigns) : "-"}
-          loading={loading}
-        />
-        <StatCard
-          icon={MousePointerClick}
-          label="Klick"
-          value={data ? formatNumber(data.totals.clicks) : "-"}
-          loading={loading}
-        />
-        <StatCard
-          icon={Target}
-          label="Konverteringar"
-          value={data ? formatNumber(data.totals.conversions) : "-"}
-          loading={loading}
-        />
-        <StatCard
-          icon={TrendingUp}
-          label="Impressions"
-          value={data ? formatNumber(data.totals.impressions) : "-"}
-          loading={loading}
-        />
-      </div>
+      {/* Aggregerade totals per valuta */}
+      {data && data.totalsByCurrency.length > 0 && (
+        <div className="space-y-2">
+          {data.totalsByCurrency.map((t) => (
+            <div key={t.currency}>
+              {data.totalsByCurrency.length > 1 && (
+                <div className="text-[10px] uppercase tracking-wide text-text-muted mb-2">
+                  Totalt i {t.currency}
+                </div>
+              )}
+              <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+                <StatCard
+                  icon={DollarSign}
+                  label="Spend"
+                  value={formatCurrency(t.spend, t.currency)}
+                  loading={loading}
+                />
+                <StatCard
+                  icon={Layers}
+                  label="Kampanjer"
+                  value={formatNumber(t.campaigns)}
+                  loading={loading}
+                />
+                <StatCard
+                  icon={MousePointerClick}
+                  label="Klick"
+                  value={formatNumber(t.clicks)}
+                  loading={loading}
+                />
+                <StatCard
+                  icon={Target}
+                  label="Konverteringar"
+                  value={formatNumber(t.conversions)}
+                  loading={loading}
+                />
+                <StatCard
+                  icon={TrendingUp}
+                  label="Impressions"
+                  value={formatNumber(t.impressions)}
+                  loading={loading}
+                />
+              </div>
+              <div className="grid grid-cols-3 gap-3 mt-2">
+                <SecondaryStat
+                  label="CTR"
+                  value={t.ctr != null ? `${t.ctr.toFixed(2)}%` : "-"}
+                />
+                <SecondaryStat
+                  label="CPC"
+                  value={t.cpc != null ? formatCurrency(t.cpc, t.currency) : "-"}
+                />
+                <SecondaryStat
+                  label="Kostnad / konv."
+                  value={
+                    t.cost_per_conversion != null
+                      ? formatCurrency(t.cost_per_conversion, t.currency)
+                      : "-"
+                  }
+                />
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
 
-      {/* Per-plattform cards */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+      {data && data.totalsByCurrency.length === 0 && !loading && (
+        <div className="rounded-lg border border-dashed border-border p-6 text-center text-sm text-text-muted">
+          Ingen live-data for vald period an. Prova en annan period.
+        </div>
+      )}
+
+      {/* Per-plattform-sektioner med kampanjlistor */}
+      <div className="space-y-3">
         {data?.platforms.map((p) => (
-          <PlatformCard
+          <PlatformSection
             key={p.platform}
             block={p}
-            currency={currency}
-            expanded={expanded[p.platform] || false}
+            expanded={expandedCampaigns[p.platform] !== false}
             onToggle={() =>
-              setExpanded((prev) => ({ ...prev, [p.platform]: !prev[p.platform] }))
+              setExpandedCampaigns((prev) => ({
+                ...prev,
+                [p.platform]: prev[p.platform] === false ? true : false,
+              }))
             }
           />
         ))}
       </div>
 
-      {/* Quota + source-info */}
+      {/* Quota + kalla */}
       {data?.quota && (
         <div className="flex flex-wrap items-center gap-3 rounded-lg border border-border bg-surface-elevated/50 px-4 py-2.5 text-xs text-text-secondary">
-          <Megaphone className="h-3.5 w-3.5 text-text-muted" />
+          <span className="text-text-muted">Live via Adspirer ({data.quota.tier}-tier).</span>
           <span>
-            Live via Adspirer ({data.quota.tier}-tier). Anvandning:{" "}
+            Anvandning:{" "}
             <span className="font-mono font-medium text-text-primary">
               {data.quota.used} / {data.quota.limit}
             </span>{" "}
             anrop denna manad ({data.quota.usage_percent.toFixed(1)}%).
           </span>
-          <span className="text-text-muted">
-            Cache 30 min - tryck Uppdatera for fardig hamtning.
-          </span>
+          <span className="text-text-muted">Cache 30 min.</span>
         </div>
       )}
     </div>
@@ -289,117 +455,155 @@ function StatCard({
   );
 }
 
-function PlatformCard({
+function SecondaryStat({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-md bg-surface-elevated/40 px-3 py-2">
+      <div className="text-[9px] uppercase tracking-wide text-text-muted">{label}</div>
+      <div className="text-sm font-mono font-medium tabular-nums text-text-primary">{value}</div>
+    </div>
+  );
+}
+
+function PlatformSection({
   block,
-  currency,
   expanded,
   onToggle,
 }: {
   block: PlatformBlock;
-  currency: string;
   expanded: boolean;
   onToggle: () => void;
 }) {
   const meta = PLATFORM_META[block.platform];
-
-  if (!block.available) {
-    return (
-      <div className="rounded-lg border border-border bg-surface p-4 opacity-70">
-        <div className="flex items-center gap-2 mb-2">
-          <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: meta.color }} />
-          <span className="text-sm font-semibold">{meta.label}</span>
-          <span className="ml-auto rounded bg-surface-elevated px-1.5 py-0.5 text-[10px] uppercase text-text-muted">
-            Ej tillganglig
-          </span>
-        </div>
-        <p className="text-xs text-text-muted leading-relaxed">{block.reason}</p>
-      </div>
-    );
-  }
-
-  if (block.reason) {
-    // Available men data ej redo (Meta sync pagar)
-    return (
-      <div className="rounded-lg border border-border bg-surface p-4">
-        <div className="flex items-center gap-2 mb-2">
-          <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: meta.color }} />
-          <span className="text-sm font-semibold">{meta.label}</span>
-          <span className="ml-auto rounded bg-warning/15 px-1.5 py-0.5 text-[10px] uppercase text-warning">
-            Synkar
-          </span>
-        </div>
-        <p className="text-xs text-text-secondary leading-relaxed">{block.reason}</p>
-      </div>
-    );
-  }
-
-  const parsed = block.parsed;
+  const badge = STATUS_BADGE[block.status] || STATUS_BADGE.error;
 
   return (
-    <div className="rounded-lg border border-border bg-surface overflow-hidden flex flex-col">
-      <div className="p-4 border-b border-border">
-        <div className="flex items-center gap-2 mb-3">
-          <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: meta.color }} />
-          <span className="text-sm font-semibold">{meta.label}</span>
-          <span className="ml-auto rounded bg-success/15 px-1.5 py-0.5 text-[10px] uppercase text-success">
-            Live
-          </span>
-        </div>
-
-        {parsed && (
-          <div className="grid grid-cols-2 gap-2 text-xs">
-            <Metric label="Spend" value={formatCurrency(parsed.totalSpend, currency)} />
-            <Metric label="Kampanjer" value={formatNumber(parsed.totalCampaigns)} />
-            <Metric label="Klick" value={formatNumber(parsed.totalClicks)} />
-            <Metric label="Konv." value={formatNumber(parsed.totalConversions)} />
-            <Metric
-              label="CTR"
-              value={parsed.ctr != null ? `${parsed.ctr.toFixed(2)}%` : "-"}
-            />
-            <Metric
-              label="CPC"
-              value={parsed.cpc != null ? formatCurrency(parsed.cpc, currency) : "-"}
-            />
-            <Metric
-              label="Conv. rate"
-              value={parsed.conversionRate != null ? `${parsed.conversionRate.toFixed(2)}%` : "-"}
-            />
-            <Metric
-              label="Cost / conv."
-              value={parsed.costPerConversion != null ? formatCurrency(parsed.costPerConversion, currency) : "-"}
-            />
-          </div>
-        )}
-
-        {parsed?.topCampaign && (
-          <div className="mt-3 rounded-md bg-surface-elevated/60 px-2 py-1.5 text-[11px] text-text-secondary">
-            <span className="text-text-muted uppercase tracking-wide text-[9px]">Top:</span>{" "}
-            <span className="font-medium text-text-primary">{parsed.topCampaign}</span>
-          </div>
-        )}
-      </div>
-
+    <div className="rounded-lg border border-border bg-surface overflow-hidden">
       <button
         onClick={onToggle}
-        className="px-4 py-2 text-left text-xs text-accent hover:bg-surface-elevated/50 border-b border-border"
+        className="w-full flex items-center justify-between p-4 hover:bg-surface-elevated/30 transition-colors"
       >
-        {expanded ? "Dolj" : "Visa"} fullstandig rapport <ExternalLink className="inline h-2.5 w-2.5 ml-1" />
+        <div className="flex items-center gap-3">
+          <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: meta.color }} />
+          <span className="text-sm font-semibold">{meta.label}</span>
+          <span className={cn("rounded px-1.5 py-0.5 text-[10px] uppercase font-medium", badge.bg, badge.text)}>
+            {badge.label}
+          </span>
+          {block.status === "live" && (
+            <>
+              <span className="text-xs text-text-muted">|</span>
+              <span className="text-xs text-text-secondary">
+                {formatCurrency(block.totals.spend, block.currency)} spend, {block.totals.campaigns}{" "}
+                {block.totals.campaigns === 1 ? "kampanj" : "kampanjer"}
+              </span>
+            </>
+          )}
+        </div>
+        <ChevronDown
+          className={cn("h-4 w-4 text-text-muted transition-transform", expanded ? "rotate-180" : "")}
+        />
       </button>
 
-      {expanded && block.reportText && (
-        <div className="adspirer-report p-4 bg-surface-elevated/30 text-xs leading-relaxed overflow-x-auto">
-          <ReactMarkdown remarkPlugins={[remarkGfm]}>{block.reportText}</ReactMarkdown>
+      {expanded && (
+        <div className="border-t border-border">
+          {block.status !== "live" && block.reason && (
+            <div className="p-4 text-xs text-text-secondary leading-relaxed">{block.reason}</div>
+          )}
+          {block.status === "live" && block.campaigns.length === 0 && (
+            <div className="p-4 text-xs text-text-muted text-center">
+              Inga kampanjer for vald period.
+            </div>
+          )}
+          {block.status === "live" && block.campaigns.length > 0 && (
+            <CampaignTable campaigns={block.campaigns} currency={block.currency} />
+          )}
         </div>
       )}
     </div>
   );
 }
 
-function Metric({ label, value }: { label: string; value: string }) {
+type SortKey = "spend" | "clicks" | "conversions" | "ctr" | "cpc" | "name";
+
+function CampaignTable({ campaigns, currency }: { campaigns: CampaignRow[]; currency: string }) {
+  const [sortKey, setSortKey] = useState<SortKey>("spend");
+  const [sortDir, setSortDir] = useState<"desc" | "asc">("desc");
+
+  const sorted = useMemo(() => {
+    const arr = [...campaigns];
+    arr.sort((a, b) => {
+      const av = a[sortKey];
+      const bv = b[sortKey];
+      const aN = typeof av === "number" ? av : av === null ? -Infinity : 0;
+      const bN = typeof bv === "number" ? bv : bv === null ? -Infinity : 0;
+      if (sortKey === "name") {
+        return sortDir === "desc" ? String(bv).localeCompare(String(av)) : String(av).localeCompare(String(bv));
+      }
+      return sortDir === "desc" ? bN - aN : aN - bN;
+    });
+    return arr;
+  }, [campaigns, sortKey, sortDir]);
+
+  const handleSort = (key: SortKey) => {
+    if (sortKey === key) {
+      setSortDir((d) => (d === "desc" ? "asc" : "desc"));
+    } else {
+      setSortKey(key);
+      setSortDir("desc");
+    }
+  };
+
+  const Th = ({ k, children, align = "left" }: { k: SortKey; children: React.ReactNode; align?: "left" | "right" }) => (
+    <th
+      onClick={() => handleSort(k)}
+      className={cn(
+        "py-2 px-3 text-[10px] uppercase tracking-wide font-medium text-text-muted cursor-pointer hover:text-text-primary select-none",
+        align === "right" ? "text-right" : "text-left",
+      )}
+    >
+      {children}
+      {sortKey === k && <span className="ml-1">{sortDir === "desc" ? "▼" : "▲"}</span>}
+    </th>
+  );
+
   return (
-    <div>
-      <div className="text-[10px] uppercase tracking-wide text-text-muted">{label}</div>
-      <div className="font-mono font-semibold text-text-primary tabular-nums">{value}</div>
+    <div className="overflow-x-auto">
+      <table className="w-full text-xs">
+        <thead className="bg-surface-elevated/40 border-b border-border">
+          <tr>
+            <Th k="name">Kampanj</Th>
+            <Th k="spend" align="right">Spend</Th>
+            <Th k="clicks" align="right">Klick</Th>
+            <Th k="conversions" align="right">Konv.</Th>
+            <Th k="ctr" align="right">CTR</Th>
+            <Th k="cpc" align="right">CPC</Th>
+          </tr>
+        </thead>
+        <tbody>
+          {sorted.map((c) => (
+            <tr key={c.campaign_id || c.name} className="border-b border-border/40 last:border-0 hover:bg-surface-elevated/20">
+              <td className="py-2 px-3">
+                <div className="text-text-primary font-medium">{c.name}</div>
+                {c.type && <div className="text-[10px] text-text-muted">{c.type}</div>}
+              </td>
+              <td className="py-2 px-3 text-right font-mono tabular-nums">
+                {formatCurrency(c.spend, currency)}
+              </td>
+              <td className="py-2 px-3 text-right font-mono tabular-nums">
+                {formatNumber(c.clicks)}
+              </td>
+              <td className="py-2 px-3 text-right font-mono tabular-nums">
+                {formatNumber(c.conversions)}
+              </td>
+              <td className="py-2 px-3 text-right font-mono tabular-nums">
+                {c.ctr != null ? `${c.ctr.toFixed(2)}%` : "-"}
+              </td>
+              <td className="py-2 px-3 text-right font-mono tabular-nums">
+                {c.cpc != null ? formatCurrency(c.cpc, currency) : "-"}
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
     </div>
   );
 }
