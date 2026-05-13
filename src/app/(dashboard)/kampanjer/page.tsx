@@ -168,10 +168,21 @@ function normalizeName(s: string): string {
     .slice(0, 50);
 }
 
-function unifyStatus(s: string | null): "active" | "paused" | "completed" {
+function unifyStatus(
+  s: string | null,
+  spend?: number | null,
+): "active" | "paused" | "completed" | "library" | "unknown" {
   const t = (s || "").toLowerCase();
   if (t.includes("active") || t.includes("live")) return "active";
   if (t.includes("paus")) return "paused";
+  if (t.includes("completed") || t.includes("avslutad")) return "completed";
+  if (t.includes("library")) return "library";
+  // Adspirer kan returnera status=null. Om spend > 0 är kampanjen aktiv;
+  // annars osäker.
+  if (!s) {
+    if ((spend || 0) > 0) return "active";
+    return "unknown";
+  }
   return "completed";
 }
 
@@ -183,32 +194,33 @@ export default function KampanjerPage() {
   const [adsData, setAdsData] = useState<AdsOverview | null>(null);
   const [loading, setLoading] = useState(true);
   const [platformFilter, setPlatformFilter] = useState<Platform | "all">("all");
-  const [statusFilter, setStatusFilter] = useState<"all" | "active" | "paused" | "completed">("all");
+  const [statusFilter, setStatusFilter] = useState<
+    "all" | "active" | "paused" | "library" | "completed"
+  >("all");
 
   useEffect(() => {
-    let cancelled = false;
-    setLoading(true);
+    const ctrl = { cancelled: false };
     (async () => {
       try {
         const [dbRes, adsRes] = await Promise.all([
           fetch("/api/campaigns").then((r) => r.json()),
           fetch(`/api/ads/overview?lookback=${period}`).then((r) => r.json()),
         ]);
-        if (!cancelled) {
+        if (!ctrl.cancelled) {
           setDbCampaigns(dbRes.campaigns || []);
           setAdsData(adsRes && !adsRes.error ? adsRes : null);
+          setLoading(false);
         }
       } catch {
-        if (!cancelled) {
+        if (!ctrl.cancelled) {
           setDbCampaigns([]);
           setAdsData(null);
+          setLoading(false);
         }
-      } finally {
-        if (!cancelled) setLoading(false);
       }
     })();
     return () => {
-      cancelled = true;
+      ctrl.cancelled = true;
     };
   }, [period]);
 
@@ -260,13 +272,23 @@ export default function KampanjerPage() {
     }
 
     // 2. Lägg in DB-kampanjer som inte matchades (kreativ-bibliotek + email)
+    // Viktigt: kalla dem inte "Live" — vi har ingen Adspirer-bekräftelse på
+    // att de faktiskt körs i Meta/LinkedIn just nu. Email är annorlunda
+    // (faktiska utskick från Upsales).
     for (const d of dbCampaigns) {
       if (usedDbKeys.has(d.id)) continue;
+      // Email-mailings är historiska utskick — markera som completed.
+      // Övriga DB-kampanjer som vi inte hittat i Adspirer: status "library"
+      // (kreativ utan live-bekräftelse) snarare än de ursprungliga active/paused.
+      const isEmail = d.platform === "email";
+      const trustedStatus = isEmail
+        ? d.status
+        : "library";
       result.push({
         key: `db-${d.id}`,
         platform: d.platform,
         name: d.campaign_name,
-        status: d.status,
+        status: trustedStatus,
         source: "library",
         spend: d.spend,
         impressions: d.impressions,
@@ -287,11 +309,18 @@ export default function KampanjerPage() {
       });
     }
 
-    // Sortera: aktiva först, sen efter spend desc
+    // Sortera: aktiva först, sen pausade, sen sparade, sen efter spend desc
+    const statusRank = (s: string | null, spend?: number | null): number => {
+      const t = unifyStatus(s, spend);
+      if (t === "active") return 0;
+      if (t === "paused") return 1;
+      if (t === "library") return 2;
+      if (t === "unknown") return 3;
+      return 4;
+    };
     return result.sort((a, b) => {
-      const aActive = unifyStatus(a.status) === "active" ? 0 : 1;
-      const bActive = unifyStatus(b.status) === "active" ? 0 : 1;
-      if (aActive !== bActive) return aActive - bActive;
+      const r = statusRank(a.status, a.spend) - statusRank(b.status, b.spend);
+      if (r !== 0) return r;
       return (b.spend || 0) - (a.spend || 0);
     });
   }, [dbCampaigns, adsData]);
@@ -300,27 +329,41 @@ export default function KampanjerPage() {
   const visible = useMemo(() => {
     return unified.filter((c) => {
       if (platformFilter !== "all" && c.platform !== platformFilter) return false;
-      if (statusFilter !== "all" && unifyStatus(c.status) !== statusFilter) return false;
+      if (statusFilter !== "all" && unifyStatus(c.status, c.spend) !== statusFilter)
+        return false;
       return true;
     });
   }, [unified, platformFilter, statusFilter]);
 
-  // Per-plattform-sammanfattning
+  // Per-plattform-sammanfattning. Räknar bara live-kampanjer (status active
+  // bekräftad av Adspirer), inte "sparad kreativ" från DB. Spend kommer från
+  // Adspirers period så det är pengar som FAKTISKT spenderats i perioden.
   const platformSummary = useMemo(() => {
-    const result: Record<Platform, { count: number; active: number; spend: number; conv: number; status: string }> = {
-      meta: { count: 0, active: 0, spend: 0, conv: 0, status: "—" },
-      linkedin: { count: 0, active: 0, spend: 0, conv: 0, status: "—" },
-      google: { count: 0, active: 0, spend: 0, conv: 0, status: "—" },
-      email: { count: 0, active: 0, spend: 0, conv: 0, status: "—" },
+    const result: Record<
+      Platform,
+      {
+        live: number;
+        paused: number;
+        library: number;
+        spend: number;
+        conv: number;
+        status: string;
+      }
+    > = {
+      meta: { live: 0, paused: 0, library: 0, spend: 0, conv: 0, status: "—" },
+      linkedin: { live: 0, paused: 0, library: 0, spend: 0, conv: 0, status: "—" },
+      google: { live: 0, paused: 0, library: 0, spend: 0, conv: 0, status: "—" },
+      email: { live: 0, paused: 0, library: 0, spend: 0, conv: 0, status: "—" },
     };
     for (const c of unified) {
       const p = c.platform;
-      result[p].count++;
-      if (unifyStatus(c.status) === "active") result[p].active++;
+      const st = unifyStatus(c.status, c.spend);
+      if (st === "active") result[p].live++;
+      else if (st === "paused") result[p].paused++;
+      else if (st === "library") result[p].library++;
       result[p].spend += c.spend || 0;
       result[p].conv += c.conversions || 0;
     }
-    // Status från Adspirer per plattform
     if (adsData) {
       for (const ap of adsData.platforms) {
         if (result[ap.platform]) result[ap.platform].status = ap.status;
@@ -339,8 +382,11 @@ export default function KampanjerPage() {
           Kampanjer
         </h1>
         <p className="mt-1 text-sm text-text-secondary">
-          Live data från Adspirer (Google/Meta/LinkedIn) kombinerat med kreativ-bibliotek.
-          Välj period så uppdateras spend, klick och konverteringar.
+          Status och spend kommer live från Adspirer (Google, Meta, LinkedIn).
+          Kreativ syns där det matchas mot en sparad annons. Kampanjer som
+          endast finns som sparad kreativ — utan live-bekräftelse från
+          plattformen — märks som <strong className="text-[#a363d9]">Sparad</strong>,
+          inte Live.
         </p>
       </div>
 
@@ -370,22 +416,24 @@ export default function KampanjerPage() {
         </span>
       </div>
 
-      {/* Plattform-summary med spend och status */}
+      {/* Plattform-summary: visar bara LIVE-kampanjer (Adspirer-bekräftade),
+          pausade och sparade-kreativ separat. Inga inflations-siffror. */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         {(Object.keys(PLATFORM_META) as Platform[]).map((p) => {
           const meta = PLATFORM_META[p];
           const s = platformSummary[p];
+          const total = s.live + s.paused + s.library;
           const isFilterActive = platformFilter === p;
           return (
             <button
               key={p}
               onClick={() => setPlatformFilter((cur) => (cur === p ? "all" : p))}
-              disabled={s.count === 0}
+              disabled={total === 0}
               className={cn(
                 "text-left rounded-lg border p-3 transition-all",
                 isFilterActive
                   ? "border-text-primary bg-surface-elevated"
-                  : s.count > 0
+                  : total > 0
                     ? "border-border bg-surface hover:bg-surface-elevated/50"
                     : "border-border/50 bg-surface opacity-50 cursor-not-allowed",
               )}
@@ -398,7 +446,7 @@ export default function KampanjerPage() {
                   />
                   <span className="text-xs font-semibold">{meta.label}</span>
                 </div>
-                <StatusPill status={s.status} active={s.active} />
+                <StatusPill liveCount={s.live} pausedCount={s.paused} />
               </div>
               <div className="text-[9px] uppercase tracking-wide text-text-muted">
                 Spend i perioden
@@ -406,8 +454,12 @@ export default function KampanjerPage() {
               <div className="font-display text-xl tabular-nums">
                 {formatKr(s.spend)}
               </div>
-              <div className="mt-1 flex items-center gap-2 text-[10px] text-text-muted">
-                <span>{s.count} kampanjer</span>
+              <div className="mt-1 flex flex-wrap items-center gap-1.5 text-[10px] text-text-muted">
+                {s.live > 0 && <span className="text-[#8bb347]">{s.live} live</span>}
+                {s.paused > 0 && <span className="text-[#e8864c]">{s.paused} pausad</span>}
+                {s.library > 0 && (
+                  <span className="text-[#a363d9]">{s.library} sparad</span>
+                )}
                 {s.conv > 0 && <span>· {s.conv} konv.</span>}
               </div>
             </button>
@@ -421,7 +473,7 @@ export default function KampanjerPage() {
           <span className="text-[10px] uppercase tracking-wide text-text-muted">
             Status
           </span>
-          {(["all", "active", "paused", "completed"] as const).map((s) => (
+          {(["all", "active", "paused", "library", "completed"] as const).map((s) => (
             <button
               key={s}
               onClick={() => setStatusFilter(s)}
@@ -432,7 +484,15 @@ export default function KampanjerPage() {
                   : "bg-surface-elevated text-text-secondary hover:text-text-primary",
               )}
             >
-              {s === "all" ? "Alla" : s === "active" ? "Live" : s === "paused" ? "Pausad" : "Avslutad"}
+              {s === "all"
+                ? "Alla"
+                : s === "active"
+                  ? "Live"
+                  : s === "paused"
+                    ? "Pausad"
+                    : s === "library"
+                      ? "Sparad kreativ"
+                      : "Avslutad"}
             </button>
           ))}
         </div>
@@ -468,8 +528,8 @@ export default function KampanjerPage() {
   );
 }
 
-function StatusPill({ status, active }: { status: string; active: number }) {
-  if (status === "live") {
+function StatusPill({ liveCount, pausedCount }: { liveCount: number; pausedCount: number }) {
+  if (liveCount > 0) {
     return (
       <span className="inline-flex items-center gap-1 rounded-full bg-[#8bb347]/15 px-1.5 py-0.5 text-[9px] font-bold uppercase text-[#8bb347]">
         <span className="relative flex h-1.5 w-1.5">
@@ -480,34 +540,56 @@ function StatusPill({ status, active }: { status: string; active: number }) {
       </span>
     );
   }
-  if (status === "structure_only") {
+  if (pausedCount > 0) {
     return (
       <span
         className="rounded-full px-1.5 py-0.5 text-[9px] font-bold uppercase"
         style={{ background: "rgba(232,134,76,0.15)", color: "#e8864c" }}
       >
-        Synkar
+        Pausad
       </span>
     );
   }
-  if (active > 0) {
-    return (
-      <span className="rounded-full bg-[#8bb347]/15 px-1.5 py-0.5 text-[9px] font-bold uppercase text-[#8bb347]">
-        {active} live
-      </span>
-    );
-  }
-  return <span className="text-[9px] text-text-muted">—</span>;
+  return <span className="text-[9px] text-text-muted">Inaktiv</span>;
 }
 
 function CampaignCard({ c }: { c: UnifiedCampaign }) {
   const platformMeta = PLATFORM_META[c.platform];
-  const status = unifyStatus(c.status);
+  const status = unifyStatus(c.status, c.spend);
   const isActive = status === "active";
-  const StatusIcon = status === "active" ? Play : status === "paused" ? Pause : Check;
+  const isLibrary = status === "library";
+  const StatusIcon =
+    status === "active"
+      ? Play
+      : status === "paused"
+        ? Pause
+        : status === "library"
+          ? ImageIcon
+          : Check;
   const ctr = c.clicks && c.impressions ? (c.clicks / c.impressions) * 100 : 0;
-  const cpl =
-    c.conversions && c.spend ? Math.round(c.spend / c.conversions) : 0;
+  const cpl = c.conversions && c.spend ? Math.round(c.spend / c.conversions) : 0;
+
+  // Status-styling
+  const statusBg =
+    status === "active"
+      ? "bg-[#8bb347]/15 text-[#8bb347]"
+      : status === "paused"
+        ? "bg-[#e8864c]/15 text-[#e8864c]"
+        : status === "library"
+          ? "bg-[#a363d9]/15 text-[#a363d9]"
+          : status === "unknown"
+            ? "bg-text-muted/15 text-text-muted"
+            : "bg-text-muted/15 text-text-muted";
+  const statusLabel =
+    status === "active"
+      ? "Live"
+      : status === "paused"
+        ? "Pausad"
+        : status === "library"
+          ? "Sparad"
+          : status === "unknown"
+            ? "Okänd"
+            : "Avsl.";
 
   return (
     <div
@@ -516,27 +598,35 @@ function CampaignCard({ c }: { c: UnifiedCampaign }) {
         isActive ? "border-border" : "border-border/50",
       )}
     >
-      {/* Creative */}
+      {/* Creative — visa i sitt naturliga aspekt-förhållande mot mörk
+          bakgrund så stående annonser inte beskärs. Begränsa höjd så kortet
+          inte blir överdrivet långt. */}
       {c.creativeImageUrl ? (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img
-          src={c.creativeImageUrl}
-          alt={c.name}
-          className={cn("w-full object-cover", isActive ? "" : "grayscale")}
-          style={{ aspectRatio: "16 / 9" }}
-        />
+        <div
+          className={cn(
+            "w-full flex items-center justify-center overflow-hidden",
+            isLibrary ? "bg-[#a363d9]/5" : "bg-black/5",
+          )}
+          style={{ maxHeight: 340, minHeight: 160 }}
+        >
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={c.creativeImageUrl}
+            alt={c.name}
+            className={cn(
+              "max-w-full max-h-[340px] object-contain",
+              isActive ? "" : "grayscale opacity-90",
+            )}
+            loading="lazy"
+          />
+        </div>
       ) : (
         <div
-          className="w-full flex items-center justify-center bg-surface-elevated relative"
+          className="w-full flex flex-col items-center justify-center bg-surface-elevated relative gap-1"
           style={{ aspectRatio: "16 / 9" }}
         >
           <platformMeta.Icon className="h-7 w-7" style={{ color: platformMeta.color }} />
-          {c.source === "live" && (
-            <div className="absolute bottom-1.5 right-1.5 text-[9px] text-text-muted flex items-center gap-1">
-              <ImageIcon className="h-2.5 w-2.5" />
-              Ingen kreativ
-            </div>
-          )}
+          <div className="text-[9px] text-text-muted">Ingen kreativ tillgänglig</div>
         </div>
       )}
 
@@ -563,15 +653,11 @@ function CampaignCard({ c }: { c: UnifiedCampaign }) {
           <span
             className={cn(
               "inline-flex items-center gap-0.5 rounded-full px-1.5 py-0.5 text-[8px] font-bold uppercase shrink-0",
-              isActive
-                ? "bg-[#8bb347]/15 text-[#8bb347]"
-                : status === "paused"
-                  ? "bg-[#e8864c]/15 text-[#e8864c]"
-                  : "bg-text-muted/15 text-text-muted",
+              statusBg,
             )}
           >
             <StatusIcon className="h-2 w-2" />
-            {isActive ? "Live" : status === "paused" ? "Pausad" : "Avsl."}
+            {statusLabel}
           </span>
         </div>
 
@@ -656,13 +742,16 @@ function CampaignCard({ c }: { c: UnifiedCampaign }) {
           )}
         </div>
 
-        {/* Source-indicator */}
+        {/* Source-indicator — tydlig om datan är live från Adspirer eller
+            historisk kreativ utan live-bekräftelse */}
         <div className="flex items-center gap-1 pt-1 border-t border-border/30 text-[9px] text-text-muted">
           {c.source === "merged" && (
-            <span className="text-[#8bb347]">● Live data + kreativ</span>
+            <span className="text-[#8bb347]">● Adspirer-bekräftad + kreativ</span>
           )}
-          {c.source === "live" && <span>● Live från Adspirer</span>}
-          {c.source === "library" && <span>● Kreativ-bibliotek</span>}
+          {c.source === "live" && <span>● Adspirer live-data</span>}
+          {c.source === "library" && (
+            <span className="text-[#a363d9]">● Kreativ utan live-bekräftelse</span>
+          )}
         </div>
       </div>
     </div>
