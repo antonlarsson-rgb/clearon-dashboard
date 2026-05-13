@@ -364,3 +364,75 @@ body {
 .animate-pulse-ring {
   animation: pulse-ring 2s ease-out infinite;
 }
+
+/* Adspirer Markdown report styling */
+.adspirer-report h1,
+.adspirer-report h2,
+.adspirer-report h3 {
+  font-family: var(--font-display);
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-top: 0.75rem;
+  margin-bottom: 0.4rem;
+}
+.adspirer-report h1 {
+  font-size: 0.95rem;
+}
+.adspirer-report h2 {
+  font-size: 0.85rem;
+}
+.adspirer-report h3 {
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+}
+.adspirer-report p {
+  color: var(--text-secondary);
+  margin-bottom: 0.5rem;
+}
+.adspirer-report ul,
+.adspirer-report ol {
+  padding-left: 1.1rem;
+  margin-bottom: 0.5rem;
+}
+.adspirer-report li {
+  color: var(--text-secondary);
+  margin-bottom: 0.15rem;
+}
+.adspirer-report strong {
+  color: var(--text-primary);
+  font-weight: 600;
+}
+.adspirer-report code {
+  background: var(--surface-elevated);
+  padding: 0.1rem 0.3rem;
+  border-radius: 3px;
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+}
+.adspirer-report table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 0.5rem 0;
+  font-size: 0.7rem;
+}
+.adspirer-report th,
+.adspirer-report td {
+  border: 1px solid var(--border);
+  padding: 0.3rem 0.5rem;
+  text-align: left;
+}
+.adspirer-report th {
+  background: var(--surface-elevated);
+  font-weight: 600;
+  color: var(--text-primary);
+}
+.adspirer-report td {
+  color: var(--text-secondary);
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+}
+.adspirer-report hr {
+  border: none;
+  border-top: 1px solid var(--border);
+  margin: 0.75rem 0;
+}

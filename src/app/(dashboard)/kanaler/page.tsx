@@ -1,8 +1,7 @@
 // Datakallor:
 // - Webbkanaler: clearon.live (Supabase web_events) + clearon.se (Upsales)
 // - Landningssidor: Supabase web_sessions per landningssida
-// - Annonskanaler: live via Adspirer (Meta/Google/LinkedIn) - tillgangligt via AI-agenten
-import Link from "next/link";
+// - Annonskanaler: live via Adspirer MCP (Google + Meta, LinkedIn ej exponerat an)
 import { getContacts } from "@/lib/dashboard-data";
 import {
   buildWebChannelFlows,
@@ -12,7 +11,8 @@ import {
 import { products } from "@/lib/products";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { formatNumber } from "@/lib/utils";
-import { ExternalLink, ArrowRight, Eye, Users, Target, TrendingUp, Megaphone, Bot } from "lucide-react";
+import { AdsOverview } from "@/components/dashboard/ads-overview";
+import { ExternalLink, ArrowRight, Eye, Users, Target, TrendingUp, Megaphone } from "lucide-react";
 
 function getProductColor(slug: string) {
   return products.find((p) => p.slug === slug)?.color ?? "#6B7280";
@@ -186,72 +186,19 @@ export default async function KanalerPage() {
         </CardContent>
       </Card>
 
-      {/* Annonskanaler - empty-state, hanvisar till AI-agenten via Adspirer */}
-      <Card className="border-accent/20 bg-accent-subtle/20">
+      {/* Annonskanaler - LIVE via Adspirer MCP */}
+      <Card>
         <CardHeader>
           <div className="flex items-center gap-2">
             <Megaphone className="h-5 w-5 text-accent" />
-            <CardTitle>Annonskanaler (Meta, Google, LinkedIn)</CardTitle>
+            <CardTitle>Annonskanaler (Google Ads, Meta, LinkedIn)</CardTitle>
           </div>
+          <p className="text-xs text-text-secondary mt-1">
+            Hamtas live fran respektive plattform via Adspirer. Vrid period for olika tidsfonster.
+          </p>
         </CardHeader>
-        <CardContent className="space-y-4">
-          <p className="text-sm text-text-secondary leading-relaxed">
-            Live ad-data hamtas via Adspirer som wrappar Meta, Google Ads och LinkedIn i en endpoint.
-            Stallningstabeller och CPL/ROAS-vyer kommer snart direkt har. Tills dess - fraga{" "}
-            <Link href="/ai-agent" className="text-accent hover:underline font-medium">
-              AI-agenten
-            </Link>
-            :
-          </p>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-            <Link
-              href="/ai-agent"
-              className="flex items-start gap-3 rounded-md border border-border bg-surface p-3 hover:border-accent/40 transition-colors"
-            >
-              <Bot className="h-4 w-4 text-accent mt-0.5 shrink-0" />
-              <div className="text-sm">
-                <div className="font-medium text-text-primary">Vilka Meta-kampanjer ar aktiva?</div>
-                <div className="text-xs text-text-muted mt-0.5">Live status, budget och resultat senaste 30 dagarna</div>
-              </div>
-            </Link>
-            <Link
-              href="/ai-agent"
-              className="flex items-start gap-3 rounded-md border border-border bg-surface p-3 hover:border-accent/40 transition-colors"
-            >
-              <Bot className="h-4 w-4 text-accent mt-0.5 shrink-0" />
-              <div className="text-sm">
-                <div className="font-medium text-text-primary">Cross-platform performance senaste 30 dagar</div>
-                <div className="text-xs text-text-muted mt-0.5">Meta + Google + LinkedIn sida vid sida</div>
-              </div>
-            </Link>
-            <Link
-              href="/ai-agent"
-              className="flex items-start gap-3 rounded-md border border-border bg-surface p-3 hover:border-accent/40 transition-colors"
-            >
-              <Bot className="h-4 w-4 text-accent mt-0.5 shrink-0" />
-              <div className="text-sm">
-                <div className="font-medium text-text-primary">Vilka kampanjer slosar budget?</div>
-                <div className="text-xs text-text-muted mt-0.5">Underpresterande annonser och rekommenderade pauser</div>
-              </div>
-            </Link>
-            <Link
-              href="/ai-agent"
-              className="flex items-start gap-3 rounded-md border border-border bg-surface p-3 hover:border-accent/40 transition-colors"
-            >
-              <Bot className="h-4 w-4 text-accent mt-0.5 shrink-0" />
-              <div className="text-sm">
-                <div className="font-medium text-text-primary">Hitta keywords for nasta kampanj</div>
-                <div className="text-xs text-text-muted mt-0.5">Keyword-research med volym och konkurrensdata</div>
-              </div>
-            </Link>
-          </div>
-          <p className="text-xs text-text-muted">
-            Anslutningsstatus for Adspirer kontrolleras i{" "}
-            <Link href="/installningar" className="text-accent hover:underline">
-              installningar
-            </Link>
-            .
-          </p>
+        <CardContent>
+          <AdsOverview />
         </CardContent>
       </Card>
     </div>
