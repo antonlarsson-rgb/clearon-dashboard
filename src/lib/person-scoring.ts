@@ -4,6 +4,7 @@
 
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { halflifeFor } from "@/lib/event-weights";
+import { classifyBehaviorPattern } from "@/lib/buying-intent";
 
 function decay(value: number, daysAgo: number, halflifeDays: number): number {
   if (halflifeDays === Infinity) return value;
@@ -250,6 +251,34 @@ export async function recomputePerson(
     hasLostOpportunity: !!hasLostOpp,
   });
 
+  // Räkna ut behavior_pattern uteslutande från events
+  const { data: personMeta } = await supabase
+    .from("persons")
+    .select("primary_email")
+    .eq("id", personId)
+    .maybeSingle();
+
+  const dayMs = 24 * 60 * 60 * 1000;
+  const eventsForPattern = (events || []).map((e) => ({
+    ...e,
+    source: "computed",
+    metadata: null,
+  })) as Parameters<typeof classifyBehaviorPattern>[0];
+
+  const daysSinceLast = result.last_event_at
+    ? (Date.now() - new Date(result.last_event_at).getTime()) / dayMs
+    : Infinity;
+  const daysSinceFirst = result.first_event_at
+    ? (Date.now() - new Date(result.first_event_at).getTime()) / dayMs
+    : 0;
+
+  const behaviorPattern = classifyBehaviorPattern(eventsForPattern, {
+    is_customer: lifecycle === "customer",
+    is_identified: !!personMeta?.primary_email,
+    days_since_last_event: daysSinceLast,
+    days_since_first_event: daysSinceFirst,
+  });
+
   await supabase
     .from("persons")
     .update({
@@ -267,6 +296,7 @@ export async function recomputePerson(
       has_purchased: result.has_purchased,
       is_customer: lifecycle === "customer",
       lifecycle_stage: lifecycle,
+      behavior_pattern: behaviorPattern,
       updated_at: new Date().toISOString(),
     })
     .eq("id", personId);

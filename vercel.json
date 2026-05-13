@@ -1,0 +1,36 @@
+{
+  "crons": [
+    {
+      "path": "/api/sync/upsales-visits",
+      "schedule": "*/15 * * * *"
+    },
+    {
+      "path": "/api/sync/upsales-opportunities",
+      "schedule": "20 * * * *"
+    },
+    {
+      "path": "/api/sync/upsales-mail",
+      "schedule": "40 * * * *"
+    },
+    {
+      "path": "/api/cron/score-decay",
+      "schedule": "*/30 * * * *"
+    },
+    {
+      "path": "/api/cron/ai-triage",
+      "schedule": "0 * * * *"
+    },
+    {
+      "path": "/api/cron/daily-brief",
+      "schedule": "0 6 * * *"
+    },
+    {
+      "path": "/api/cron/identify-enrich",
+      "schedule": "10,40 * * * *"
+    },
+    {
+      "path": "/api/cron/weekly-stellar",
+      "schedule": "0 8 * * 1"
+    }
+  ]
+}

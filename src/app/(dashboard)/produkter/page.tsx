@@ -1,15 +1,6 @@
 import Link from "next/link";
 import { products } from "@/lib/products";
-import {
-  getContacts,
-  getContactsForProduct,
-  getProductLandingStats,
-} from "@/lib/dashboard-data";
-import {
-  getLandingAnalyticsForProduct,
-  getLandingPageAnalytics,
-  mergeLandingStats,
-} from "@/lib/web-analytics";
+import { getContacts, getContactsForProduct } from "@/lib/dashboard-data";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { ScoreBadge } from "@/components/ui/score-badge";
 import { Button } from "@/components/ui/button";
@@ -38,10 +29,7 @@ const iconMap: Record<string, React.ElementType> = {
 };
 
 export default async function ProdukterPage() {
-  const [contacts, landingPageStats] = await Promise.all([
-    getContacts(200),
-    getLandingPageAnalytics(30),
-  ]);
+  const contacts = await getContacts(200);
 
   return (
     <div className="space-y-6">
@@ -49,7 +37,8 @@ export default async function ProdukterPage() {
         <span className="section-prefix">/ Produkter</span>
         <h1 className="font-display text-2xl mt-1">Produktportfolj</h1>
         <p className="text-text-secondary text-sm mt-1">
-          ClearOns sex produkter och deras lead-intresse fran Upsales CRM
+          ClearOns produkter med lead-intresse fran Upsales CRM. Siffrorna nedan ar
+          Upsales rule-based score; for AI-driven buying-intent per person, se /persons.
         </p>
       </div>
 
@@ -58,10 +47,6 @@ export default async function ProdukterPage() {
           const Icon = iconMap[product.icon];
           const hotLeads = getContactsForProduct(contacts, product.slug, 50);
           const top3 = hotLeads.slice(0, 3);
-          const lpStat = mergeLandingStats(
-            getLandingAnalyticsForProduct(landingPageStats, product.slug),
-            getProductLandingStats(contacts, product.slug)
-          );
           const contactNowCount = hotLeads.filter((lead) => lead.contactNow).length;
 
           return (
@@ -85,30 +70,13 @@ export default async function ProdukterPage() {
                         {product.name}
                       </CardTitle>
                       <p className="text-xs text-text-secondary mt-0.5">
-                        {formatNumber(hotLeads.length)} leads med score &gt;50
+                        {formatNumber(hotLeads.length)} Upsales-leads med score &gt;50
                       </p>
                     </div>
                   </div>
                 </div>
               </CardHeader>
               <CardContent>
-                {lpStat.visitors > 0 || lpStat.leads > 0 ? (
-                  <div className="grid grid-cols-3 gap-2 mb-3 pb-3 border-b border-border">
-                    <div>
-                      <p className="text-[10px] text-text-muted uppercase tracking-wide">Besokare</p>
-                      <p className="font-mono text-sm">{formatNumber(lpStat.visitors)}</p>
-                    </div>
-                    <div>
-                      <p className="text-[10px] text-text-muted uppercase tracking-wide">Conv. rate</p>
-                      <p className="font-mono text-sm">{lpStat.conversion_rate.toString().replace(".", ",")}%</p>
-                    </div>
-                    <div>
-                      <p className="text-[10px] text-text-muted uppercase tracking-wide">Leads</p>
-                      <p className="font-mono text-sm">{lpStat.leads}</p>
-                    </div>
-                  </div>
-                ) : null}
-
                 {contactNowCount > 0 && (
                   <div className="flex items-center gap-1.5 mb-3 text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-md px-2.5 py-1.5">
                     <Zap className="h-3 w-3" />

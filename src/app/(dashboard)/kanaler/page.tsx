@@ -1,22 +1,16 @@
 // Datakallor:
 // - Webbkanaler: clearon.live (Supabase web_events) + clearon.se (Upsales)
-// - Landningssidor: Supabase web_sessions per landningssida
-// - Annonskanaler: live via Adspirer MCP (Google + Meta, LinkedIn ej exponerat an)
+// - Annonskanaler: live via Adspirer MCP (Google + Meta + LinkedIn)
 import { getContacts } from "@/lib/dashboard-data";
 import {
   buildWebChannelFlows,
   getClearonSeWebTraffic,
   getLandingPageAnalytics,
 } from "@/lib/web-analytics";
-import { products } from "@/lib/products";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { formatNumber } from "@/lib/utils";
 import { AdsOverview } from "@/components/dashboard/ads-overview";
-import { ExternalLink, ArrowRight, Eye, Users, Target, TrendingUp, Megaphone } from "lucide-react";
-
-function getProductColor(slug: string) {
-  return products.find((p) => p.slug === slug)?.color ?? "#6B7280";
-}
+import { ArrowRight, Megaphone } from "lucide-react";
 
 export const dynamic = "force-dynamic";
 
@@ -38,10 +32,16 @@ export default async function KanalerPage() {
         </p>
       </div>
 
-      {/* Channel flow funnel - LIVE Supabase + Upsales */}
+      {/* Web-funnel: bara kolumner vi faktiskt har data för. Opportunities och
+          deals visas på /accounts och i KPI:erna på hemskärmen (events-graf).
+          Att inkludera dem här utan attribution skulle vara missvisande. */}
       <Card>
         <CardHeader>
           <CardTitle>Webbkanaler</CardTitle>
+          <p className="text-xs text-text-secondary mt-1">
+            Besökare och leads per webbkälla. För opportunities-attribution per kanal,
+            se /accounts och hemskärmens KPI-kort.
+          </p>
         </CardHeader>
         <CardContent>
           <div className="overflow-x-auto">
@@ -54,10 +54,6 @@ export default async function KanalerPage() {
                   <th className="pb-2 pr-4 text-right">Leads</th>
                   <th className="pb-2 pr-4 text-center"></th>
                   <th className="pb-2 pr-4 text-right">Kvalificerade</th>
-                  <th className="pb-2 pr-4 text-center"></th>
-                  <th className="pb-2 pr-4 text-right">Mojligheter</th>
-                  <th className="pb-2 pr-4 text-center"></th>
-                  <th className="pb-2 pr-4 text-right">Deals</th>
                   <th className="pb-2 pr-4">Top landningssida</th>
                   <th className="pb-2">Top produkt</th>
                 </tr>
@@ -65,7 +61,7 @@ export default async function KanalerPage() {
               <tbody>
                 {channelFlows.length === 0 && (
                   <tr>
-                    <td colSpan={12} className="py-6 text-center text-sm text-text-muted">
+                    <td colSpan={8} className="py-6 text-center text-sm text-text-muted">
                       Ingen webbdata an. Landningssidans events och Upsales webbbesok visas har nar de finns.
                     </td>
                   </tr>
@@ -78,10 +74,6 @@ export default async function KanalerPage() {
                     <td className="py-3 pr-4 text-right font-mono text-xs">{flow.leads}</td>
                     <td className="py-3 pr-4 text-center text-text-muted"><ArrowRight className="h-3 w-3 inline" /></td>
                     <td className="py-3 pr-4 text-right font-mono text-xs">{flow.qualified}</td>
-                    <td className="py-3 pr-4 text-center text-text-muted"><ArrowRight className="h-3 w-3 inline" /></td>
-                    <td className="py-3 pr-4 text-right font-mono text-xs">{flow.opportunities}</td>
-                    <td className="py-3 pr-4 text-center text-text-muted"><ArrowRight className="h-3 w-3 inline" /></td>
-                    <td className="py-3 pr-4 text-right font-mono text-xs font-medium text-accent">{flow.deals}</td>
                     <td className="py-3 pr-4">
                       <span className="text-xs text-text-secondary font-mono">{flow.topLandingPage}</span>
                     </td>
@@ -99,10 +91,6 @@ export default async function KanalerPage() {
                     <td className="py-3 pr-4"></td>
                     <td className="py-3 pr-4 text-right font-mono text-xs">{channelFlows.reduce((s, f) => s + f.qualified, 0)}</td>
                     <td className="py-3 pr-4"></td>
-                    <td className="py-3 pr-4 text-right font-mono text-xs">{channelFlows.reduce((s, f) => s + f.opportunities, 0)}</td>
-                    <td className="py-3 pr-4"></td>
-                    <td className="py-3 pr-4 text-right font-mono text-xs text-accent">{channelFlows.reduce((s, f) => s + f.deals, 0)}</td>
-                    <td className="py-3 pr-4"></td>
                     <td className="py-3"></td>
                   </tr>
                 )}
@@ -112,81 +100,6 @@ export default async function KanalerPage() {
         </CardContent>
       </Card>
 
-      {/* Landing page performance - LIVE Supabase */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Landningssidor per produkt</CardTitle>
-        </CardHeader>
-        <CardContent>
-          {landingPageStats.length === 0 ? (
-            <div className="rounded-md border border-dashed border-border p-6 text-center text-sm text-text-muted">
-              Inga landningssidor har samlat trafik an. Tracking via /api/tracking ar aktiv.
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-              {landingPageStats.map((lp) => {
-                const product = products.find((p) => p.slug === lp.product_slug);
-                return (
-                  <div key={lp.path} className="border border-border rounded-lg p-4 hover:border-accent/30 transition-colors">
-                    <div className="flex items-center justify-between mb-3">
-                      <div className="flex items-center gap-2">
-                        <span
-                          className="h-2.5 w-2.5 rounded-full"
-                          style={{
-                            backgroundColor: lp.product_slug ? getProductColor(lp.product_slug) : "#6B7280",
-                          }}
-                        />
-                        <span className="text-sm font-medium">{product?.name || lp.path}</span>
-                      </div>
-                      <a
-                        href={product?.landingPageUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="flex items-center gap-1 text-xs text-text-muted hover:text-accent transition-colors"
-                      >
-                        <span className="font-mono">{lp.path}</span>
-                        <ExternalLink className="h-3 w-3" />
-                      </a>
-                    </div>
-                    <div className="grid grid-cols-2 gap-3">
-                      <div className="flex items-center gap-2">
-                        <Eye className="h-3.5 w-3.5 text-text-muted" />
-                        <div>
-                          <p className="text-[10px] text-text-muted uppercase">Besokare</p>
-                          <p className="font-mono text-sm">{formatNumber(lp.visitors)}</p>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <Users className="h-3.5 w-3.5 text-text-muted" />
-                        <div>
-                          <p className="text-[10px] text-text-muted uppercase">Leads</p>
-                          <p className="font-mono text-sm">{lp.leads}</p>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <Target className="h-3.5 w-3.5 text-text-muted" />
-                        <div>
-                          <p className="text-[10px] text-text-muted uppercase">Conv. rate</p>
-                          <p className="font-mono text-sm">{lp.conversion_rate.toString().replace(".", ",")}%</p>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <TrendingUp className="h-3.5 w-3.5 text-text-muted" />
-                        <div>
-                          <p className="text-[10px] text-text-muted uppercase">Top kalla</p>
-                          <p className="text-xs">{lp.top_source}</p>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          )}
-        </CardContent>
-      </Card>
-
-      {/* Annonskanaler - LIVE via Adspirer MCP */}
       <Card>
         <CardHeader>
           <div className="flex items-center gap-2">

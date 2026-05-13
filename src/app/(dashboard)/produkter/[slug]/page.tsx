@@ -1,17 +1,11 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { products, getProduct } from "@/lib/products";
+import { getProduct } from "@/lib/products";
 import {
   getContacts,
   getContactsForProduct,
   getProductChannelBreakdown,
-  getProductLandingStats,
 } from "@/lib/dashboard-data";
-import {
-  getLandingAnalyticsForProduct,
-  getLandingPageAnalytics,
-  mergeLandingStats,
-} from "@/lib/web-analytics";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { ScoreBadge } from "@/components/ui/score-badge";
 import { Button } from "@/components/ui/button";
@@ -23,14 +17,9 @@ import {
   Gift,
   ArrowLeftRight,
   ArrowLeft,
-  Sparkles,
   ExternalLink,
   Zap,
-  Users,
-  Eye,
-  Target,
 } from "lucide-react";
-import { formatNumber } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
 
@@ -50,18 +39,10 @@ export default async function ProductDetailPage(
   const product = getProduct(slug);
   if (!product) notFound();
 
-  const [contacts, landingPageStats] = await Promise.all([
-    getContacts(200),
-    getLandingPageAnalytics(30),
-  ]);
+  const contacts = await getContacts(200);
   const allLeads = getContactsForProduct(contacts, slug);
-  const lpStat = mergeLandingStats(
-    getLandingAnalyticsForProduct(landingPageStats, slug),
-    getProductLandingStats(contacts, slug)
-  );
   const channelBreakdown = getProductChannelBreakdown(contacts, slug);
   const Icon = iconMap[product.icon];
-  const topLead = allLeads[0];
 
   return (
     <div className="space-y-6">
@@ -89,63 +70,17 @@ export default async function ProductDetailPage(
           <p className="text-sm text-text-secondary mt-0.5 max-w-2xl">
             {product.description}
           </p>
+          <a
+            href={product.landingPageUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-1 mt-1 text-xs text-accent hover:underline"
+          >
+            {product.landingPageUrl}
+            <ExternalLink className="h-3 w-3" />
+          </a>
         </div>
       </div>
-
-      <Card>
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <CardTitle>Landningssida</CardTitle>
-            <a
-              href={product.landingPageUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex items-center gap-1.5 text-sm text-accent hover:text-accent-light transition-colors"
-            >
-              {product.landingPageUrl}
-              <ExternalLink className="h-3.5 w-3.5" />
-            </a>
-          </div>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <div className="flex items-center gap-2.5">
-              <div className="flex h-8 w-8 items-center justify-center rounded-full bg-accent-subtle">
-                <Eye className="h-4 w-4 text-accent" />
-              </div>
-              <div>
-                <p className="text-[10px] text-text-muted uppercase tracking-wide">Besokare</p>
-                <p className="font-display text-lg">{formatNumber(lpStat.visitors)}</p>
-              </div>
-            </div>
-            <div className="flex items-center gap-2.5">
-              <div className="flex h-8 w-8 items-center justify-center rounded-full bg-accent-subtle">
-                <Users className="h-4 w-4 text-accent" />
-              </div>
-              <div>
-                <p className="text-[10px] text-text-muted uppercase tracking-wide">Leads</p>
-                <p className="font-display text-lg">{lpStat.leads}</p>
-              </div>
-            </div>
-            <div className="flex items-center gap-2.5">
-              <div className="flex h-8 w-8 items-center justify-center rounded-full bg-accent-subtle">
-                <Target className="h-4 w-4 text-accent" />
-              </div>
-              <div>
-                <p className="text-[10px] text-text-muted uppercase tracking-wide">Conv. rate</p>
-                <p className="font-display text-lg">{lpStat.conversion_rate.toString().replace(".", ",")}%</p>
-              </div>
-            </div>
-            <div>
-              <p className="text-[10px] text-text-muted uppercase tracking-wide">Top kalla</p>
-              <p className="font-display text-sm">{lpStat.top_source}</p>
-            </div>
-          </div>
-          <p className="text-xs text-text-muted mt-3">
-            Malgrupp: {product.targetAudience}
-          </p>
-        </CardContent>
-      </Card>
 
       <Card>
         <CardHeader>
@@ -258,21 +193,6 @@ export default async function ProductDetailPage(
         </CardContent>
       </Card>
 
-      <Card className="border-accent/20 bg-accent-subtle/30">
-        <CardHeader>
-          <div className="flex items-center gap-2">
-            <Sparkles className="h-4 w-4 text-accent" />
-            <CardTitle className="text-accent">AI-rekommendation</CardTitle>
-          </div>
-        </CardHeader>
-        <CardContent>
-          <p className="text-sm leading-relaxed">
-            {topLead
-              ? `${topLead.name} på ${topLead.company} är den starkaste leaden just nu med score ${topLead.score}. ${topLead.contactNow ? `Prioritera uppföljning: ${topLead.contactNowReason}.` : "Bevaka fler signaler innan aktiv uppföljning."}`
-              : "Ingen specifik rekommendation tillganglig for denna produkt just nu."}
-          </p>
-        </CardContent>
-      </Card>
     </div>
   );
 }

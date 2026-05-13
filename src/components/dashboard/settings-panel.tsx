@@ -2,8 +2,6 @@
 
 import { useEffect, useState } from "react";
 import * as Tabs from "@radix-ui/react-tabs";
-import * as Switch from "@radix-ui/react-switch";
-import * as Slider from "@radix-ui/react-slider";
 import {
   Card,
   CardHeader,
@@ -13,15 +11,9 @@ import {
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import {
-  Check,
-  X,
-  ExternalLink,
-  Shield,
-  UserCircle,
-  RefreshCw,
-} from "lucide-react";
+import { Check, X, ExternalLink, RefreshCw } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { EVENT_WEIGHTS, HALFLIFE_DAYS, halflifeFor } from "@/lib/event-weights";
 
 // --- INTEGRATIONER (live status fran /api/integrations/status) ---
 
@@ -104,7 +96,25 @@ function IntegrationsTab() {
   } | null>(null);
   const [loading, setLoading] = useState(true);
 
-  async function load() {
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetch("/api/integrations/status", { cache: "no-store" });
+        const json = await res.json();
+        if (!cancelled) setData(json);
+      } catch {
+        if (!cancelled) setData(null);
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  async function refresh() {
     setLoading(true);
     try {
       const res = await fetch("/api/integrations/status", { cache: "no-store" });
@@ -116,10 +126,6 @@ function IntegrationsTab() {
       setLoading(false);
     }
   }
-
-  useEffect(() => {
-    load();
-  }, []);
 
   if (loading) {
     return (
@@ -143,7 +149,7 @@ function IntegrationsTab() {
         <p className="text-sm text-text-secondary">
           {data.summary.connected} av {data.summary.total} integrationer ar anslutna. Konfigurera via miljovariabler i Vercel-projektet.
         </p>
-        <Button variant="outline" size="sm" onClick={load}>
+        <Button variant="outline" size="sm" onClick={refresh}>
           <RefreshCw className="h-3.5 w-3.5 mr-1.5" />
           Uppdatera
         </Button>
@@ -157,262 +163,133 @@ function IntegrationsTab() {
   );
 }
 
-// --- SCORING-VIKTER ---
+// --- SCORING-VIKTER (read-only mot riktiga EVENT_WEIGHTS) ---
 
-interface ScoringWeight {
-  id: string;
-  label: string;
-  description: string;
-  value: number;
-}
+const EVENT_TYPE_LABELS: Record<string, string> = {
+  // Web events
+  page_view: "Sidvisning",
+  scroll_depth: "Scroll-djup",
+  "hero:role": "Vald roll i hero",
+  "product:hover": "Hovrade produkt",
+  "product:expand": "Expanderade produkt",
+  "product:cta": "CTA på produktsida",
+  "game:start": "Startade spel",
+  "game:win": "Vann spel",
+  "quiz:answer": "Quiz-svar",
+  "quiz:complete": "Slutförde quiz",
+  "quiz:cta": "Quiz CTA",
+  "usecase:expand": "Expanderade use case",
+  "sms-demo:send": "Testade SMS-demo",
+  "roi:adjust": "Justerade ROI-kalkylator",
+  "roi:compute": "Räknade ROI",
+  "module:engage": "Engagerade modul",
+  cta_clicked: "Klickade CTA",
+  lead_submitted: "Skickade formulär",
+  popup_shown: "Popup visades",
+  popup_dismissed: "Stängde popup",
+  // Upsales-visits
+  upsales_visit_page: "Besökte clearon.se",
+  upsales_visit_contact_page: "Besökte kontaktsidan",
+  upsales_visit_pricing_page: "Besökte prissidan",
+  upsales_visit_product_page: "Besökte produktsida",
+  upsales_visit_return: "Återkom till sajten",
+  // Mail
+  mail_open: "Öppnade mail",
+  mail_click: "Klickade i mail",
+  mail_unsubscribe: "Avregistrerade mail",
+  mail_bounce: "Mail studsade",
+  // Form
+  form_submit: "Skickade formulär (Upsales)",
+  // CRM
+  journey_step_change: "Bytte journey-stage",
+  opportunity_created: "Ny opportunity",
+  opportunity_stage_change: "Opportunity bytte stage",
+  opportunity_won: "Opportunity vunnen",
+  opportunity_lost: "Opportunity förlorad",
+  activity_created: "Aktivitet skapad i CRM",
+  appointment_scheduled: "Bokade möte",
+  order_placed: "Order lagd",
+  demo_booked: "Demo bokad",
+  // Ads
+  meta_ad_click: "Klickade Meta-annons",
+  linkedin_ad_click: "Klickade LinkedIn-annons",
+  google_ad_click: "Klickade Google-annons",
+};
 
-const defaultWeights: ScoringWeight[] = [
-  {
-    id: "page_view",
-    label: "Sidbesok",
-    description: "Poang per sidbesok pa clearon.se",
-    value: 8,
-  },
-  {
-    id: "download",
-    label: "Nedladdning",
-    description: "Rapport eller material nedladdat",
-    value: 10,
-  },
-  {
-    id: "email_open",
-    label: "Mail oppnat",
-    description: "Oppnade ett utskickat mail",
-    value: 3,
-  },
-  {
-    id: "email_click",
-    label: "Mail-klick",
-    description: "Klickade pa lank i mail",
-    value: 6,
-  },
-  {
-    id: "ad_click",
-    label: "Annonsklick",
-    description: "Klickade pa annons (Meta/Google/LinkedIn)",
-    value: 4,
-  },
-  {
-    id: "form_submit",
-    label: "Formular",
-    description: "Fyllde i kontaktformular eller demo-bokning",
-    value: 15,
-  },
-  {
-    id: "search",
-    label: "Organisk sok",
-    description: "Forsta besok via sökmotor",
-    value: 5,
-  },
-  {
-    id: "return_visit",
-    label: "Aterbesok",
-    description: "Kom tillbaka inom 7 dagar",
-    value: 7,
-  },
-];
-
-function ScoringWeights() {
-  const [weights, setWeights] = useState(defaultWeights);
-
-  function updateWeight(id: string, value: number) {
-    setWeights((prev) =>
-      prev.map((w) => (w.id === id ? { ...w, value } : w))
-    );
-  }
+function ScoringWeightsTab() {
+  // Sortera så starkaste signaler kommer först
+  const rows = Object.entries(EVENT_WEIGHTS)
+    .map(([type, w]) => ({
+      type,
+      label: EVENT_TYPE_LABELS[type] || type,
+      weight: w.weight,
+      intent: w.intent_weight,
+      halflife: halflifeFor(type),
+    }))
+    .sort((a, b) => b.intent + b.weight - (a.intent + a.weight));
 
   return (
     <div className="space-y-4">
-      <p className="text-sm text-text-secondary">
-        Justera hur mycket varje signal vager i lead scoring. Hogre varde ger
-        mer paverkan pa totalpoangen.
-      </p>
-      <div className="space-y-5">
-        {weights.map((weight) => (
-          <div key={weight.id} className="space-y-2">
-            <div className="flex items-center justify-between">
-              <div>
-                <span className="text-sm font-medium text-text-primary">
-                  {weight.label}
-                </span>
-                <span className="ml-2 text-xs text-text-muted">
-                  {weight.description}
-                </span>
-              </div>
-              <span className="text-sm font-mono font-medium text-accent min-w-[2rem] text-right">
-                {weight.value}
-              </span>
-            </div>
-            <Slider.Root
-              className="relative flex h-5 w-full touch-none select-none items-center"
-              value={[weight.value]}
-              onValueChange={([val]) => updateWeight(weight.id, val)}
-              max={20}
-              min={0}
-              step={1}
-            >
-              <Slider.Track className="relative h-1.5 w-full grow overflow-hidden rounded-full bg-surface-elevated">
-                <Slider.Range className="absolute h-full bg-accent" />
-              </Slider.Track>
-              <Slider.Thumb className="block h-4 w-4 rounded-full border-2 border-accent bg-surface shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/50 cursor-pointer" />
-            </Slider.Root>
+      <Card>
+        <CardHeader>
+          <CardTitle>
+            <span className="section-prefix">/ SCORING-VIKTER (live)</span>
+          </CardTitle>
+          <CardDescription>
+            Vikterna nedan används av scoring-motorn i realtid. Varje event har en engagement-vikt och en intent-vikt. Halveringstiden styr hur snabbt äldre events tonar bort.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-border text-left text-xs text-text-muted uppercase tracking-wide">
+                  <th className="py-2 pr-4">Event-typ</th>
+                  <th className="py-2 pr-4 text-right">Engagement</th>
+                  <th className="py-2 pr-4 text-right">Intent</th>
+                  <th className="py-2 pr-4 text-right">Halveringstid</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-border/50">
+                {rows.map((r) => {
+                  const total = r.weight + r.intent;
+                  const isNegative = total < 0;
+                  return (
+                    <tr key={r.type} className="hover:bg-surface-elevated/50">
+                      <td className="py-2 pr-4">
+                        <div className="font-medium text-text-primary">{r.label}</div>
+                        <div className="text-[10px] font-mono text-text-muted">{r.type}</div>
+                      </td>
+                      <td
+                        className={cn(
+                          "py-2 pr-4 text-right font-mono tabular-nums",
+                          isNegative ? "text-danger" : "text-text-primary",
+                        )}
+                      >
+                        {r.weight > 0 ? `+${r.weight}` : r.weight}
+                      </td>
+                      <td
+                        className={cn(
+                          "py-2 pr-4 text-right font-mono tabular-nums",
+                          r.intent < 0 ? "text-danger" : r.intent > 0 ? "text-accent" : "text-text-muted",
+                        )}
+                      >
+                        {r.intent > 0 ? `+${r.intent}` : r.intent}
+                      </td>
+                      <td className="py-2 pr-4 text-right text-xs text-text-secondary">
+                        {r.halflife === Infinity ? "ingen" : `${r.halflife}d`}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
           </div>
-        ))}
-      </div>
-      <div className="pt-2">
-        <Button size="sm">Spara vikter</Button>
-      </div>
-    </div>
-  );
-}
-
-// --- TEAM ---
-
-interface TeamMember {
-  name: string;
-  email: string;
-  role: "admin" | "user";
-}
-
-const team: TeamMember[] = [
-  { name: "Kaveh Sabeghi", email: "kaveh@clearon.se", role: "admin" },
-];
-
-function TeamList() {
-  return (
-    <div className="space-y-4">
-      <p className="text-sm text-text-secondary">
-        Hantera anvandare som har tillgang till dashboarden.
-      </p>
-      <div className="space-y-3">
-        {team.map((member) => (
-          <Card key={member.email} className="p-4">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="flex h-9 w-9 items-center justify-center rounded-full bg-accent-subtle">
-                  <UserCircle className="h-5 w-5 text-accent" />
-                </div>
-                <div>
-                  <div className="text-sm font-medium text-text-primary">
-                    {member.name}
-                  </div>
-                  <div className="text-xs text-text-muted">{member.email}</div>
-                </div>
-              </div>
-              <Badge variant="default" className="flex items-center gap-1">
-                <Shield className="h-3 w-3" />
-                {member.role === "admin" ? "Admin" : "Anvandare"}
-              </Badge>
-            </div>
-          </Card>
-        ))}
-      </div>
-      <Button variant="outline" size="sm">
-        Bjud in anvandare
-      </Button>
-    </div>
-  );
-}
-
-// --- NOTIFIERINGAR ---
-
-interface NotificationSetting {
-  id: string;
-  label: string;
-  description: string;
-  enabled: boolean;
-}
-
-const defaultNotifications: NotificationSetting[] = [
-  {
-    id: "hot_lead",
-    label: "Heta leads",
-    description: "Notifiera nar en lead nar over 70 poang",
-    enabled: true,
-  },
-  {
-    id: "new_lead",
-    label: "Nya leads",
-    description: "Notifiera nar en ny kontakt registreras",
-    enabled: true,
-  },
-  {
-    id: "task_done",
-    label: "Slutforda uppgifter",
-    description: "Notifiera nar Stellar slutfor en uppgift",
-    enabled: false,
-  },
-  {
-    id: "weekly_report",
-    label: "Veckorapport",
-    description: "Skicka veckosammanfattning varje mandag",
-    enabled: true,
-  },
-  {
-    id: "campaign_alert",
-    label: "Kampanjvarningar",
-    description: "Notifiera vid budgetoverskridning eller prestandafall",
-    enabled: true,
-  },
-  {
-    id: "ai_suggestion",
-    label: "AI-forslag",
-    description: "Notifiera nar AI Agent har nya rekommendationer",
-    enabled: false,
-  },
-];
-
-function NotificationSettings() {
-  const [notifications, setNotifications] = useState(defaultNotifications);
-
-  function toggle(id: string) {
-    setNotifications((prev) =>
-      prev.map((n) => (n.id === id ? { ...n, enabled: !n.enabled } : n))
-    );
-  }
-
-  return (
-    <div className="space-y-4">
-      <p className="text-sm text-text-secondary">
-        Valj vilka notifieringar du vill ta emot via mail och i dashboarden.
-      </p>
-      <div className="space-y-3">
-        {notifications.map((setting) => (
-          <div
-            key={setting.id}
-            className="flex items-center justify-between rounded-md border border-border p-4"
-          >
-            <div>
-              <div className="text-sm font-medium text-text-primary">
-                {setting.label}
-              </div>
-              <div className="text-xs text-text-muted">
-                {setting.description}
-              </div>
-            </div>
-            <Switch.Root
-              checked={setting.enabled}
-              onCheckedChange={() => toggle(setting.id)}
-              className={cn(
-                "relative inline-flex h-5 w-9 shrink-0 cursor-pointer items-center rounded-full transition-colors",
-                setting.enabled ? "bg-accent" : "bg-border"
-              )}
-            >
-              <Switch.Thumb
-                className={cn(
-                  "pointer-events-none block h-3.5 w-3.5 rounded-full bg-white shadow-sm transition-transform",
-                  setting.enabled ? "translate-x-[18px]" : "translate-x-[3px]"
-                )}
-              />
-            </Switch.Root>
-          </div>
-        ))}
-      </div>
+          <p className="mt-4 text-xs text-text-muted">
+            Förändring av vikter sker via <code className="rounded bg-surface-elevated px-1 py-0.5 font-mono">src/lib/event-weights.ts</code>. Halveringstider är: engagement {HALFLIFE_DAYS.engagement}d, intent {HALFLIFE_DAYS.intent}d, orders/demo aldrig.
+          </p>
+        </CardContent>
+      </Card>
     </div>
   );
 }
@@ -422,8 +299,6 @@ function NotificationSettings() {
 const tabItems = [
   { value: "integrationer", label: "Integrationer" },
   { value: "scoring", label: "Scoring-vikter" },
-  { value: "team", label: "Team" },
-  { value: "notifieringar", label: "Notifieringar" },
 ];
 
 export function SettingsPanel() {
@@ -437,7 +312,7 @@ export function SettingsPanel() {
             className={cn(
               "px-4 py-2 text-sm font-medium transition-colors rounded-t-md cursor-pointer",
               "text-text-secondary hover:text-text-primary",
-              "data-[state=active]:text-text-primary data-[state=active]:border-b-2 data-[state=active]:border-accent data-[state=active]:-mb-px"
+              "data-[state=active]:text-text-primary data-[state=active]:border-b-2 data-[state=active]:border-accent data-[state=active]:-mb-px",
             )}
           >
             {tab.label}
@@ -451,42 +326,7 @@ export function SettingsPanel() {
         </Tabs.Content>
 
         <Tabs.Content value="scoring">
-          <Card>
-            <CardHeader>
-              <CardTitle>
-                <span className="section-prefix">/ SCORING-VIKTER</span>
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <ScoringWeights />
-            </CardContent>
-          </Card>
-        </Tabs.Content>
-
-        <Tabs.Content value="team">
-          <Card>
-            <CardHeader>
-              <CardTitle>
-                <span className="section-prefix">/ TEAM</span>
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <TeamList />
-            </CardContent>
-          </Card>
-        </Tabs.Content>
-
-        <Tabs.Content value="notifieringar">
-          <Card>
-            <CardHeader>
-              <CardTitle>
-                <span className="section-prefix">/ NOTIFIERINGAR</span>
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <NotificationSettings />
-            </CardContent>
-          </Card>
+          <ScoringWeightsTab />
         </Tabs.Content>
       </div>
     </Tabs.Root>

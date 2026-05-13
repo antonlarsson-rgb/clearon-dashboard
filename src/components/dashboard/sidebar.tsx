@@ -4,7 +4,6 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
   LayoutDashboard,
-  Users,
   UserCircle,
   Package,
   Building2,
@@ -21,12 +20,11 @@ const navItems = [
   { href: "/", label: "Oversikt", icon: LayoutDashboard },
   { href: "/hot", label: "Hot Now", icon: Flame, pulse: true },
   { href: "/accounts", label: "Foretag", icon: Building2 },
-  { href: "/persons", label: "Personer", icon: UserCircle },
-  { href: "/leads", label: "Leads", icon: Users },
+  { href: "/persons", label: "Leads & Personer", icon: UserCircle },
   { href: "/produkter", label: "Produkter", icon: Package },
-  { href: "/ai-agent", label: "AI Agent", icon: Bot },
   { href: "/kampanjer", label: "Kampanjer", icon: Megaphone },
   { href: "/kanaler", label: "Kanaler", icon: BarChart3 },
+  { href: "/ai-agent", label: "AI Agent", icon: Bot },
   { href: "/stellar", label: "Stellar", icon: FolderKanban },
   { href: "/installningar", label: "Installningar", icon: Settings },
 ];

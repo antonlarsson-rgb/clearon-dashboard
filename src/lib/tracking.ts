@@ -97,6 +97,53 @@ export function getUtmParams(): Record<string, string> {
   return utm;
 }
 
+/**
+ * Identifierings-token från mail-länkar.
+ *   ?clearon_pid=12345     → upsales_contact_id för stitching
+ *   ?clearon_email=base64  → email base64-encoded
+ *   ?clearon_sig=...       → optional HMAC (verifieras server-side om MAIL_LINK_SECRET satt)
+ *
+ * När en känd Upsales-kontakt klickar på ett mail-länk till clearon.live
+ * stitchas visitor_cookie → person så att framtida anonym aktivitet är
+ * identifierad. Tokenen persisteras i sessionStorage så att efterföljande
+ * page_views i samma session också identifieras (URL kan ändras vid nav).
+ */
+export function getIdentificationToken(): {
+  clearon_pid?: string;
+  clearon_email?: string;
+  clearon_sig?: string;
+} {
+  if (typeof window === "undefined") return {};
+
+  const out: { clearon_pid?: string; clearon_email?: string; clearon_sig?: string } = {};
+  const params = new URLSearchParams(window.location.search);
+
+  const pid = params.get("clearon_pid");
+  const email = params.get("clearon_email");
+  const sig = params.get("clearon_sig");
+
+  if (pid || email) {
+    if (pid) out.clearon_pid = pid;
+    if (email) out.clearon_email = email;
+    if (sig) out.clearon_sig = sig;
+    // Persistera token i sessionStorage så efterföljande events identifierar
+    try {
+      sessionStorage.setItem("clearon_idtoken", JSON.stringify(out));
+    } catch {
+      // ignore quota errors
+    }
+    return out;
+  }
+
+  try {
+    const stored = sessionStorage.getItem("clearon_idtoken");
+    if (stored) return JSON.parse(stored);
+  } catch {
+    // ignore
+  }
+  return {};
+}
+
 export function getDeviceType(): string {
   if (typeof window === "undefined") return "unknown";
 
@@ -145,10 +192,13 @@ export async function track(eventName: string, properties: TrackingProperties = 
         }
       : {};
 
+  const idToken = getIdentificationToken();
+
   const enrichedProperties = {
     ...properties,
     ...pageContext,
     ...utmParams,
+    ...idToken,
     referrer: getReferrer(),
     device_type: getDeviceType(),
     timestamp: new Date().toISOString(),

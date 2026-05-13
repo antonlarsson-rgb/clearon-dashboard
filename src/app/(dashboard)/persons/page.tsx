@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { UserCircle, Filter, TrendingUp } from "lucide-react";
+import { UserCircle, Filter } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const PRODUCTS = [
@@ -13,6 +13,46 @@ const PRODUCTS = [
   { slug: "send-a-gift", label: "Send a Gift" },
   { slug: "kuponger", label: "Kuponger" },
 ];
+
+// Beteende-mönster — endast event-härledda. Inga inferenser om titel/roll.
+const PATTERNS = [
+  { slug: "", label: "Alla" },
+  { slug: "form_converted", label: "Skickat formulär" },
+  { slug: "pricing_intent", label: "Besökt pris/kontakt" },
+  { slug: "product_evaluator", label: "Tittat på produkter" },
+  { slug: "returning_visitor", label: "Återkommit" },
+  { slug: "mail_engaged", label: "Mail-engagerad" },
+  { slug: "ad_responder", label: "Klickat annons" },
+  { slug: "customer_active", label: "Kund aktiv" },
+  { slug: "dormant_returning", label: "Vaknat" },
+  { slug: "stalled", label: "Stagnerar" },
+];
+
+const PATTERN_COLOR: Record<string, string> = {
+  form_converted: "#8bb347",
+  pricing_intent: "#ff6b35",
+  product_evaluator: "#e8864c",
+  returning_visitor: "#4a9df0",
+  mail_engaged: "#c8a44c",
+  ad_responder: "#a363d9",
+  customer_active: "#8bb347",
+  dormant_returning: "#c8a44c",
+  stalled: "#aaa",
+  new_visitor: "#999",
+};
+
+const PATTERN_LABELS: Record<string, string> = {
+  form_converted: "Formulär",
+  pricing_intent: "Pris/kontakt",
+  product_evaluator: "Produkter",
+  returning_visitor: "Återkommer",
+  mail_engaged: "Mail",
+  ad_responder: "Annons",
+  customer_active: "Kund aktiv",
+  dormant_returning: "Vaknat",
+  stalled: "Stagnerar",
+  new_visitor: "Ny",
+};
 
 interface PersonRow {
   id: string;
@@ -31,6 +71,9 @@ interface PersonRow {
   visits_count?: number;
   total_events?: number;
   product_score?: number;
+  behavior_pattern?: string;
+  identification_method?: string;
+  is_identified?: boolean;
 }
 
 const segmentColors: Record<string, string> = {
@@ -46,6 +89,7 @@ export default function PersonsPage() {
   const [product, setProduct] = useState("");
   const [lifecycle, setLifecycle] = useState("");
   const [segment, setSegment] = useState("");
+  const [pattern, setPattern] = useState("");
 
   async function load() {
     setLoading(true);
@@ -53,6 +97,7 @@ export default function PersonsPage() {
     if (product) params.set("product", product);
     if (lifecycle) params.set("lifecycle", lifecycle);
     if (segment) params.set("segment", segment);
+    if (pattern) params.set("pattern", pattern);
     params.set("limit", "200");
     params.set("days", "365");
     const res = await fetch(`/api/persons/hot?${params}`);
@@ -64,17 +109,17 @@ export default function PersonsPage() {
   useEffect(() => {
     load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [product, lifecycle, segment]);
+  }, [product, lifecycle, segment, pattern]);
 
   return (
     <div className="flex flex-col gap-6">
       <div>
         <h1 className="flex items-center gap-2 text-2xl font-bold text-text-primary">
           <UserCircle className="h-6 w-6 text-accent" />
-          Personer — individ-nivå scoring
+          Leads & Personer
         </h1>
         <p className="mt-1 text-sm text-text-secondary">
-          Individer scorad över alla touchpoints: web, mail, form, opportunity, order
+          Alla identifierade och anonyma individer i ett — clearon.live + clearon.se + mail + ads + Upsales-aktiviteter samlat per person. Scoring, buying-intent och beteende-mönster baseras på events-tabellen.
         </p>
       </div>
 
@@ -106,6 +151,12 @@ export default function PersonsPage() {
             { slug: "dormant", label: "Sovande" },
           ]}
         />
+        <FilterChips
+          label="Beteende"
+          value={pattern}
+          onChange={setPattern}
+          options={PATTERNS}
+        />
       </div>
 
       {loading ? (
@@ -119,6 +170,7 @@ export default function PersonsPage() {
               <tr>
                 <th className="p-3 text-left font-medium">Person</th>
                 <th className="p-3 text-left font-medium">Företag</th>
+                <th className="p-3 text-left font-medium">Beteende</th>
                 <th className="p-3 text-left font-medium">Segment</th>
                 <th className="p-3 text-left font-medium">Lifecycle</th>
                 <th className="p-3 text-right font-medium">Score</th>
@@ -150,6 +202,21 @@ export default function PersonsPage() {
                     <td className="p-3">
                       {p.account?.name ? (
                         <div className="text-xs text-text-secondary">{p.account.name}</div>
+                      ) : (
+                        <span className="text-[10px] text-text-muted">—</span>
+                      )}
+                    </td>
+                    <td className="p-3">
+                      {p.behavior_pattern ? (
+                        <span
+                          className="rounded-full px-1.5 py-0.5 text-[9px] font-bold uppercase"
+                          style={{
+                            background: `${PATTERN_COLOR[p.behavior_pattern] || "#888"}1A`,
+                            color: PATTERN_COLOR[p.behavior_pattern] || "#888",
+                          }}
+                        >
+                          {PATTERN_LABELS[p.behavior_pattern] || p.behavior_pattern}
+                        </span>
                       ) : (
                         <span className="text-[10px] text-text-muted">—</span>
                       )}
@@ -196,7 +263,7 @@ export default function PersonsPage() {
               })}
               {persons.length === 0 && (
                 <tr>
-                  <td colSpan={9} className="p-12 text-center text-sm text-text-muted">
+                  <td colSpan={10} className="p-12 text-center text-sm text-text-muted">
                     Inga personer matchar filtren.
                   </td>
                 </tr>

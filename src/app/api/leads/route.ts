@@ -76,30 +76,52 @@ export async function POST(request: Request) {
     const resolvedWebsite = vainuMatch?.website || emailDomain || null;
 
     // --- 2. Hitta eller skapa account ---
+    // Tre fallback-strategier: (a) exakt namn, (b) domän-match mot
+    // accounts.website, (c) Vainu-domän → namn → ny account.
     let accountId: string | null = null;
+    let accountMatchMethod: string | null = null;
     if (resolvedCompany) {
-      const { data: existingAccount } = await supabase
+      const { data: existingByName } = await supabase
         .from("accounts")
         .select("id")
-        .eq("name", resolvedCompany)
+        .ilike("name", resolvedCompany)
         .limit(1)
         .maybeSingle();
-
-      if (existingAccount) {
-        accountId = existingAccount.id;
-      } else {
-        const { data: newAccount } = await supabase
-          .from("accounts")
-          .insert({
-            upsales_id: Math.floor(Date.now() / 1000),
-            name: resolvedCompany,
-            industry: resolvedIndustry,
-            website: resolvedWebsite,
-          })
-          .select("id")
-          .single();
-        accountId = newAccount?.id || null;
+      if (existingByName) {
+        accountId = existingByName.id;
+        accountMatchMethod = "name_match";
       }
+    }
+
+    // Domän-match: @volvo.com hittar account med website volvo.se eller volvo.com
+    if (!accountId && emailDomain && !FREE_EMAIL_DOMAINS.has(emailDomain)) {
+      const rootDomain = emailDomain.split(".").slice(-2, -1)[0] || emailDomain;
+      const { data: existingByDomain } = await supabase
+        .from("accounts")
+        .select("id, name")
+        .ilike("website", `%${rootDomain}%`)
+        .limit(1)
+        .maybeSingle();
+      if (existingByDomain) {
+        accountId = existingByDomain.id;
+        accountMatchMethod = "domain_match";
+      }
+    }
+
+    // Inget existerar → skapa
+    if (!accountId && (resolvedCompany || (emailDomain && !FREE_EMAIL_DOMAINS.has(emailDomain)))) {
+      const { data: newAccount } = await supabase
+        .from("accounts")
+        .insert({
+          upsales_id: Math.floor(Date.now() / 1000),
+          name: resolvedCompany || emailDomain,
+          industry: resolvedIndustry,
+          website: resolvedWebsite,
+        })
+        .select("id")
+        .single();
+      accountId = newAccount?.id || null;
+      accountMatchMethod = "created_from_form";
     }
 
     // --- 3. Skapa contact ---
@@ -292,6 +314,16 @@ export async function POST(request: Request) {
     );
 
     if (personId) {
+      // Markera identifierings-metod (form-submit är högsta confidence)
+      await supabase
+        .from("persons")
+        .update({
+          identification_method: "form",
+          identification_confidence: 1.0,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", personId);
+
       await logEvent(supabase, {
         person_id: personId,
         account_id: accountId,
@@ -307,6 +339,7 @@ export async function POST(request: Request) {
           phone_provided: phoneProvided,
           boss_phone_provided: bossPhoneProvided,
           vainu_matched: !!vainuMatch,
+          account_match_method: accountMatchMethod,
         },
       });
 

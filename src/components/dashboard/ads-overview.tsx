@@ -395,6 +395,73 @@ export function AdsOverview() {
         </div>
       )}
 
+      {/* Spend per plattform — det första man ser, jämförande vy */}
+      {data && data.platforms.length > 0 && (
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          {data.platforms.map((p) => {
+            const meta = PLATFORM_META[p.platform];
+            const badge = STATUS_BADGE[p.status] || STATUS_BADGE.error;
+            const isLive = p.status === "live";
+            return (
+              <div
+                key={p.platform}
+                className="rounded-lg border bg-surface p-4"
+                style={{ borderColor: `${meta.color}33` }}
+              >
+                <div className="flex items-center justify-between gap-2">
+                  <div className="flex items-center gap-2">
+                    <span
+                      className="h-2.5 w-2.5 rounded-full"
+                      style={{ backgroundColor: meta.color }}
+                    />
+                    <span className="text-xs font-semibold">{meta.label}</span>
+                  </div>
+                  <span
+                    className={cn(
+                      "rounded px-1.5 py-0.5 text-[9px] uppercase font-medium",
+                      badge.bg,
+                      badge.text,
+                    )}
+                  >
+                    {badge.label}
+                  </span>
+                </div>
+                <div className="mt-3">
+                  <div className="text-[10px] uppercase tracking-wide text-text-muted">
+                    Spenderat i perioden
+                  </div>
+                  <div className="mt-0.5 font-display text-2xl tabular-nums">
+                    {isLive ? formatCurrency(p.totals.spend, p.currency) : "—"}
+                  </div>
+                </div>
+                {isLive && (
+                  <div className="mt-2 grid grid-cols-3 gap-2 text-[10px] text-text-muted">
+                    <div>
+                      <div className="uppercase tracking-wide">Klick</div>
+                      <div className="font-mono text-text-secondary text-xs">
+                        {formatNumber(p.totals.clicks)}
+                      </div>
+                    </div>
+                    <div>
+                      <div className="uppercase tracking-wide">Konv.</div>
+                      <div className="font-mono text-text-secondary text-xs">
+                        {formatNumber(p.totals.conversions)}
+                      </div>
+                    </div>
+                    <div>
+                      <div className="uppercase tracking-wide">CTR</div>
+                      <div className="font-mono text-text-secondary text-xs">
+                        {p.totals.ctr != null ? `${p.totals.ctr.toFixed(2)}%` : "-"}
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      )}
+
       {/* Aggregerade totals per valuta */}
       {data && data.totalsByCurrency.length > 0 && (
         <div className="space-y-2">

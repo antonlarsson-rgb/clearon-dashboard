@@ -301,6 +301,131 @@ export async function getVisitsForClient(clientId: number, limit = 50): Promise<
   }
 }
 
+// ---- OPPORTUNITIES ----
+
+export interface UpsalesOpportunity {
+  id: number;
+  description: string | null;
+  value: number;
+  weightedValue?: number | null;
+  probability?: number | null;
+  date?: string | null;
+  closeDate?: string | null;
+  regDate: string;
+  modDate: string;
+  // stage as object eller stageId
+  stage?: { id: number; name: string } | null;
+  // 1=öppen, 2=vunnen, 4=förlorad (Upsales-konvention varierar; använd probability/stage också)
+  status?: number;
+  probability1?: number;
+  client?: { id: number; name: string } | null;
+  contacts?: Array<{ id: number; name?: string }>;
+  user?: { id: number; name: string } | null;
+}
+
+export async function getOpportunities(options?: {
+  sinceDate?: string;
+  limit?: number;
+  offset?: number;
+}): Promise<{ data: UpsalesOpportunity[]; total: number }> {
+  const { sinceDate, limit = 200, offset = 0 } = options || {};
+  const params: Record<string, string> = {
+    limit: String(limit),
+    offset: String(offset),
+    sort: "-modDate",
+  };
+  if (sinceDate) {
+    params["q[0][a]"] = "modDate";
+    params["q[0][c]"] = "gte";
+    params["q[0][v]"] = sinceDate;
+  }
+
+  try {
+    const data = await upsalesFetch("/orders", { params });
+    return {
+      data: (data.data as UpsalesOpportunity[]) || [],
+      total: data.metadata?.total || 0,
+    };
+  } catch (e) {
+    console.error("Upsales getOpportunities error:", e);
+    return { data: [], total: 0 };
+  }
+}
+
+// ---- MAILINGS ----
+
+export interface UpsalesMailing {
+  id: number;
+  name: string;
+  subject: string | null;
+  sentDate: string | null;
+  regDate: string;
+  status: string | null;
+  recipients?: number;
+  opens?: number;
+  clicks?: number;
+}
+
+export async function getMailings(options?: {
+  sinceDate?: string;
+  limit?: number;
+}): Promise<UpsalesMailing[]> {
+  const { sinceDate, limit = 100 } = options || {};
+  const params: Record<string, string> = {
+    limit: String(limit),
+    sort: "-sentDate",
+  };
+  if (sinceDate) {
+    params["q[0][a]"] = "sentDate";
+    params["q[0][c]"] = "gte";
+    params["q[0][v]"] = sinceDate;
+  }
+  try {
+    const data = await upsalesFetch("/mails", { params });
+    return (data.data as UpsalesMailing[]) || [];
+  } catch (e) {
+    console.error("Upsales getMailings error:", e);
+    return [];
+  }
+}
+
+export interface UpsalesMailEvent {
+  id: number;
+  mail: { id: number; subject?: string } | null;
+  contact: { id: number; name?: string; email?: string } | null;
+  client?: { id: number; name?: string } | null;
+  type: string; // "open" | "click" | "bounce" etc
+  date: string;
+  url?: string | null;
+}
+
+export async function getMailEvents(options?: {
+  sinceDate?: string;
+  limit?: number;
+  offset?: number;
+}): Promise<UpsalesMailEvent[]> {
+  const { sinceDate, limit = 500, offset = 0 } = options || {};
+  const params: Record<string, string> = {
+    limit: String(limit),
+    offset: String(offset),
+    sort: "-date",
+  };
+  if (sinceDate) {
+    params["q[0][a]"] = "date";
+    params["q[0][c]"] = "gte";
+    params["q[0][v]"] = sinceDate;
+  }
+  try {
+    // Upsales har olika endpoints per leverantör; vi försöker /mailEvents
+    // som finns på de flesta installationer.
+    const data = await upsalesFetch("/mailEvents", { params });
+    return (data.data as UpsalesMailEvent[]) || [];
+  } catch (e) {
+    console.error("Upsales getMailEvents error:", e);
+    return [];
+  }
+}
+
 // ---- ACTIVITIES ----
 
 export async function createActivity(activity: {

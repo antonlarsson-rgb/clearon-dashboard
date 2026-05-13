@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { createHmac, timingSafeEqual } from "node:crypto";
 import { getServiceClient } from "@/lib/supabase";
 import {
   ENGAGEMENT_POINTS,
@@ -9,6 +10,45 @@ import {
 } from "@/lib/scoring";
 import { resolveOrCreatePerson } from "@/lib/identity";
 import { logEvent } from "@/lib/events";
+
+/**
+ * Verifiera mail-länk-token. Upsales-mail-länkar genereras med
+ *   HMAC-SHA256(MAIL_LINK_SECRET, payload).slice(0, 32) i hex
+ * (kan trunkeras till ~12 tecken om URL-längd är problem).
+ * Returnerar true om sign saknas och secret saknas, eller om sign matchar.
+ */
+async function verifyMailSig(
+  payload: string,
+  sig: string | null,
+  secret: string,
+): Promise<boolean> {
+  if (!sig) return false;
+  try {
+    const expected = createHmac("sha256", secret).update(payload).digest("hex");
+    const a = Buffer.from(sig);
+    const b = Buffer.from(expected.slice(0, sig.length));
+    return a.length === b.length && timingSafeEqual(a, b);
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Extrahera klient-IP och tilbakaprefix till /24 (de första 3 oktetterna)
+ * för IPv4 eller /48 för IPv6. Trunkering = GDPR-safe pseudonymisering.
+ */
+function clientIpPrefix(request: Request): string | null {
+  const xff = request.headers.get("x-forwarded-for") || "";
+  const ip = xff.split(",")[0]?.trim() || request.headers.get("x-real-ip") || "";
+  if (!ip) return null;
+  if (ip.includes(":")) {
+    // IPv6 — ta de första 3 grupperna (~/48)
+    return ip.split(":").slice(0, 3).join(":") + "::/48";
+  }
+  const parts = ip.split(".");
+  if (parts.length !== 4) return null;
+  return `${parts[0]}.${parts[1]}.${parts[2]}.0/24`;
+}
 
 interface VisitorRow {
   id: string;
@@ -73,6 +113,7 @@ export async function POST(request: Request) {
 
     if (!webSessionId) {
       const pagePath = (props.page_section as string) || "/landing";
+      const ipPrefix = clientIpPrefix(request);
       const { data: newSession, error: sessionError } = await supabase
         .from("web_sessions")
         .insert({
@@ -82,6 +123,7 @@ export async function POST(request: Request) {
           source: (props.utm_source as string) || null,
           medium: (props.utm_medium as string) || null,
           campaign: (props.utm_campaign as string) || null,
+          ip_prefix: ipPrefix,
           duration_seconds: 0,
           timestamp: new Date().toISOString(),
         })
@@ -113,17 +155,70 @@ export async function POST(request: Request) {
     }
 
     // --- 2b. Resolve person + logga i nya events-tabellen (person graph) ---
+    // Identifierings-token från mail-länk: clearon_pid (upsales_contact_id)
+    // eller clearon_email (base64-kodad). Verifierar HMAC om MAIL_LINK_SECRET
+    // är satt, annars accepteras token "best-effort" (mail-mottagaren har
+    // ändå verifierats av Upsales mail-system).
+    let upsalesContactId: number | null = null;
+    let identifiedEmail: string | null = null;
+    let identMethod: string | null = null;
+
+    const cleronPid = (props.clearon_pid as string) || null;
+    const clearonEmail = (props.clearon_email as string) || null;
+    const clearonSig = (props.clearon_sig as string) || null;
+
+    if (cleronPid) {
+      const pidNum = Number(cleronPid);
+      if (Number.isFinite(pidNum) && pidNum > 0) {
+        const mailSecret = (process.env.MAIL_LINK_SECRET || "").trim();
+        if (!mailSecret || (await verifyMailSig(cleronPid, clearonSig, mailSecret))) {
+          upsalesContactId = pidNum;
+          identMethod = "mail_link";
+        }
+      }
+    }
+    if (clearonEmail) {
+      try {
+        const decoded = Buffer.from(clearonEmail, "base64").toString("utf-8");
+        if (decoded.includes("@") && decoded.length < 200) {
+          const mailSecret = (process.env.MAIL_LINK_SECRET || "").trim();
+          if (!mailSecret || (await verifyMailSig(clearonEmail, clearonSig, mailSecret))) {
+            identifiedEmail = decoded.toLowerCase();
+            identMethod = identMethod || "mail_link";
+          }
+        }
+      } catch {
+        // bad base64, ignore
+      }
+    }
+
     if (visitorId) {
       const personId = await resolveOrCreatePerson(
         supabase,
-        { visitor_cookie: visitorId },
         {
-          source: "web",
+          visitor_cookie: visitorId,
+          upsales_contact_id: upsalesContactId,
+          email: identifiedEmail,
+        },
+        {
+          source: identMethod === "mail_link" ? "mail_link" : "web",
           first_utm_source: (props.utm_source as string) || null,
           first_utm_campaign: (props.utm_campaign as string) || null,
           first_referrer: (props.referrer as string) || null,
         }
       );
+      if (personId && identMethod) {
+        // Markera identifierings-metoden om personen blev nyligen identifierad
+        await supabase
+          .from("persons")
+          .update({
+            identification_method: identMethod,
+            identification_confidence: 0.95,
+            updated_at: new Date().toISOString(),
+          })
+          .eq("id", personId)
+          .is("identification_method", null);
+      }
       if (personId) {
         const productSlug =
           (props.product as string) ||

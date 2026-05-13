@@ -16,6 +16,7 @@ export async function GET(request: Request) {
     const product = url.searchParams.get("product");
     const lifecycle = url.searchParams.get("lifecycle");
     const segment = url.searchParams.get("segment");
+    const pattern = url.searchParams.get("pattern");
     const limit = Math.min(500, Number(url.searchParams.get("limit")) || 50);
     const days = Number(url.searchParams.get("days")) || 30;
 
@@ -69,7 +70,7 @@ export async function GET(request: Request) {
     let q = supabase
       .from("persons")
       .select(
-        "id, name, primary_email, title, segment, lifecycle_stage, is_customer, has_purchased, score, engagement_score, intent_score, demo_readiness, top_product_slug, top_product_score, visits_count, last_event_at, total_events, account:accounts(name, industry, website)"
+        "id, name, primary_email, title, segment, lifecycle_stage, is_customer, has_purchased, score, engagement_score, intent_score, demo_readiness, top_product_slug, top_product_score, visits_count, last_event_at, total_events, behavior_pattern, identification_method, suggested_account_id, account:accounts(name, industry, website)"
       )
       .order("score", { ascending: false })
       .gte("last_event_at", since)
@@ -77,6 +78,7 @@ export async function GET(request: Request) {
 
     if (lifecycle) q = q.eq("lifecycle_stage", lifecycle);
     if (segment) q = q.eq("segment", segment);
+    if (pattern) q = q.eq("behavior_pattern", pattern);
 
     const { data: persons } = await q;
 
@@ -107,6 +109,9 @@ export async function GET(request: Request) {
             visits_count: p.visits_count,
             total_events: p.total_events,
             last_event_at: p.last_event_at,
+            behavior_pattern: p.behavior_pattern,
+            identification_method: p.identification_method,
+            is_identified: !!p.primary_email,
           };
         }) || [],
     });
