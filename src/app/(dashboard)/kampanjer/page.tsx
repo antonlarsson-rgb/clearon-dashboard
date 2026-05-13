@@ -335,9 +335,9 @@ export default function KampanjerPage() {
     });
   }, [unified, platformFilter, statusFilter]);
 
-  // Per-plattform-sammanfattning. Räknar bara live-kampanjer (status active
-  // bekräftad av Adspirer), inte "sparad kreativ" från DB. Spend kommer från
-  // Adspirers period så det är pengar som FAKTISKT spenderats i perioden.
+  // Per-plattform-sammanfattning. Spend räknas BARA från Adspirer-bekräftade
+  // kampanjer (live/paused med period-bunden data). DB-library-kampanjer har
+  // statisk spend som inte är period-bunden — räknas inte in.
   const platformSummary = useMemo(() => {
     const result: Record<
       Platform,
@@ -361,12 +361,23 @@ export default function KampanjerPage() {
       if (st === "active") result[p].live++;
       else if (st === "paused") result[p].paused++;
       else if (st === "library") result[p].library++;
-      result[p].spend += c.spend || 0;
-      result[p].conv += c.conversions || 0;
+      // Bara period-bunden spend: Adspirer-bekräftade kampanjer (source =
+      // 'live' eller 'merged'). Library-spend är historisk total, inte i
+      // perioden → skulle bara dölja periodförändringen.
+      if (c.source === "live" || c.source === "merged") {
+        result[p].spend += c.spend || 0;
+        result[p].conv += c.conversions || 0;
+      }
     }
+    // Adspirer-totalsumma är auktoritativ för spend i perioden (täcker även
+    // kampanjer Adspirer rapporterar utan kreativ-match).
     if (adsData) {
       for (const ap of adsData.platforms) {
-        if (result[ap.platform]) result[ap.platform].status = ap.status;
+        if (result[ap.platform]) {
+          result[ap.platform].status = ap.status;
+          result[ap.platform].spend = ap.totals.spend;
+          result[ap.platform].conv = ap.totals.conversions;
+        }
       }
     }
     return result;
