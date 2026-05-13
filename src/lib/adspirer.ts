@@ -242,6 +242,7 @@ export interface CampaignRow {
   engagement_rate?: number | null;
   type?: string | null;
   daily_budget?: number | null;
+  created_at?: string | null;
 }
 
 export interface PlatformPerformance {
@@ -618,24 +619,29 @@ export async function getMetaPerformance(
 /**
  * Hamta meta-kampanjer direkt fran list_meta_campaigns (utan performance-data).
  * Anvands som fallback nar Adspirer's metrics-cache ar tom.
+ *
+ * Markdown-tabellen har formatet:
+ * | Campaign Name | `id` | STATUS | OBJECTIVE | $X.XX | YYYY-MM-DD |
  */
 export async function getMetaCampaignsList(
   revalidateSeconds = 3600,
 ): Promise<{ campaigns: CampaignRow[]; error: string | null }> {
   const result = await callAdspirerTool("list_meta_campaigns", {}, { revalidateSeconds });
   if (result.isError) return { campaigns: [], error: result.errorMessage };
-  // list_meta_campaigns returnerar Markdown-tabell - parsa rader manuellt
   const text = result.text || "";
   const campaigns: CampaignRow[] = [];
   const lines = text.split("\n");
   for (const line of lines) {
-    // Format: | Name | `id` | STATUS | OBJECTIVE | $X.XX | Date |
-    const m = line.match(/^\|\s*([^|]+?)\s*\|\s*`([^`]+)`\s*\|\s*(\w+)\s*\|\s*(\w+)\s*\|\s*([^|]+?)\s*\|/);
+    // 6 kolumner: name | id | status | objective | budget | created
+    const m = line.match(
+      /^\|\s*([^|]+?)\s*\|\s*`([^`]+)`\s*\|\s*(\w+)\s*\|\s*(\w+)\s*\|\s*([^|]+?)\s*\|\s*([^|]*?)\s*\|/,
+    );
     if (!m) continue;
-    const [, name, id, status, objective, budgetStr] = m;
-    if (name.toLowerCase() === "campaign name") continue; // Header-rad
+    const [, name, id, status, objective, budgetStr, createdStr] = m;
+    if (name.toLowerCase() === "campaign name") continue;
     const budgetMatch = budgetStr.match(/[\d,.]+/);
     const dailyBudget = budgetMatch ? parseFloat(budgetMatch[0].replace(/,/g, "")) : 0;
+    const created = createdStr.trim().match(/^\d{4}-\d{2}-\d{2}/)?.[0] || null;
     campaigns.push({
       campaign_id: id,
       name: name.trim(),
@@ -655,6 +661,7 @@ export async function getMetaCampaignsList(
       leads: null,
       engagement_rate: null,
       daily_budget: dailyBudget > 0 ? dailyBudget : null,
+      created_at: created,
     });
   }
   return { campaigns, error: null };

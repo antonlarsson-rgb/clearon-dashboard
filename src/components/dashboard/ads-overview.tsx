@@ -52,6 +52,7 @@ interface CampaignRow {
   engagement_rate?: number | null;
   type?: string | null;
   daily_budget?: number | null;
+  created_at?: string | null;
 }
 
 interface PlatformBlock {
@@ -167,6 +168,39 @@ function formatCurrency(n: number | null | undefined, currency = "SEK"): string 
   const symbol = currency === "USD" ? "$" : currency === "EUR" ? "€" : currency + " ";
   const sep = currency === "USD" || currency === "EUR" ? "" : "";
   return `${symbol}${sep}${n.toLocaleString("sv-SE", { maximumFractionDigits: 0 })}`;
+}
+
+function formatDate(s: string | null | undefined): string {
+  if (!s) return "";
+  const d = new Date(s);
+  if (Number.isNaN(d.getTime())) return s;
+  return d.toLocaleDateString("sv-SE", { day: "numeric", month: "short", year: "numeric" });
+}
+
+function effectivePeriodLabel(data: OverviewData, period: PeriodSelection): string {
+  if (period.type === "month") return period.label;
+  if (period.type === "lookback") return `Senaste ${period.lookback} dagarna`;
+  if (period.startDate && period.endDate) {
+    return `${formatDate(period.startDate)} - ${formatDate(period.endDate)}`;
+  }
+  return data.period.label;
+}
+
+function effectiveDateRange(data: OverviewData): string | null {
+  // Plocka faktiskt datum-intervall fran forsta plattformen som har en dateRange
+  const ranges = data.platforms
+    .map((p) => p.dateRange)
+    .filter((r) => r.start && r.end);
+  if (ranges.length === 0) {
+    if (data.period.start_date && data.period.end_date) {
+      return `Adspirer-data: ${formatDate(data.period.start_date)} - ${formatDate(data.period.end_date)}`;
+    }
+    return null;
+  }
+  // Bredaste range over plattformar
+  const start = ranges.reduce((min, r) => (r.start! < min ? r.start! : min), ranges[0].start!);
+  const end = ranges.reduce((max, r) => (r.end! > max ? r.end! : max), ranges[0].end!);
+  return `Faktisk datatid: ${formatDate(start)} - ${formatDate(end)}`;
 }
 
 export function AdsOverview() {
@@ -328,6 +362,39 @@ export function AdsOverview() {
         </div>
       </div>
 
+      {/* Effektiv period-banner med exakta datum som plattformarna returnerade */}
+      {data && (
+        <div className="rounded-lg border border-accent/25 bg-accent-subtle/30 px-4 py-3">
+          <div className="flex items-start justify-between gap-3 flex-wrap">
+            <div>
+              <div className="text-[10px] uppercase tracking-wide text-text-muted">
+                Period som visas
+              </div>
+              <div className="text-sm font-semibold text-text-primary mt-0.5">
+                {effectivePeriodLabel(data, period)}
+              </div>
+              {effectiveDateRange(data) && (
+                <div className="text-xs text-text-secondary mt-0.5 font-mono">
+                  {effectiveDateRange(data)}
+                </div>
+              )}
+            </div>
+            <div className="text-right">
+              <div className="text-[10px] uppercase tracking-wide text-text-muted">
+                Total spend i perioden
+              </div>
+              <div className="text-lg font-bold text-text-primary mt-0.5">
+                {data.totalsByCurrency.length === 0
+                  ? "-"
+                  : data.totalsByCurrency
+                      .map((t) => formatCurrency(t.spend, t.currency))
+                      .join(" + ")}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Aggregerade totals per valuta */}
       {data && data.totalsByCurrency.length > 0 && (
         <div className="space-y-2">
@@ -341,13 +408,13 @@ export function AdsOverview() {
               <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
                 <StatCard
                   icon={DollarSign}
-                  label="Spend"
+                  label="Spenderat"
                   value={formatCurrency(t.spend, t.currency)}
                   loading={loading}
                 />
                 <StatCard
                   icon={Layers}
-                  label="Kampanjer"
+                  label="Aktiva kampanjer"
                   value={formatNumber(t.campaigns)}
                   loading={loading}
                 />
@@ -365,22 +432,22 @@ export function AdsOverview() {
                 />
                 <StatCard
                   icon={TrendingUp}
-                  label="Impressions"
+                  label="Visningar"
                   value={formatNumber(t.impressions)}
                   loading={loading}
                 />
               </div>
               <div className="grid grid-cols-3 gap-3 mt-2">
                 <SecondaryStat
-                  label="CTR"
+                  label="CTR (klick / visning)"
                   value={t.ctr != null ? `${t.ctr.toFixed(2)}%` : "-"}
                 />
                 <SecondaryStat
-                  label="CPC"
+                  label="CPC (kostnad / klick)"
                   value={t.cpc != null ? formatCurrency(t.cpc, t.currency) : "-"}
                 />
                 <SecondaryStat
-                  label="Kostnad / konv."
+                  label="Kostnad per konvertering"
                   value={
                     t.cost_per_conversion != null
                       ? formatCurrency(t.cost_per_conversion, t.currency)
@@ -467,6 +534,30 @@ function SecondaryStat({ label, value }: { label: string; value: string }) {
   );
 }
 
+function InlineMetric({
+  label,
+  value,
+  emphasis = false,
+}: {
+  label: string;
+  value: string;
+  emphasis?: boolean;
+}) {
+  return (
+    <div>
+      <div className="text-[9px] uppercase tracking-wide text-text-muted">{label}</div>
+      <div
+        className={cn(
+          "font-mono tabular-nums",
+          emphasis ? "text-base font-bold text-text-primary" : "text-sm font-medium text-text-secondary",
+        )}
+      >
+        {value}
+      </div>
+    </div>
+  );
+}
+
 function PlatformSection({
   block,
   expanded,
@@ -483,26 +574,48 @@ function PlatformSection({
     <div className="rounded-lg border border-border bg-surface overflow-hidden">
       <button
         onClick={onToggle}
-        className="w-full flex items-center justify-between p-4 hover:bg-surface-elevated/30 transition-colors"
+        className="w-full flex items-center justify-between p-4 hover:bg-surface-elevated/30 transition-colors text-left"
       >
-        <div className="flex items-center gap-3">
-          <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: meta.color }} />
-          <span className="text-sm font-semibold">{meta.label}</span>
-          <span className={cn("rounded px-1.5 py-0.5 text-[10px] uppercase font-medium", badge.bg, badge.text)}>
-            {badge.label}
-          </span>
-          {block.status === "live" && (
-            <>
-              <span className="text-xs text-text-muted">|</span>
-              <span className="text-xs text-text-secondary">
-                {formatCurrency(block.totals.spend, block.currency)} spend, {block.totals.campaigns}{" "}
-                {block.totals.campaigns === 1 ? "kampanj" : "kampanjer"}
+        <div className="flex-1">
+          <div className="flex items-center gap-3 flex-wrap">
+            <span className="h-2.5 w-2.5 rounded-full shrink-0" style={{ backgroundColor: meta.color }} />
+            <span className="text-sm font-semibold">{meta.label}</span>
+            <span className={cn("rounded px-1.5 py-0.5 text-[10px] uppercase font-medium", badge.bg, badge.text)}>
+              {badge.label}
+            </span>
+            {block.dateRange.start && block.dateRange.end && (
+              <span className="text-[10px] text-text-muted font-mono">
+                {formatDate(block.dateRange.start)} - {formatDate(block.dateRange.end)}
               </span>
-            </>
+            )}
+          </div>
+          {block.status === "live" && (
+            <div className="mt-2 grid grid-cols-2 sm:grid-cols-4 gap-4 text-xs">
+              <InlineMetric
+                label="Spenderat"
+                value={formatCurrency(block.totals.spend, block.currency)}
+                emphasis
+              />
+              <InlineMetric label="Klick" value={formatNumber(block.totals.clicks)} />
+              <InlineMetric label="Konverteringar" value={formatNumber(block.totals.conversions)} />
+              <InlineMetric
+                label="CTR"
+                value={block.totals.ctr != null ? `${block.totals.ctr.toFixed(2)}%` : "-"}
+              />
+            </div>
+          )}
+          {block.status === "structure_only" && (
+            <div className="mt-2 text-xs text-text-secondary">
+              <span className="font-medium text-text-primary">{block.campaigns.length}</span>{" "}
+              kampanjer i kontot - se status nedan
+            </div>
           )}
         </div>
         <ChevronDown
-          className={cn("h-4 w-4 text-text-muted transition-transform", expanded ? "rotate-180" : "")}
+          className={cn(
+            "h-4 w-4 text-text-muted transition-transform shrink-0 ml-3 mt-1",
+            expanded ? "rotate-180" : "",
+          )}
         />
       </button>
 
@@ -596,6 +709,9 @@ function CampaignTable({
               <Th k="name">Kampanj</Th>
               <Th k="status">Status</Th>
               <Th k="daily_budget" align="right">Dagsbudget</Th>
+              <th className="py-2 px-3 text-[10px] uppercase tracking-wide font-medium text-text-muted text-right">
+                Skapad
+              </th>
             </tr>
           </thead>
           <tbody>
@@ -620,6 +736,9 @@ function CampaignTable({
                 <td className="py-2 px-3 text-right font-mono tabular-nums">
                   {c.daily_budget != null ? `${formatCurrency(c.daily_budget, currency)} / dag` : "-"}
                 </td>
+                <td className="py-2 px-3 text-right text-[11px] text-text-muted font-mono">
+                  {c.created_at ? formatDate(c.created_at) : "-"}
+                </td>
               </tr>
             ))}
           </tbody>
@@ -634,11 +753,14 @@ function CampaignTable({
         <thead className="bg-surface-elevated/40 border-b border-border">
           <tr>
             <Th k="name">Kampanj</Th>
-            <Th k="spend" align="right">Spend</Th>
+            <Th k="spend" align="right">Spenderat</Th>
             <Th k="clicks" align="right">Klick</Th>
             <Th k="conversions" align="right">Konv.</Th>
             <Th k="ctr" align="right">CTR</Th>
             <Th k="cpc" align="right">CPC</Th>
+            <th className="py-2 px-3 text-[10px] uppercase tracking-wide font-medium text-text-muted text-right">
+              Kostnad / konv.
+            </th>
           </tr>
         </thead>
         <tbody>
@@ -646,22 +768,45 @@ function CampaignTable({
             <tr key={c.campaign_id || c.name} className="border-b border-border/40 last:border-0 hover:bg-surface-elevated/20">
               <td className="py-2 px-3">
                 <div className="text-text-primary font-medium">{c.name}</div>
-                {c.type && <div className="text-[10px] text-text-muted">{c.type}</div>}
+                <div className="flex items-center gap-2 mt-0.5">
+                  {c.status && (
+                    <span
+                      className={cn(
+                        "rounded px-1 py-0.5 text-[9px] font-medium",
+                        c.status === "ACTIVE" || c.status === "ENABLED"
+                          ? "bg-success/15 text-success"
+                          : "bg-text-muted/15 text-text-muted",
+                      )}
+                    >
+                      {c.status}
+                    </span>
+                  )}
+                  {c.type && <span className="text-[10px] text-text-muted">{c.type}</span>}
+                </div>
               </td>
-              <td className="py-2 px-3 text-right font-mono tabular-nums">
+              <td className="py-2 px-3 text-right font-mono tabular-nums font-medium text-text-primary">
                 {formatCurrency(c.spend, currency)}
               </td>
               <td className="py-2 px-3 text-right font-mono tabular-nums">
                 {formatNumber(c.clicks)}
               </td>
               <td className="py-2 px-3 text-right font-mono tabular-nums">
-                {formatNumber(c.conversions)}
+                {c.conversions > 0 ? (
+                  <span className="text-accent font-medium">{formatNumber(c.conversions)}</span>
+                ) : (
+                  formatNumber(c.conversions)
+                )}
               </td>
               <td className="py-2 px-3 text-right font-mono tabular-nums">
                 {c.ctr != null ? `${c.ctr.toFixed(2)}%` : "-"}
               </td>
               <td className="py-2 px-3 text-right font-mono tabular-nums">
                 {c.cpc != null ? formatCurrency(c.cpc, currency) : "-"}
+              </td>
+              <td className="py-2 px-3 text-right font-mono tabular-nums">
+                {c.cost_per_conversion != null
+                  ? formatCurrency(c.cost_per_conversion, currency)
+                  : "-"}
               </td>
             </tr>
           ))}

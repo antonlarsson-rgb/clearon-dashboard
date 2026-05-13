@@ -191,10 +191,11 @@ export default async function KanalerPage() {
         <CardHeader>
           <div className="flex items-center gap-2">
             <Megaphone className="h-5 w-5 text-accent" />
-            <CardTitle>Annonskanaler (Google Ads, Meta, LinkedIn)</CardTitle>
+            <CardTitle>Annonskanaler - vad spenderas och vad ger det?</CardTitle>
           </div>
           <p className="text-xs text-text-secondary mt-1">
-            Hamtas live fran respektive plattform via Adspirer. Vrid period for olika tidsfonster.
+            Live spend, klick och konverteringar fran Google Ads, Meta och LinkedIn via Adspirer.
+            Valj period (rullande dagar eller specifik manad) for att se exakt vad som hant.
           </p>
         </CardHeader>
         <CardContent>
