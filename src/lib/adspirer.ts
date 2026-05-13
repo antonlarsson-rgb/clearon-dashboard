@@ -241,14 +241,16 @@ export interface CampaignRow {
   leads?: number | null;
   engagement_rate?: number | null;
   type?: string | null;
+  daily_budget?: number | null;
 }
 
 export interface PlatformPerformance {
   platform: "google" | "meta" | "linkedin";
   available: boolean;
-  status: "live" | "no_data" | "syncing" | "unavailable" | "error";
+  status: "live" | "no_data" | "syncing" | "unavailable" | "error" | "structure_only";
   reason: string | null;
   currency: string;
+  currencyNote: string | null;
   dateRange: { start: string | null; end: string | null };
   totals: {
     spend: number;
@@ -266,6 +268,33 @@ export interface PlatformPerformance {
   campaigns: CampaignRow[];
   rawJson: unknown;
   quota: McpToolResult["_quota_data"] | null;
+}
+
+/**
+ * Adspirer rapporterar konsekvent currency: "USD" och "$" symbol for Google/Meta
+ * aven for icke-amerikanska konton. ClearOns konton ar svenska, sa vi overridar
+ * USD till SEK och flaggar det. LinkedIn rapporterar redan ratt valuta.
+ */
+const ACCOUNT_CURRENCY_OVERRIDES: Record<string, { currency: string; note: string }> = {
+  google: {
+    currency: "SEK",
+    note: "Adspirer rapporterar 'USD' for alla Google-konton. Faktisk faktureringsvaluta for kontot 1033196174 ar SEK.",
+  },
+  meta: {
+    currency: "SEK",
+    note: "Adspirer rapporterar 'USD' i Meta-svar. Meta-kontot 1771733670071985 (ClearOn) faktureras i SEK.",
+  },
+};
+
+function applyCurrencyOverride(
+  platform: PlatformPerformance["platform"],
+  reportedCurrency: string,
+): { currency: string; note: string | null } {
+  const override = ACCOUNT_CURRENCY_OVERRIDES[platform];
+  if (override && reportedCurrency === "USD") {
+    return { currency: override.currency, note: override.note };
+  }
+  return { currency: reportedCurrency, note: null };
 }
 
 /**
@@ -370,12 +399,15 @@ function buildPerformance(
 ): PlatformPerformance {
   // Empty / no_data response
   if (!raw || raw.status === "no_data" || raw.campaign_count === 0) {
+    const reportedCur = raw?.currency || defaultCurrency;
+    const { currency, note } = applyCurrencyOverride(platform, reportedCur);
     return {
       platform,
       available: true,
       status: raw?.status === "no_data" ? "syncing" : "no_data",
       reason: raw?.message || "Ingen kampanjdata for vald period.",
-      currency: raw?.currency || defaultCurrency,
+      currency,
+      currencyNote: note,
       dateRange: { start: raw?.date_range?.start || null, end: raw?.date_range?.end || null },
       totals: emptyTotals(),
       campaigns: [],
@@ -431,12 +463,16 @@ function buildPerformance(
     summary.avg_cost_per_conversion ??
     (totalConversions > 0 ? totalSpend / totalConversions : null);
 
+  const reportedCur = raw.currency || defaultCurrency;
+  const { currency, note } = applyCurrencyOverride(platform, reportedCur);
+
   return {
     platform,
     available: true,
     status: "live",
     reason: null,
-    currency: raw.currency || defaultCurrency,
+    currency,
+    currencyNote: note,
     dateRange: { start: raw.date_range?.start || null, end: raw.date_range?.end || null },
     totals: {
       spend: totalSpend,
@@ -483,6 +519,7 @@ function unavailable(
     status: "unavailable",
     reason,
     currency: "SEK",
+    currencyNote: null,
     dateRange: { start: null, end: null },
     totals: emptyTotals(),
     campaigns: [],
@@ -501,6 +538,7 @@ function errorResult(
     status: "error",
     reason,
     currency: "SEK",
+    currencyNote: null,
     dateRange: { start: null, end: null },
     totals: emptyTotals(),
     campaigns: [],
@@ -555,7 +593,71 @@ export async function getMetaPerformance(
   if (result.toolNotFound) return unavailable("meta", "Verktyget inte tillgangligt");
   if (result.isError) return errorResult("meta", result.errorMessage || "Okant fel");
   const raw = extractJsonBlock(result.text) as RawPerformanceShape | null;
-  return buildPerformance("meta", raw, "SEK", result);
+  const perf = buildPerformance("meta", raw, "SEK", result);
+
+  // Adspirer's metrics-cache for Meta ar tom (nyligen kopplad eller pending sync).
+  // Falla tillbaka till list_meta_campaigns sa anvandaren atminstone ser vilka
+  // kampanjer som finns + deras status och budget. Performance-data dyker upp
+  // sa snart Adspirer's nightly sync har korit.
+  if (perf.status === "syncing" || perf.status === "no_data") {
+    const fallback = await getMetaCampaignsList(revalidateSeconds);
+    if (fallback.campaigns.length > 0) {
+      return {
+        ...perf,
+        status: "structure_only",
+        reason:
+          "Performance-data fran Adspirer's metrics-cache ar inte synkad an. Visar kampanjstruktur direkt fran Meta. Spend och konverteringar dyker upp efter Adspirer's nattliga sync.",
+        campaigns: fallback.campaigns,
+        totals: { ...perf.totals, campaigns: fallback.campaigns.length },
+      };
+    }
+  }
+  return perf;
+}
+
+/**
+ * Hamta meta-kampanjer direkt fran list_meta_campaigns (utan performance-data).
+ * Anvands som fallback nar Adspirer's metrics-cache ar tom.
+ */
+export async function getMetaCampaignsList(
+  revalidateSeconds = 3600,
+): Promise<{ campaigns: CampaignRow[]; error: string | null }> {
+  const result = await callAdspirerTool("list_meta_campaigns", {}, { revalidateSeconds });
+  if (result.isError) return { campaigns: [], error: result.errorMessage };
+  // list_meta_campaigns returnerar Markdown-tabell - parsa rader manuellt
+  const text = result.text || "";
+  const campaigns: CampaignRow[] = [];
+  const lines = text.split("\n");
+  for (const line of lines) {
+    // Format: | Name | `id` | STATUS | OBJECTIVE | $X.XX | Date |
+    const m = line.match(/^\|\s*([^|]+?)\s*\|\s*`([^`]+)`\s*\|\s*(\w+)\s*\|\s*(\w+)\s*\|\s*([^|]+?)\s*\|/);
+    if (!m) continue;
+    const [, name, id, status, objective, budgetStr] = m;
+    if (name.toLowerCase() === "campaign name") continue; // Header-rad
+    const budgetMatch = budgetStr.match(/[\d,.]+/);
+    const dailyBudget = budgetMatch ? parseFloat(budgetMatch[0].replace(/,/g, "")) : 0;
+    campaigns.push({
+      campaign_id: id,
+      name: name.trim(),
+      status,
+      type: objective,
+      spend: 0,
+      impressions: 0,
+      clicks: 0,
+      conversions: 0,
+      ctr: null,
+      cpc: null,
+      cpm: null,
+      conversion_rate: null,
+      cost_per_conversion: null,
+      conversion_value: null,
+      roas: null,
+      leads: null,
+      engagement_rate: null,
+      daily_budget: dailyBudget > 0 ? dailyBudget : null,
+    });
+  }
+  return { campaigns, error: null };
 }
 
 export async function getLinkedInPerformance(

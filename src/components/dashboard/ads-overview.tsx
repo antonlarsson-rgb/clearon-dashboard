@@ -27,6 +27,7 @@ const STATUS_BADGE: Record<
 > = {
   live: { label: "Live", bg: "bg-success/15", text: "text-success" },
   syncing: { label: "Synkar", bg: "bg-warning/15", text: "text-warning" },
+  structure_only: { label: "Struktur", bg: "bg-warning/15", text: "text-warning" },
   no_data: { label: "Ingen data", bg: "bg-text-muted/15", text: "text-text-muted" },
   unavailable: { label: "Ej tillganglig", bg: "bg-text-muted/15", text: "text-text-muted" },
   error: { label: "Fel", bg: "bg-danger/15", text: "text-danger" },
@@ -50,6 +51,7 @@ interface CampaignRow {
   leads?: number | null;
   engagement_rate?: number | null;
   type?: string | null;
+  daily_budget?: number | null;
 }
 
 interface PlatformBlock {
@@ -58,6 +60,7 @@ interface PlatformBlock {
   status: string;
   reason: string | null;
   currency: string;
+  currencyNote?: string | null;
   dateRange: { start: string | null; end: string | null };
   totals: {
     spend: number;
@@ -505,7 +508,13 @@ function PlatformSection({
 
       {expanded && (
         <div className="border-t border-border">
-          {block.status !== "live" && block.reason && (
+          {block.currencyNote && (
+            <div className="px-4 py-2 bg-warning/5 border-b border-warning/15 text-[11px] text-text-secondary">
+              <span className="font-medium text-warning">Notera valuta:</span>{" "}
+              {block.currencyNote}
+            </div>
+          )}
+          {(block.status === "syncing" || block.status === "no_data" || block.status === "structure_only" || block.status === "error" || block.status === "unavailable") && block.reason && (
             <div className="p-4 text-xs text-text-secondary leading-relaxed">{block.reason}</div>
           )}
           {block.status === "live" && block.campaigns.length === 0 && (
@@ -513,8 +522,12 @@ function PlatformSection({
               Inga kampanjer for vald period.
             </div>
           )}
-          {block.status === "live" && block.campaigns.length > 0 && (
-            <CampaignTable campaigns={block.campaigns} currency={block.currency} />
+          {(block.status === "live" || block.status === "structure_only") && block.campaigns.length > 0 && (
+            <CampaignTable
+              campaigns={block.campaigns}
+              currency={block.currency}
+              showStructureOnly={block.status === "structure_only"}
+            />
           )}
         </div>
       )}
@@ -522,31 +535,40 @@ function PlatformSection({
   );
 }
 
-type SortKey = "spend" | "clicks" | "conversions" | "ctr" | "cpc" | "name";
+type SortKey = "spend" | "clicks" | "conversions" | "ctr" | "cpc" | "name" | "daily_budget" | "status";
 
-function CampaignTable({ campaigns, currency }: { campaigns: CampaignRow[]; currency: string }) {
-  const [sortKey, setSortKey] = useState<SortKey>("spend");
+function CampaignTable({
+  campaigns,
+  currency,
+  showStructureOnly = false,
+}: {
+  campaigns: CampaignRow[];
+  currency: string;
+  showStructureOnly?: boolean;
+}) {
+  const [sortKey, setSortKey] = useState<SortKey>(showStructureOnly ? "name" : "spend");
   const [sortDir, setSortDir] = useState<"desc" | "asc">("desc");
 
   const sorted = useMemo(() => {
     const arr = [...campaigns];
     arr.sort((a, b) => {
-      const av = a[sortKey];
-      const bv = b[sortKey];
+      const av = a[sortKey as keyof CampaignRow];
+      const bv = b[sortKey as keyof CampaignRow];
+      if (sortKey === "name" || sortKey === "status") {
+        return sortDir === "desc"
+          ? String(bv ?? "").localeCompare(String(av ?? ""))
+          : String(av ?? "").localeCompare(String(bv ?? ""));
+      }
       const aN = typeof av === "number" ? av : av === null ? -Infinity : 0;
       const bN = typeof bv === "number" ? bv : bv === null ? -Infinity : 0;
-      if (sortKey === "name") {
-        return sortDir === "desc" ? String(bv).localeCompare(String(av)) : String(av).localeCompare(String(bv));
-      }
       return sortDir === "desc" ? bN - aN : aN - bN;
     });
     return arr;
   }, [campaigns, sortKey, sortDir]);
 
   const handleSort = (key: SortKey) => {
-    if (sortKey === key) {
-      setSortDir((d) => (d === "desc" ? "asc" : "desc"));
-    } else {
+    if (sortKey === key) setSortDir((d) => (d === "desc" ? "asc" : "desc"));
+    else {
       setSortKey(key);
       setSortDir("desc");
     }
@@ -564,6 +586,47 @@ function CampaignTable({ campaigns, currency }: { campaigns: CampaignRow[]; curr
       {sortKey === k && <span className="ml-1">{sortDir === "desc" ? "▼" : "▲"}</span>}
     </th>
   );
+
+  if (showStructureOnly) {
+    return (
+      <div className="overflow-x-auto">
+        <table className="w-full text-xs">
+          <thead className="bg-surface-elevated/40 border-b border-border">
+            <tr>
+              <Th k="name">Kampanj</Th>
+              <Th k="status">Status</Th>
+              <Th k="daily_budget" align="right">Dagsbudget</Th>
+            </tr>
+          </thead>
+          <tbody>
+            {sorted.map((c) => (
+              <tr key={c.campaign_id || c.name} className="border-b border-border/40 last:border-0 hover:bg-surface-elevated/20">
+                <td className="py-2 px-3">
+                  <div className="text-text-primary font-medium">{c.name}</div>
+                  {c.type && <div className="text-[10px] text-text-muted">{c.type}</div>}
+                </td>
+                <td className="py-2 px-3">
+                  <span
+                    className={cn(
+                      "inline-flex items-center rounded px-1.5 py-0.5 text-[10px] font-medium",
+                      c.status === "ACTIVE"
+                        ? "bg-success/15 text-success"
+                        : "bg-text-muted/15 text-text-muted",
+                    )}
+                  >
+                    {c.status || "-"}
+                  </span>
+                </td>
+                <td className="py-2 px-3 text-right font-mono tabular-nums">
+                  {c.daily_budget != null ? `${formatCurrency(c.daily_budget, currency)} / dag` : "-"}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    );
+  }
 
   return (
     <div className="overflow-x-auto">
