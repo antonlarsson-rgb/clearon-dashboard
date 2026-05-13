@@ -10,8 +10,6 @@ import {
   ShieldCheck,
   Building2,
   EyeOff,
-  Search,
-  Flame,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -39,74 +37,85 @@ interface IntentPerson {
   };
 }
 
-const PATTERN_META: Record<
-  string,
-  { label: string; description: string; color: string }
-> = {
-  form_converted: {
-    label: "Konverterade formulär",
-    description: "Skickat in form senaste 30d — varmaste leadsen",
-    color: "#8bb347",
-  },
-  pricing_intent: {
-    label: "Pris/kontaktsida",
-    description: "Besökt pris- eller kontaktsidan",
-    color: "#ff6b35",
-  },
-  product_evaluator: {
-    label: "Utvärderar produkter",
-    description: "Tittat på 2+ olika produktsidor senaste 14d",
-    color: "#e8864c",
-  },
-  returning_visitor: {
-    label: "Återkommer ofta",
-    description: "3+ sessioner senaste 14d",
-    color: "#4a9df0",
-  },
-  mail_engaged: {
-    label: "Mail-engagerade",
-    description: "Öppnat eller klickat mail senaste 14d",
-    color: "#c8a44c",
-  },
-  ad_responder: {
-    label: "Annonsklick",
-    description: "Klickat Meta/Google/LinkedIn-annons senaste 14d",
-    color: "#a363d9",
-  },
-  customer_active: {
-    label: "Befintliga kunder",
-    description: "Kund med ny aktivitet — cross-sell-potential",
-    color: "#8bb347",
-  },
-  dormant_returning: {
-    label: "Återväckta",
-    description: "Var inaktiva 30+ dagar, har nu kommit tillbaka",
-    color: "#c8a44c",
-  },
-  stalled: {
-    label: "Stagnerar",
-    description: "Hade aktivitet, inget senaste 14d",
-    color: "#aaa",
-  },
-  new_visitor: {
-    label: "Nya / okategoriserade",
-    description: "Inte tillräckligt med signaler för klassning",
-    color: "#999",
-  },
-};
-
+// Ordnad efter prioritet för säljteamet — beslutsfattare och pris-intent först.
 const PATTERN_ORDER = [
-  "form_converted",
   "pricing_intent",
+  "form_converted",
+  "paying_customer",
   "product_evaluator",
-  "returning_visitor",
-  "customer_active",
   "dormant_returning",
   "mail_engaged",
   "ad_responder",
+  "deep_browser",
   "stalled",
   "new_visitor",
 ];
+
+const PATTERN_META: Record<
+  string,
+  { label: string; description: string; color: string; priority: "het" | "varm" | "kall" }
+> = {
+  pricing_intent: {
+    label: "Pris- eller kontaktsida",
+    description: "Besökt /pris eller /kontakt — närmast affärsbeslut",
+    color: "#ff6b35",
+    priority: "het",
+  },
+  form_converted: {
+    label: "Skickat formulär",
+    description: "Skickat in form senaste 90 dagar — varmaste leadsen",
+    color: "#ff6b35",
+    priority: "het",
+  },
+  paying_customer: {
+    label: "Befintlig kund",
+    description: "Har order_placed eller opportunity_won i sin historik",
+    color: "#8bb347",
+    priority: "varm",
+  },
+  product_evaluator: {
+    label: "Utvärderar produkter",
+    description: "Tittat på 2+ olika produktsidor",
+    color: "#e8864c",
+    priority: "varm",
+  },
+  dormant_returning: {
+    label: "Vaknat efter paus",
+    description: "Var inaktiva 60+ dagar — nu kommit tillbaka",
+    color: "#c8a44c",
+    priority: "varm",
+  },
+  mail_engaged: {
+    label: "Mail-engagerade",
+    description: "Öppnat eller klickat mail — låg-mid signal",
+    color: "#4a9df0",
+    priority: "varm",
+  },
+  ad_responder: {
+    label: "Annons-klickare",
+    description: "Klickat Meta/Google/LinkedIn-annons",
+    color: "#a363d9",
+    priority: "kall",
+  },
+  deep_browser: {
+    label: "Många sidvisningar",
+    description: "10+ sajt-/produktvisningar utan formulär eller köp",
+    color: "#888",
+    priority: "kall",
+  },
+  stalled: {
+    label: "Stagnerar",
+    description: "Hade aktivitet, inget senaste 90 dagar",
+    color: "#aaa",
+    priority: "kall",
+  },
+  new_visitor: {
+    label: "Nya / okategoriserade",
+    description: "För få signaler för klassning",
+    color: "#999",
+    priority: "kall",
+  },
+};
 
 const PRODUCT_LABELS: Record<string, string> = {
   "sales-promotion": "Sales Promotion",
@@ -198,142 +207,69 @@ function IdentificationBadge({
 export default function PersonsPage() {
   const [people, setPeople] = useState<IntentPerson[]>([]);
   const [loading, setLoading] = useState(true);
-  const [search, setSearch] = useState("");
-  const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
-  const [onlyIdentified, setOnlyIdentified] = useState(false);
+  // Default kollapsade — användaren expanderar de hen vill djupdyka i
+  const [expanded, setExpanded] = useState<Record<string, boolean>>({});
 
   useEffect(() => {
-    let cancelled = false;
+    const ctrl = { cancelled: false };
     (async () => {
       try {
-        const res = await fetch("/api/buying-intent/top?limit=300&days=365");
+        const res = await fetch("/api/buying-intent/top?limit=500&days=365");
         const json = await res.json();
-        if (!cancelled) setPeople(json.results || []);
+        if (!ctrl.cancelled) {
+          setPeople(json.results || []);
+          setLoading(false);
+        }
       } catch {
-        if (!cancelled) setPeople([]);
-      } finally {
-        if (!cancelled) setLoading(false);
+        if (!ctrl.cancelled) {
+          setPeople([]);
+          setLoading(false);
+        }
       }
     })();
     return () => {
-      cancelled = true;
+      ctrl.cancelled = true;
     };
   }, []);
-
-  // Filtrera klient-side
-  const filteredPeople = useMemo(() => {
-    let list = people;
-    if (onlyIdentified) {
-      list = list.filter((p) => p.is_identified);
-    }
-    if (search.trim()) {
-      const q = search.toLowerCase();
-      list = list.filter(
-        (p) =>
-          (p.name || "").toLowerCase().includes(q) ||
-          (p.email || "").toLowerCase().includes(q) ||
-          (p.company || "").toLowerCase().includes(q) ||
-          (p.title || "").toLowerCase().includes(q),
-      );
-    }
-    return list;
-  }, [people, search, onlyIdentified]);
 
   // Gruppera efter behavior_pattern
   const groups = useMemo(() => {
     const map = new Map<string, IntentPerson[]>();
-    for (const p of filteredPeople) {
+    for (const p of people) {
       const pattern = p.intent.behavior_pattern || "new_visitor";
       if (!map.has(pattern)) map.set(pattern, []);
       map.get(pattern)!.push(p);
     }
-    // Sortera personer inom grupp efter intent-score DESC
     for (const list of map.values()) {
       list.sort((a, b) => b.intent.intent_score - a.intent.intent_score);
     }
-    // Sortera grupper efter PATTERN_ORDER, men bara de som finns
     return PATTERN_ORDER.filter((p) => map.has(p)).map((p) => ({
       pattern: p,
       people: map.get(p)!,
-      maxIntent: map.get(p)![0]?.intent.intent_score || 0,
     }));
-  }, [filteredPeople]);
-
-  // KPI:er
-  const stats = useMemo(() => {
-    const total = filteredPeople.length;
-    const identified = filteredPeople.filter((p) => p.is_identified).length;
-    const hot = filteredPeople.filter((p) => p.intent.intent_score >= 70).length;
-    const rising = filteredPeople.filter((p) => p.intent.trend === "rising").length;
-    return { total, identified, hot, rising };
-  }, [filteredPeople]);
+  }, [people]);
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="flex flex-col gap-4">
       <div>
         <h1 className="flex items-center gap-2 text-2xl font-bold text-text-primary">
           <UserCircle className="h-6 w-6 text-accent" />
           Leads & Personer
         </h1>
         <p className="mt-1 text-sm text-text-secondary">
-          Alla identifierade och anonyma individer segmenterade efter beteende.
-          Kontaktsannolikheten (0-100) berattar vem som är lättast och bäst att
-          kontakta just nu — baserat på faktiska events de senaste dagarna.
+          Alla personer segmenterade efter beteende. Sorterade så heta signaler
+          (pris, formulär, kund) hamnar överst. Klicka på en grupp för att se
+          personerna och deras kontaktsannolikhet.
         </p>
-      </div>
-
-      {/* KPI-rad */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-        <Stat label="Totalt aktiva" value={stats.total} />
-        <Stat
-          label="Identifierade"
-          value={stats.identified}
-          sub={stats.total > 0 ? `${Math.round((stats.identified / stats.total) * 100)}%` : "—"}
-        />
-        <Stat label="Höga signaler ≥70" value={stats.hot} color="#ff6b35" icon={Flame} />
-        <Stat
-          label="Aktivitet stiger"
-          value={stats.rising}
-          color="#8bb347"
-          icon={TrendingUp}
-        />
-      </div>
-
-      {/* Filter + sök */}
-      <div className="flex flex-wrap items-center gap-3 rounded-lg border border-border bg-surface p-3">
-        <div className="flex items-center gap-2 flex-1 min-w-[200px]">
-          <Search className="h-3.5 w-3.5 text-text-muted" />
-          <input
-            type="text"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="Sök på namn, email, företag eller titel..."
-            className="flex-1 bg-transparent text-sm text-text-primary placeholder:text-text-muted focus:outline-none"
-          />
-        </div>
-        <button
-          onClick={() => setOnlyIdentified((v) => !v)}
-          className={cn(
-            "inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium transition-colors",
-            onlyIdentified
-              ? "bg-[#8bb347]/15 text-[#8bb347]"
-              : "bg-surface-elevated text-text-secondary hover:text-text-primary",
-          )}
-        >
-          <ShieldCheck className="h-3 w-3" />
-          {onlyIdentified ? "Visar identifierade" : "Visa alla"}
-        </button>
       </div>
 
       {loading ? (
         <div className="rounded-lg border border-border bg-surface p-12 text-center text-sm text-text-muted">
-          Laddar och beräknar kontaktsannolikheter...
+          Klassificerar beteenden från events-tabellen...
         </div>
       ) : groups.length === 0 ? (
         <div className="rounded-lg border border-border bg-surface p-12 text-center text-sm text-text-muted">
-          {filteredPeople.length === 0
-            ? "Inga personer matchar filtren."
-            : "Inga beteende-mönster identifierade än."}
+          Inga personer i datan än. Sync-jobben kör i bakgrunden.
         </div>
       ) : (
         groups.map((g) => (
@@ -341,9 +277,9 @@ export default function PersonsPage() {
             key={g.pattern}
             pattern={g.pattern}
             people={g.people}
-            collapsed={!!collapsed[g.pattern]}
+            expanded={!!expanded[g.pattern]}
             onToggle={() =>
-              setCollapsed((prev) => ({ ...prev, [g.pattern]: !prev[g.pattern] }))
+              setExpanded((prev) => ({ ...prev, [g.pattern]: !prev[g.pattern] }))
             }
           />
         ))
@@ -352,54 +288,23 @@ export default function PersonsPage() {
   );
 }
 
-function Stat({
-  label,
-  value,
-  sub,
-  color,
-  icon: Icon,
-}: {
-  label: string;
-  value: number;
-  sub?: string;
-  color?: string;
-  icon?: React.ComponentType<{ className?: string }>;
-}) {
-  return (
-    <div className="rounded-lg border border-border bg-surface p-4">
-      <div className="flex items-center justify-between">
-        <div className="text-[10px] font-medium uppercase tracking-wide text-text-muted">
-          {label}
-        </div>
-        {Icon && <Icon className="h-3.5 w-3.5 text-text-muted" />}
-      </div>
-      <div className="mt-1 flex items-baseline gap-2">
-        <div className="text-3xl font-bold tabular-nums" style={{ color }}>
-          {value}
-        </div>
-        {sub && <div className="text-xs text-text-muted">{sub}</div>}
-      </div>
-    </div>
-  );
-}
-
 function BehaviorGroup({
   pattern,
   people,
-  collapsed,
+  expanded,
   onToggle,
 }: {
   pattern: string;
   people: IntentPerson[];
-  collapsed: boolean;
+  expanded: boolean;
   onToggle: () => void;
 }) {
   const meta = PATTERN_META[pattern] || PATTERN_META.new_visitor;
+  const maxIntent = people[0]?.intent.intent_score || 0;
   const avgIntent = Math.round(
     people.reduce((s, p) => s + p.intent.intent_score, 0) / people.length,
   );
-  const maxIntent = people[0]?.intent.intent_score || 0;
-  const visiblePeople = collapsed ? people.slice(0, 0) : people;
+  const identifiedCount = people.filter((p) => p.is_identified).length;
 
   return (
     <div className="rounded-lg border border-border bg-surface overflow-hidden">
@@ -418,6 +323,30 @@ function BehaviorGroup({
               <span className="text-xs text-text-muted">
                 {people.length} {people.length === 1 ? "person" : "personer"}
               </span>
+              {identifiedCount > 0 && (
+                <span className="text-[10px] text-text-muted">
+                  · {identifiedCount} identifierade
+                </span>
+              )}
+              <span
+                className="rounded-full px-1.5 py-0.5 text-[9px] font-bold uppercase"
+                style={{
+                  background:
+                    meta.priority === "het"
+                      ? "rgba(255,107,53,0.15)"
+                      : meta.priority === "varm"
+                        ? "rgba(232,134,76,0.15)"
+                        : "rgba(170,170,170,0.15)",
+                  color:
+                    meta.priority === "het"
+                      ? "#ff6b35"
+                      : meta.priority === "varm"
+                        ? "#e8864c"
+                        : "#888",
+                }}
+              >
+                {meta.priority}
+              </span>
             </div>
             <p className="text-[11px] text-text-muted mt-0.5">{meta.description}</p>
           </div>
@@ -425,7 +354,7 @@ function BehaviorGroup({
         <div className="flex items-center gap-3 shrink-0">
           <div className="text-right">
             <div className="text-[10px] uppercase tracking-wide text-text-muted">
-              Topp / snitt
+              Topp / snitt intent
             </div>
             <div className="font-mono text-sm tabular-nums">
               <span style={{ color: intentColor(maxIntent) }}>{maxIntent}</span>
@@ -435,15 +364,15 @@ function BehaviorGroup({
           <ChevronDown
             className={cn(
               "h-4 w-4 text-text-muted transition-transform",
-              collapsed ? "-rotate-90" : "",
+              expanded ? "" : "-rotate-90",
             )}
           />
         </div>
       </button>
 
-      {!collapsed && (
-        <div className="divide-y divide-border border-t border-border">
-          {visiblePeople.map((p) => (
+      {expanded && (
+        <div className="divide-y divide-border border-t border-border max-h-[600px] overflow-y-auto">
+          {people.map((p) => (
             <PersonRow key={p.person_id} p={p} />
           ))}
         </div>
@@ -467,7 +396,6 @@ function PersonRow({ p }: { p: IntentPerson }) {
       href={`/persons/${p.person_id}`}
       className="flex items-start gap-4 px-4 py-3 hover:bg-surface-elevated transition-colors"
     >
-      {/* Probability/intent score som circle */}
       <div
         className="flex h-14 w-14 flex-col items-center justify-center rounded-full shrink-0"
         style={{ background: `${color}15`, border: `2px solid ${color}40` }}
@@ -480,7 +408,6 @@ function PersonRow({ p }: { p: IntentPerson }) {
         </span>
       </div>
 
-      {/* Person-info */}
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2 flex-wrap">
           <span className="text-sm font-semibold text-text-primary truncate">
@@ -516,7 +443,6 @@ function PersonRow({ p }: { p: IntentPerson }) {
           )}
         </div>
 
-        {/* Event-taggar */}
         {p.intent.event_tags.length > 0 && (
           <div className="mt-1.5 flex flex-wrap gap-1">
             {p.intent.event_tags.map((tag, i) => {
@@ -535,7 +461,6 @@ function PersonRow({ p }: { p: IntentPerson }) {
         )}
       </div>
 
-      {/* Action-chip */}
       <div
         className="shrink-0 text-[10px] font-bold uppercase tracking-wide px-2 py-1 rounded self-center"
         style={{ background: `${action.color}1A`, color: action.color }}

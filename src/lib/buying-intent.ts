@@ -57,25 +57,25 @@ interface EventRow {
 // Inga title-regex, inga inferenser om "beslutsmandat" eller liknande.
 // Varje pattern motsvarar ett konkret event-mönster i events-tabellen.
 export type BehaviorPattern =
-  | "form_converted" // har form_submit / lead_submitted-event
+  | "paying_customer" // har order_placed eller opportunity_won
+  | "form_converted" // har form_submit / lead_submitted-event senaste 90d
   | "pricing_intent" // har besökt /pricing eller /kontakt
   | "product_evaluator" // har besökt 2+ olika produktsidor
-  | "returning_visitor" // 3+ separata sessioner senaste 14d
-  | "mail_engaged" // mail_open eller mail_click senaste 14d
-  | "ad_responder" // *_ad_click senaste 14d
-  | "customer_active" // is_customer + recent events
-  | "dormant_returning" // gap 30+ dagar, sen ny aktivitet
-  | "stalled" // hade events, inget senaste 14d
-  | "new_visitor"; // 1 session, mindre än 7 dagar gammal
+  | "deep_browser" // 10+ produkt/sajt-visits utan annan intent
+  | "mail_engaged" // mail_open eller mail_click
+  | "ad_responder" // *_ad_click
+  | "dormant_returning" // gap 60+ dagar, sen ny aktivitet
+  | "stalled" // hade events, inget senaste 90d
+  | "new_visitor"; // få events, sannolikt nytt
 
 export const BEHAVIOR_PATTERN_LABELS: Record<BehaviorPattern, string> = {
+  paying_customer: "Befintliga kunder",
   form_converted: "Skickat formulär",
   pricing_intent: "Besökt pris/kontakt",
   product_evaluator: "Tittat på produkter",
-  returning_visitor: "Återkommit flera ggr",
+  deep_browser: "Många sidvisningar",
   mail_engaged: "Engagerat mail",
   ad_responder: "Klickat annons",
-  customer_active: "Kund aktiv",
   dormant_returning: "Vaknat efter paus",
   stalled: "Stagnerar",
   new_visitor: "Ny besökare",
@@ -124,7 +124,10 @@ function shortPath(url: string | undefined | null): string {
 
 /**
  * Klassificera person baserat på OBSERVERADE events — inga title- eller
- * profil-inferenser. Varje regel listar exakt vilka event-typer som krävs.
+ * profil-inferenser. Reglerna nedan körs i ordning, första som matchar vinner.
+ *
+ * Fönster utökade till 90 dagar för att fånga ClearOns långsamma B2B-cykel
+ * (orders/conversions kan vara månader gamla men är fortfarande relevanta).
  */
 export function classifyBehaviorPattern(
   events: EventRow[],
@@ -138,17 +141,35 @@ export function classifyBehaviorPattern(
   if (events.length === 0) return "new_visitor";
 
   const now = Date.now();
-  const last14d = events.filter((e) => now - new Date(e.occurred_at).getTime() < 14 * DAY);
-  const last30d = events.filter((e) => now - new Date(e.occurred_at).getTime() < 30 * DAY);
+  const last90d = events.filter((e) => now - new Date(e.occurred_at).getTime() < 90 * DAY);
 
-  // 1. form_submit / lead_submitted — högsta-prio signal
-  if (last30d.some((e) => e.event_type === "form_submit" || e.event_type === "lead_submitted")) {
+  // 1. PAYING CUSTOMER — har någonsin en order eller won-opp (oavsett ålder)
+  // Denna är den starkaste signalen; alla med faktisk affär hamnar här.
+  if (
+    events.some(
+      (e) =>
+        e.event_type === "order_placed" ||
+        e.event_type === "opportunity_won",
+    )
+  ) {
+    return "paying_customer";
+  }
+
+  // 2. FORM_CONVERTED — skickat formulär senaste 90 dagar
+  if (
+    last90d.some(
+      (e) =>
+        e.event_type === "form_submit" ||
+        e.event_type === "lead_submitted" ||
+        e.event_type === "lead:submit",
+    )
+  ) {
     return "form_converted";
   }
 
-  // 2. Besökt pris- eller kontaktsidan
+  // 3. PRICING_INTENT — besökt pris- eller kontaktsidan senaste 90d
   if (
-    last30d.some(
+    last90d.some(
       (e) =>
         e.event_type === "upsales_visit_pricing_page" ||
         e.event_type === "upsales_visit_contact_page",
@@ -157,9 +178,9 @@ export function classifyBehaviorPattern(
     return "pricing_intent";
   }
 
-  // 3. Besökt 2+ olika produktsidor (unika product_slug)
+  // 4. PRODUCT_EVALUATOR — tittat på 2+ olika produktsidor senaste 90d
   const productSlugs = new Set(
-    last14d
+    last90d
       .filter(
         (e) =>
           e.event_type === "upsales_visit_product_page" ||
@@ -171,15 +192,18 @@ export function classifyBehaviorPattern(
   );
   if (productSlugs.size >= 2) return "product_evaluator";
 
-  // 4. Mail-engagemang senaste 14d
-  const mailEvents = last14d.filter(
-    (e) => e.event_type === "mail_open" || e.event_type === "mail_click",
-  );
-  if (mailEvents.length >= 1) return "mail_engaged";
-
-  // 5. Klickat annons senaste 14d
+  // 5. MAIL_ENGAGED — mail_open eller mail_click senaste 90d
   if (
-    last14d.some(
+    last90d.some(
+      (e) => e.event_type === "mail_open" || e.event_type === "mail_click",
+    )
+  ) {
+    return "mail_engaged";
+  }
+
+  // 6. AD_RESPONDER — klickat annons senaste 90d
+  if (
+    last90d.some(
       (e) =>
         e.event_type === "meta_ad_click" ||
         e.event_type === "google_ad_click" ||
@@ -189,11 +213,8 @@ export function classifyBehaviorPattern(
     return "ad_responder";
   }
 
-  // 6. Befintlig kund med ny aktivitet
-  if (context.is_customer && last14d.length >= 1) return "customer_active";
-
-  // 7. Återvaknat efter paus (gap >30d, sen ny aktivitet senaste 7d)
-  if (context.days_since_first_event > 30) {
+  // 7. DORMANT_RETURNING — gap 60+ dagar i sin historik och har nu kommit tillbaka
+  if (context.days_since_first_event > 60 && context.days_since_last_event < 30) {
     const sortedAsc = [...events].sort(
       (a, b) => new Date(a.occurred_at).getTime() - new Date(b.occurred_at).getTime(),
     );
@@ -204,25 +225,24 @@ export function classifyBehaviorPattern(
         new Date(sortedAsc[i - 1].occurred_at).getTime();
       if (gap > maxGap) maxGap = gap;
     }
-    if (maxGap > 30 * DAY && context.days_since_last_event < 7) {
-      return "dormant_returning";
-    }
+    if (maxGap > 60 * DAY) return "dormant_returning";
   }
 
-  // 8. Återkommer ofta (3+ page_views senaste 14d)
-  const pageViews = last14d.filter((e) => e.event_type === "page_view");
-  if (pageViews.length >= 3) return "returning_visitor";
+  // 8. DEEP_BROWSER — 10+ sajt-/produktsidvisningar utan annan intent
+  const siteVisits = last90d.filter(
+    (e) =>
+      e.event_type === "upsales_visit_page" ||
+      e.event_type === "upsales_visit_product_page" ||
+      e.event_type === "page_view",
+  );
+  if (siteVisits.length >= 10) return "deep_browser";
 
-  // 9. Stagnerar
-  if (
-    last30d.length >= 3 &&
-    last14d.length === 0 &&
-    context.days_since_last_event > 14
-  ) {
+  // 9. STALLED — hade events tidigare men inget senaste 90d
+  if (context.days_since_last_event > 90 && events.length >= 3) {
     return "stalled";
   }
 
-  // 10. Default
+  // 10. NEW_VISITOR — defaultfall, få events eller okänt mönster
   return "new_visitor";
 }
 
@@ -734,13 +754,17 @@ export async function getTopBuyingIntent(
   if (!recent || recent.length === 0) return [];
 
   const personIds = recent.map((p) => p.id);
+  // För klassificering måste vi se hela historiken — order_placed kan vara
+  // månader gammal men personen är fortfarande "paying_customer". Hämtar
+  // upp till 2 år bakåt men cappar antal events per person via order DESC.
+  const eventLookbackDays = Math.max(lookbackDays, 730);
   const { data: allEvents } = await supabase
     .from("events")
     .select(
       "person_id, event_type, product_slug, weight, intent_weight, occurred_at, source, metadata",
     )
     .in("person_id", personIds)
-    .gte("occurred_at", new Date(Date.now() - 30 * DAY).toISOString())
+    .gte("occurred_at", new Date(Date.now() - eventLookbackDays * DAY).toISOString())
     .order("occurred_at", { ascending: false });
 
   const eventsByPerson = new Map<string, EventRow[]>();
