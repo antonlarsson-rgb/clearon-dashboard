@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import * as Tabs from "@radix-ui/react-tabs";
 import * as Switch from "@radix-ui/react-switch";
 import * as Slider from "@radix-ui/react-slider";
@@ -13,98 +13,43 @@ import {
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Input } from "@/components/ui/input";
 import {
   Check,
   X,
-  RefreshCw,
-  Eye,
-  EyeOff,
+  ExternalLink,
   Shield,
   UserCircle,
+  RefreshCw,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-// --- INTEGRATIONER ---
+// --- INTEGRATIONER (live status fran /api/integrations/status) ---
 
-interface Integration {
+interface IntegrationStatus {
   id: string;
   name: string;
   description: string;
   connected: boolean;
-  lastSync: string | null;
-  apiKeyPrefix: string;
+  envVars: string[];
+  docsUrl?: string;
 }
 
-const integrations: Integration[] = [
-  {
-    id: "upsales",
-    name: "Upsales",
-    description: "CRM, kontakter och forsaljningsdata",
-    connected: true,
-    lastSync: "2026-04-17 09:30",
-    apiKeyPrefix: "ups_",
-  },
-  {
-    id: "clickup",
-    name: "ClickUp",
-    description: "Projekthantering och uppgifter",
-    connected: true,
-    lastSync: "2026-04-17 09:15",
-    apiKeyPrefix: "ck_",
-  },
-  {
-    id: "ga4",
-    name: "GA4",
-    description: "Webbanalys och trafikdata",
-    connected: true,
-    lastSync: "2026-04-17 08:00",
-    apiKeyPrefix: "ga4_",
-  },
-  {
-    id: "meta",
-    name: "Meta Ads",
-    description: "Facebook och Instagram-annonsering",
-    connected: true,
-    lastSync: "2026-04-17 07:45",
-    apiKeyPrefix: "meta_",
-  },
-  {
-    id: "google-ads",
-    name: "Google Ads",
-    description: "Sokannonsering och display",
-    connected: true,
-    lastSync: "2026-04-17 07:45",
-    apiKeyPrefix: "gads_",
-  },
-  {
-    id: "linkedin",
-    name: "LinkedIn Ads",
-    description: "B2B-annonsering och leads",
-    connected: false,
-    lastSync: null,
-    apiKeyPrefix: "li_",
-  },
-];
-
-function IntegrationCard({ integration }: { integration: Integration }) {
-  const [showKey, setShowKey] = useState(false);
-  const maskedKey = `${integration.apiKeyPrefix}${"*".repeat(24)}`;
-
+function IntegrationCard({ integration }: { integration: IntegrationStatus }) {
   return (
     <Card>
       <CardHeader>
-        <div className="flex items-center justify-between">
-          <div className="space-y-1">
-            <CardTitle>{integration.name}</CardTitle>
+        <div className="flex items-center justify-between gap-3">
+          <div className="space-y-1 min-w-0">
+            <CardTitle className="truncate">{integration.name}</CardTitle>
             <CardDescription>{integration.description}</CardDescription>
           </div>
           <Badge
             variant={integration.connected ? "default" : "secondary"}
             className={cn(
+              "shrink-0",
               integration.connected
                 ? "bg-accent-subtle text-accent"
-                : "bg-surface-elevated text-text-muted"
+                : "bg-surface-elevated text-text-muted",
             )}
           >
             {integration.connected ? (
@@ -120,48 +65,95 @@ function IntegrationCard({ integration }: { integration: Integration }) {
         </div>
       </CardHeader>
       <CardContent className="space-y-3">
-        {/* API Key */}
         <div className="space-y-1.5">
-          <label className="text-xs text-text-secondary">API-nyckel</label>
-          <div className="flex items-center gap-2">
-            <Input
-              type={showKey ? "text" : "password"}
-              value={maskedKey}
-              readOnly
-              className="font-mono text-xs"
-            />
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => setShowKey(!showKey)}
-            >
-              {showKey ? (
-                <EyeOff className="h-4 w-4" />
-              ) : (
-                <Eye className="h-4 w-4" />
-              )}
-            </Button>
+          <div className="text-[10px] uppercase tracking-wide text-text-muted">
+            Miljovariabler
+          </div>
+          <div className="flex flex-wrap gap-1.5">
+            {integration.envVars.map((envVar) => (
+              <span
+                key={envVar}
+                className="rounded bg-surface-elevated px-1.5 py-0.5 font-mono text-[10px] text-text-secondary"
+              >
+                {envVar}
+              </span>
+            ))}
           </div>
         </div>
 
-        {/* Last sync + Sync button */}
-        <div className="flex items-center justify-between">
-          <span className="text-xs text-text-muted">
-            {integration.lastSync
-              ? `Senaste synk: ${integration.lastSync}`
-              : "Aldrig synkad"}
-          </span>
-          <Button
-            variant="outline"
-            size="sm"
-            disabled={!integration.connected}
+        {!integration.connected && integration.docsUrl && (
+          <a
+            href={integration.docsUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-1.5 text-xs text-accent hover:underline"
           >
-            <RefreshCw className="h-3.5 w-3.5 mr-1.5" />
-            Synka nu
-          </Button>
-        </div>
+            <ExternalLink className="h-3 w-3" />
+            Skaffa nyckel
+          </a>
+        )}
       </CardContent>
     </Card>
+  );
+}
+
+function IntegrationsTab() {
+  const [data, setData] = useState<{
+    integrations: IntegrationStatus[];
+    summary: { total: number; connected: number };
+  } | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  async function load() {
+    setLoading(true);
+    try {
+      const res = await fetch("/api/integrations/status", { cache: "no-store" });
+      const json = await res.json();
+      setData(json);
+    } catch {
+      setData(null);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  useEffect(() => {
+    load();
+  }, []);
+
+  if (loading) {
+    return (
+      <div className="rounded-lg border border-border bg-surface p-12 text-center text-sm text-text-muted">
+        Kontrollerar integrationer...
+      </div>
+    );
+  }
+
+  if (!data) {
+    return (
+      <div className="rounded-lg border border-border bg-surface p-12 text-center text-sm text-text-muted">
+        Kunde inte hamta integrationsstatus.
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <p className="text-sm text-text-secondary">
+          {data.summary.connected} av {data.summary.total} integrationer ar anslutna. Konfigurera via miljovariabler i Vercel-projektet.
+        </p>
+        <Button variant="outline" size="sm" onClick={load}>
+          <RefreshCw className="h-3.5 w-3.5 mr-1.5" />
+          Uppdatera
+        </Button>
+      </div>
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+        {data.integrations.map((integration) => (
+          <IntegrationCard key={integration.id} integration={integration} />
+        ))}
+      </div>
+    </div>
   );
 }
 
@@ -455,14 +447,7 @@ export function SettingsPanel() {
 
       <div className="pt-6">
         <Tabs.Content value="integrationer">
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-            {integrations.map((integration) => (
-              <IntegrationCard
-                key={integration.id}
-                integration={integration}
-              />
-            ))}
-          </div>
+          <IntegrationsTab />
         </Tabs.Content>
 
         <Tabs.Content value="scoring">

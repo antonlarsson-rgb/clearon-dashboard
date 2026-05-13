@@ -1,27 +1,32 @@
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
-import { weeklySummaries } from "@/lib/mock-data";
+import { Sparkles } from "lucide-react";
+import Link from "next/link";
 
 export function WeeklySummary() {
-  const latest = weeklySummaries[0];
-
   return (
     <Card>
       <CardHeader>
-        <div className="flex items-center justify-between">
-          <CardTitle>
-            <span className="section-prefix">/ STELLAR UPDATE VECKA {latest.week_number}</span>
-          </CardTitle>
-          <div className="flex items-center gap-3 text-xs text-text-secondary">
-            <span>{latest.tasks_completed} slutforda</span>
-            <span className="text-text-muted">|</span>
-            <span>{latest.tasks_in_progress} pagar</span>
-          </div>
-        </div>
+        <CardTitle>
+          <span className="section-prefix">/ STELLAR UPDATE</span>
+        </CardTitle>
       </CardHeader>
       <CardContent>
-        <p className="text-sm leading-relaxed text-text-primary">
-          {latest.summary_text}
-        </p>
+        <div className="flex items-start gap-3 rounded-md border border-dashed border-border bg-surface-elevated/40 p-4">
+          <Sparkles className="h-5 w-5 shrink-0 text-accent mt-0.5" />
+          <div className="space-y-1">
+            <div className="text-sm font-medium text-text-primary">
+              Veckosammanfattning genereras snart automatiskt
+            </div>
+            <div className="text-xs text-text-secondary leading-relaxed">
+              Sammanfattningen kommer baseras pa riktig data fran ClickUp (slutforda uppgifter)
+              och Upsales (nya leads + aktiviteter). Anslut ClickUp i{" "}
+              <Link href="/installningar" className="text-accent hover:underline">
+                installningar
+              </Link>{" "}
+              for att aktivera.
+            </div>
+          </div>
+        </div>
       </CardContent>
     </Card>
   );
