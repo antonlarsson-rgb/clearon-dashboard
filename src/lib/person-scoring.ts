@@ -328,30 +328,42 @@ export async function recomputePerson(
  */
 export async function recomputeAll(
   supabase: SupabaseClient,
-  options: { limit?: number; onlyRecent?: boolean } = {}
-): Promise<{ processed: number; topHotCount: number }> {
-  const { limit = 10000, onlyRecent = false } = options;
+  options: { limit?: number; onlyRecent?: boolean; offset?: number } = {}
+): Promise<{ processed: number; topHotCount: number; total: number }> {
+  const { limit = 10000, onlyRecent = false, offset = 0 } = options;
 
-  let query = supabase
-    .from("persons")
-    .select("id, last_event_at")
-    .order("last_event_at", { ascending: false, nullsFirst: false })
-    .limit(limit);
-
-  if (onlyRecent) {
-    const since = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
-    query = query.gte("last_event_at", since);
+  // Supabase/PostgREST har en default max-rows-cap (oftast 1000) som
+  // .limit() ensam inte forcerar förbi. .range() däremot går igenom som
+  // Range-header och kan plocka större sjok i taget.
+  const allPersons: Array<{ id: string }> = [];
+  const pageSize = 1000;
+  let from = offset;
+  while (allPersons.length < limit) {
+    const to = Math.min(from + pageSize - 1, offset + limit - 1);
+    let query = supabase
+      .from("persons")
+      .select("id, last_event_at")
+      .order("last_event_at", { ascending: false, nullsFirst: false })
+      .range(from, to);
+    if (onlyRecent) {
+      const since = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
+      query = query.gte("last_event_at", since);
+    }
+    const { data: page } = await query;
+    if (!page || page.length === 0) break;
+    allPersons.push(...page);
+    if (page.length < pageSize) break;
+    from += pageSize;
   }
 
-  const { data: persons } = await query;
-  if (!persons) return { processed: 0, topHotCount: 0 };
+  if (allPersons.length === 0) return { processed: 0, topHotCount: 0, total: 0 };
 
   let processed = 0;
   let hot = 0;
 
   // Process i batcher parallellt (10 åt gången)
-  for (let i = 0; i < persons.length; i += 10) {
-    const batch = persons.slice(i, i + 10);
+  for (let i = 0; i < allPersons.length; i += 10) {
+    const batch = allPersons.slice(i, i + 10);
     const results = await Promise.all(
       batch.map((p) => recomputePerson(supabase, p.id))
     );
@@ -359,5 +371,5 @@ export async function recomputeAll(
     hot += results.filter((r) => r && r.segment === "hot").length;
   }
 
-  return { processed, topHotCount: hot };
+  return { processed, topHotCount: hot, total: allPersons.length };
 }

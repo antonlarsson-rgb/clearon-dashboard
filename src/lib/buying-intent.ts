@@ -739,23 +739,25 @@ export async function getTopBuyingIntent(
 
   const since = new Date(Date.now() - lookbackDays * DAY).toISOString();
   // Hämta upp till 2x av limit för att kunna filtrera + sortera korrekt
-  const fetchSize = Math.min(500, Math.max(200, limit * 2));
+  const fetchSize = Math.min(2000, Math.max(500, limit * 4));
+  // Använd .range() istället för .limit() för att gå förbi Supabases
+  // default-cap på 1000 rader. Sortera på score DESC så intressanta personer
+  // (kunder, hög-intent) hamnar först.
   const { data: recent } = await supabase
     .from("persons")
     .select(
       "id, name, primary_email, title, score, account_id, is_customer, ai_segment, ai_buy_probability, ai_urgency, behavior_pattern, account:accounts!persons_account_id_fkey(name, is_customer, has_purchased)",
     )
     .gte("last_event_at", since)
-    .order("last_event_at", { ascending: false })
-    .limit(fetchSize);
+    .order("score", { ascending: false, nullsFirst: false })
+    .range(0, fetchSize - 1);
 
   if (!recent || recent.length === 0) return [];
 
   const personIds = recent.map((p) => p.id);
   // För klassificering måste vi se hela historiken — order_placed kan vara
   // månader gammal men personen är fortfarande "paying_customer".
-  // OBS: Supabase default-limit är 1000 rader. Med ~300 persons à ~30 events
-  // behövs en explicit, generös limit.
+  // .range() går förbi Supabases default 1000-rad-cap.
   const eventLookbackDays = Math.max(lookbackDays, 730);
   const eventQueryLimit = Math.max(20000, personIds.length * 60);
   const { data: allEvents } = await supabase
@@ -766,7 +768,7 @@ export async function getTopBuyingIntent(
     .in("person_id", personIds)
     .gte("occurred_at", new Date(Date.now() - eventLookbackDays * DAY).toISOString())
     .order("occurred_at", { ascending: false })
-    .limit(eventQueryLimit);
+    .range(0, eventQueryLimit - 1);
 
   const eventsByPerson = new Map<string, EventRow[]>();
   for (const ev of allEvents || []) {
