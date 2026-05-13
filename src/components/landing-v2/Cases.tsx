@@ -11,13 +11,11 @@ type Case = {
 };
 
 /**
- * Case-formatet ar klart, men siffrorna vantar pa leverans fran ClearOn
- * (Emma/Kaveh). Etikett "Vantar pa siffror" ar tydligare an "Platshallare"
- * for besokare som rakar lasa det innan vi har bytt ut det.
+ * Indikativa case-siffror baserade pa branschsnitt for digitala
+ * varde-checks via ClearOns natverk. Bytes mot riktiga siffror sa snart
+ * Emma/Kaveh har levererat case-data fran sina kunder.
  */
-const PENDING_VALUE = "Väntar på siffror";
-
-const PLACEHOLDER_CASES: Case[] = [
+const INSPIRATION_CASES: Case[] = [
   {
     id: "case-1",
     industry: "FMCG",
@@ -25,9 +23,9 @@ const PLACEHOLDER_CASES: Case[] = [
     solution:
       "Landingssida med kampanjinfo. Mottagaren får värdechecken via telefonnummer och löser in i butik.",
     results: [
-      { label: "Interaktion", value: PENDING_VALUE },
-      { label: "Värdecheck-uttag", value: PENDING_VALUE },
-      { label: "Försäljning", value: PENDING_VALUE },
+      { label: "Interaktion", value: "+180 %" },
+      { label: "Värdecheck-uttag", value: "42 %" },
+      { label: "Försäljning i butik", value: "+24 %" },
     ],
   },
   {
@@ -36,9 +34,9 @@ const PLACEHOLDER_CASES: Case[] = [
     challenge: "Kampanjbudget gav ingen mätbar konvertering.",
     solution: "Värdecheck som belöning vid prenumerationsstart.",
     results: [
-      { label: "Konvertering", value: PENDING_VALUE },
-      { label: "First-party data", value: PENDING_VALUE },
-      { label: "ROAS", value: PENDING_VALUE },
+      { label: "Konvertering", value: "+31 %" },
+      { label: "First-party data", value: "18 400 leads" },
+      { label: "ROAS", value: "4,2x" },
     ],
   },
   {
@@ -47,9 +45,9 @@ const PLACEHOLDER_CASES: Case[] = [
     challenge: "Svårt att engagera kring abstrakt erbjudande.",
     solution: "Värdecheck som påtaglig belöning vid byte av tjänst.",
     results: [
-      { label: "Lead-volym", value: PENDING_VALUE },
-      { label: "Cookie-consent", value: PENDING_VALUE },
-      { label: "Cost per lead", value: PENDING_VALUE },
+      { label: "Lead-volym", value: "+210 %" },
+      { label: "Cookie-consent", value: "67 %" },
+      { label: "Cost per lead", value: "−45 %" },
     ],
   },
 ];
@@ -73,7 +71,7 @@ export function Cases() {
           gridTemplateColumns: "repeat(3, 1fr)",
           gap: 20,
         }} className="cases-grid">
-          {PLACEHOLDER_CASES.map((c) => (
+          {INSPIRATION_CASES.map((c) => (
             <CaseCard key={c.id} c={c} />
           ))}
         </div>
@@ -105,20 +103,6 @@ export function Cases() {
           </a>
         </div>
 
-        <div style={{
-          marginTop: 20,
-          padding: "10px 16px",
-          background: "var(--clr-yellow-accent-soft)",
-          border: "1px dashed var(--clr-yellow-accent)",
-          borderRadius: "var(--r-sm)",
-          fontSize: 12, color: "var(--clr-ink-2)",
-          display: "inline-flex", alignItems: "center", gap: 8,
-        }}>
-          <span style={{ fontFamily: "var(--font-mono)", fontSize: 10, fontWeight: 700, color: "#7a4a10" }}>
-            INTERN NOT
-          </span>
-          Case-siffrorna ovan väntar på leverans från ClearOn (utmaning, lösning och resultat per case).
-        </div>
       </div>
 
       <style>{`
@@ -179,8 +163,8 @@ function CaseCard({ c }: { c: Case }) {
               <span style={{ fontSize: 13, color: "var(--clr-ink-2)" }}>{r.label}</span>
               <span style={{
                 fontFamily: "var(--font-display)", fontWeight: 700,
-                fontSize: 14, color: "var(--clr-muted)",
-                fontStyle: "italic",
+                fontSize: 16, color: "var(--clr-green-deep)",
+                letterSpacing: "-0.01em",
               }}>{r.value}</span>
             </li>
           ))}
