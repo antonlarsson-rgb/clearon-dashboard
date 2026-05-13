@@ -19,7 +19,7 @@ export const dynamic = "force-dynamic";
 export async function GET(request: Request) {
   try {
     const url = new URL(request.url);
-    const limit = Math.min(50, Number(url.searchParams.get("limit")) || 10);
+    const limit = Math.min(300, Number(url.searchParams.get("limit")) || 10);
     const days = Number(url.searchParams.get("days")) || 14;
     const productSlug = url.searchParams.get("product") || undefined;
     const level = url.searchParams.get("level") || "person";

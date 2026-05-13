@@ -720,6 +720,8 @@ export async function getTopBuyingIntent(
   const { limit = 25, lookbackDays = 14, productSlug, pattern } = options;
 
   const since = new Date(Date.now() - lookbackDays * DAY).toISOString();
+  // Hämta upp till 2x av limit för att kunna filtrera + sortera korrekt
+  const fetchSize = Math.min(500, Math.max(200, limit * 2));
   const { data: recent } = await supabase
     .from("persons")
     .select(
@@ -727,7 +729,7 @@ export async function getTopBuyingIntent(
     )
     .gte("last_event_at", since)
     .order("last_event_at", { ascending: false })
-    .limit(200);
+    .limit(fetchSize);
 
   if (!recent || recent.length === 0) return [];
 
