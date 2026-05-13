@@ -799,6 +799,13 @@ export async function getTopBuyingIntent(
         ai_urgency: p.ai_urgency as string | null,
         is_identified: !!p.primary_email,
       });
+
+      // Föredra persons.behavior_pattern från DB om den finns — den är
+      // beräknad av recomputePerson med full event-historik via egen query,
+      // medan live-räkningen ovan kan ha snäv eventbatch pga rad-limit.
+      if (p.behavior_pattern) {
+        intent.behavior_pattern = p.behavior_pattern as typeof intent.behavior_pattern;
+      }
       return {
         person_id: p.id,
         name: p.name as string | null,
