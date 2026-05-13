@@ -107,7 +107,7 @@ function WheelGame() {
   const slices = [
     { label: "50 kr ICA", color: "#5e9732", ink: "#fff" },
     { label: "Försök igen", color: "#ece7d8", ink: "#4a5344" },
-    { label: "25% rabatt Oatly", color: "#e8864c", ink: "#fff" },
+    { label: "20 kr Oatly", color: "#e8864c", ink: "#fff" },
     { label: "Försök igen", color: "#f4f1e9", ink: "#4a5344" },
     { label: "20 kr Apotek", color: "#c8e66b", ink: "#4a5a1a" },
     { label: "Försök igen", color: "#ece7d8", ink: "#4a5344" },
@@ -366,7 +366,7 @@ function ScratchGame() {
 function QuizGame() {
   const questions = [
     { q: "Hur många butiker löser in ClearOn-kuponger i Sverige?", opts: ["500+", "2 000+", "5 000+", "10 000+"], correct: 2 },
-    { q: "Vilket år grundades ClearOn?", opts: ["1994", "2004", "2014", "1985"], correct: 0 },
+    { q: "Vilket år grundades ClearOn?", opts: ["1968", "1985", "1994", "2004"], correct: 0 },
     { q: "Vad händer efter att en kupong scannas i kassan?", opts: ["Kunden betalar mellanskillnaden", "Butiken äter kostnaden", "ClearOn clearar automatiskt mellan varumärke och butik", "Ingenting, det är bara symboliskt"], correct: 2 },
   ];
 

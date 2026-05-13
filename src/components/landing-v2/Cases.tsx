@@ -11,41 +11,45 @@ type Case = {
 };
 
 /**
- * Tomma platshållare. Kunden levererar riktiga case och siffror separat,
- * dessa exempel visar formatet och kan bytas ut rakt av.
+ * Case-formatet ar klart, men siffrorna vantar pa leverans fran ClearOn
+ * (Emma/Kaveh). Etikett "Vantar pa siffror" ar tydligare an "Platshallare"
+ * for besokare som rakar lasa det innan vi har bytt ut det.
  */
+const PENDING_VALUE = "Väntar på siffror";
+
 const PLACEHOLDER_CASES: Case[] = [
   {
     id: "case-1",
     industry: "FMCG",
     challenge: "Låg interaktion trots hög trafik.",
-    solution: "Skraplott kopplad till kupong som löses in i butik.",
+    solution:
+      "Landingssida med kampanjinfo. Mottagaren får värdechecken via telefonnummer och löser in i butik.",
     results: [
-      { label: "Interaktion", value: "Platshållare" },
-      { label: "Kuponguttag", value: "Platshållare" },
-      { label: "Försäljning", value: "Platshållare" },
+      { label: "Interaktion", value: PENDING_VALUE },
+      { label: "Värdecheck-uttag", value: PENDING_VALUE },
+      { label: "Försäljning", value: PENDING_VALUE },
     ],
   },
   {
     id: "case-2",
     industry: "Telekom",
     challenge: "Kampanjbudget gav ingen mätbar konvertering.",
-    solution: "Kupong som belöning vid prenumerationsstart.",
+    solution: "Värdecheck som belöning vid prenumerationsstart.",
     results: [
-      { label: "Konvertering", value: "Platshållare" },
-      { label: "First-party data", value: "Platshållare" },
-      { label: "ROAS", value: "Platshållare" },
+      { label: "Konvertering", value: PENDING_VALUE },
+      { label: "First-party data", value: PENDING_VALUE },
+      { label: "ROAS", value: PENDING_VALUE },
     ],
   },
   {
     id: "case-3",
     industry: "Fackförbund",
     challenge: "Svårt att engagera kring abstrakt erbjudande.",
-    solution: "ICA-check som påtaglig belöning vid byte av tjänst.",
+    solution: "Värdecheck som påtaglig belöning vid byte av tjänst.",
     results: [
-      { label: "Lead-volym", value: "Platshållare" },
-      { label: "Cookie-consent", value: "Platshållare" },
-      { label: "Cost per lead", value: "Platshållare" },
+      { label: "Lead-volym", value: PENDING_VALUE },
+      { label: "Cookie-consent", value: PENDING_VALUE },
+      { label: "Cost per lead", value: PENDING_VALUE },
     ],
   },
 ];
@@ -113,7 +117,7 @@ export function Cases() {
           <span style={{ fontFamily: "var(--font-mono)", fontSize: 10, fontWeight: 700, color: "#7a4a10" }}>
             INTERN NOT
           </span>
-          Case-siffrorna ovan är platshållare som byts ut när Kaveh levererat riktiga resultat.
+          Case-siffrorna ovan väntar på leverans från ClearOn (utmaning, lösning och resultat per case).
         </div>
       </div>
 

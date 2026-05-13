@@ -222,17 +222,7 @@ function LandingScreen({ campaign, onRedeem }: { campaign: { brand: string; offe
         textAlign: "center", marginBottom: 14,
       }}>
         <div style={{ fontFamily: "var(--font-mono)", fontSize: 10, color: "#888", letterSpacing: "0.1em" }}>QR-KOD</div>
-        <svg width="120" height="120" viewBox="0 0 120 120" style={{ margin: "10px auto 0" }}>
-          <rect x="8" y="8" width="28" height="28" fill="#0b1220" />
-          <rect x="84" y="8" width="28" height="28" fill="#0b1220" />
-          <rect x="8" y="84" width="28" height="28" fill="#0b1220" />
-          <rect x="44" y="44" width="12" height="12" fill="#0b1220" />
-          <rect x="60" y="44" width="8" height="8" fill="#0b1220" />
-          <rect x="44" y="60" width="8" height="8" fill="#0b1220" />
-          <rect x="64" y="64" width="16" height="16" fill="#0b1220" />
-          <rect x="88" y="52" width="10" height="10" fill="#0b1220" />
-          <rect x="52" y="88" width="10" height="10" fill="#0b1220" />
-        </svg>
+        <QrCodeMark size={130} />
         <div style={{ fontFamily: "var(--font-mono)", fontSize: 11, marginTop: 6 }}>clearon.se/v/7A3F9X</div>
       </div>
 
@@ -246,6 +236,74 @@ function LandingScreen({ campaign, onRedeem }: { campaign: { brand: string; offe
         Giltig i 5 000+ butiker &middot; t.o.m. 20 maj
       </div>
     </div>
+  );
+}
+
+// Visuell QR-platshallare (inte en scannbar kod). Renderar finder-patterns
+// i 3 horn, timing-pattern och en deterministisk data-matrix sa det ser ut
+// som en vanlig QR-kod istallet for ett par losa svarta rutor.
+const QR_GRID = 25;
+
+function isDataCellOn(x: number, y: number): boolean {
+  const h = (Math.imul(x + 1, 2654435761) ^ Math.imul(y + 1, 40503)) >>> 0;
+  return (h & 7) > 2;
+}
+
+function isInFinder(x: number, y: number): boolean {
+  if (x < 8 && y < 8) return true;
+  if (x >= QR_GRID - 8 && y < 8) return true;
+  if (x < 8 && y >= QR_GRID - 8) return true;
+  return false;
+}
+
+function QrCodeMark({ size = 120 }: { size?: number }) {
+  const cells: { x: number; y: number }[] = [];
+  for (let y = 0; y < QR_GRID; y++) {
+    for (let x = 0; x < QR_GRID; x++) {
+      if (isInFinder(x, y)) continue;
+      // Timing patterns (alternering p\u00e5 rad/kolumn 6).
+      if (y === 6 && x >= 8 && x < QR_GRID - 8) {
+        if (x % 2 === 0) cells.push({ x, y });
+        continue;
+      }
+      if (x === 6 && y >= 8 && y < QR_GRID - 8) {
+        if (y % 2 === 0) cells.push({ x, y });
+        continue;
+      }
+      if (isDataCellOn(x, y)) cells.push({ x, y });
+    }
+  }
+
+  return (
+    <svg
+      width={size}
+      height={size}
+      viewBox={`0 0 ${QR_GRID} ${QR_GRID}`}
+      shapeRendering="crispEdges"
+      style={{ margin: "10px auto 0", display: "block" }}
+      aria-label="QR-kod"
+    >
+      <rect width={QR_GRID} height={QR_GRID} fill="#fff" />
+      {cells.map((c) => (
+        <rect key={`${c.x}-${c.y}`} x={c.x} y={c.y} width={1} height={1} fill="#0b1220" />
+      ))}
+      {/* Finder pattern - top left */}
+      <FinderPattern x={0} y={0} />
+      {/* Finder pattern - top right */}
+      <FinderPattern x={QR_GRID - 7} y={0} />
+      {/* Finder pattern - bottom left */}
+      <FinderPattern x={0} y={QR_GRID - 7} />
+    </svg>
+  );
+}
+
+function FinderPattern({ x, y }: { x: number; y: number }) {
+  return (
+    <g>
+      <rect x={x} y={y} width={7} height={7} fill="#0b1220" />
+      <rect x={x + 1} y={y + 1} width={5} height={5} fill="#fff" />
+      <rect x={x + 2} y={y + 2} width={3} height={3} fill="#0b1220" />
+    </g>
   );
 }
 

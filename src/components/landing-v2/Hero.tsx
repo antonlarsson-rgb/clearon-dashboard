@@ -3,10 +3,13 @@
 import { useSignal } from "./SignalProvider";
 import { ArrowRight } from "lucide-react";
 
+// Tag = exakt samma terminologi som HEROES-kickern nedan, sa
+// problem-knappen och hero-rubriken kanns kopplade. Detta var en
+// uttrycklig onskan fran kund (Emma, 2026-05-13).
 const PROBLEMS = [
   {
     id: "boring",
-    tag: "Aktivering",
+    tag: "Engagemang",
     label: "Kampanjerna engagerar inte",
     sub: "Lekfull mekanik som driver inlösen",
     accent: "var(--clr-coral)",
@@ -44,7 +47,7 @@ const PROBLEMS = [
     id: "sampling",
     tag: "Trial",
     label: "Fler måste prova produkten",
-    sub: "Kupong som driver första köpet",
+    sub: "Värdecheck som driver första köpet",
     accent: "var(--clr-orange)",
     accentInk: "#7a3810",
     segment: "trial-driver",
@@ -69,7 +72,7 @@ const PROBLEMS = [
   },
   {
     id: "staff",
-    tag: "HR",
+    tag: "Personal",
     label: "Personalen känns osedd",
     sub: "Spontan erkänsla med verkligt värde",
     accent: "var(--clr-lilac)",
@@ -97,29 +100,29 @@ const HEROES: Record<string, { kicker: string; headline: string; sub: string }> 
     sub: "Skicka ett påtagligt förlåt direkt i chatten. En verklig belöning väger tyngre än ett standardsvar.",
   },
   staff: {
-    kicker: "Personalbelöning",
-    headline: "Säg tack\nmed ett SMS.",
+    kicker: "Personal",
+    headline: "Säg tack\nmed en gåva.",
     sub: "Spontan uppskattning slår årlig bonus. Skicka en värdecheck när någon levererat. Ingen logistik.",
   },
   boring: {
     kicker: "Engagemang",
     headline: "Kampanjer som\nkänns som spel.",
-    sub: "Lyckohjul, skraplott, quiz. Mekanik som får mottagaren att stanna kvar, kopplat till en belöning som löses in i butik.",
+    sub: "Lyckohjul, landingssida, quiz eller en värdecheck rakt på mejlen. Mekanik som får mottagaren att stanna kvar, kopplat till en belöning som löses in i butik.",
   },
   acquire: {
-    kicker: "Förvärv",
+    kicker: "Tillväxt",
     headline: "Låt maten\ngöra jobbet.",
-    sub: "När er produkt är abstrakt, lånar ni värdet från något alla förstår. En ICA-check tar mottagaren från kanske till ja.",
+    sub: "När er produkt är abstrakt, lånar ni värdet från något alla förstår. En värdecheck tar mottagaren från kanske till ja.",
   },
   measure: {
-    kicker: "Mätbarhet",
+    kicker: "Mätning",
     headline: "Spårbart från\nklick till kassa.",
     sub: "Varje belöning är clearad i butiksledet. Ni ser vad som faktiskt löstes in, av vem och i vilken kanal.",
   },
   sampling: {
     kicker: "Trial",
     headline: "Få fler att\nprova produkten.",
-    sub: "Skicka ut en kupong som löses in på er hyllvara. Mottagaren möter produkten i butik, ni får data på första köpet.",
+    sub: "Skicka ut en värdecheck som löses in på er hyllvara. Mottagaren möter produkten i butik, ni får data på första köpet.",
   },
   loyalty: {
     kicker: "Lojalitet",
@@ -254,7 +257,7 @@ export function Hero({
 function HeroStats() {
   const stats = [
     { v: "5 000+", l: "Butiker i Sverige" },
-    { v: "30+ år", l: "Belönings\u00ADexpertis" },
+    { v: "50+ år", l: "Kupong\u00ADspecialist" },
     { v: "< 1 min", l: "Från SMS till inlöst" },
   ];
   return (
