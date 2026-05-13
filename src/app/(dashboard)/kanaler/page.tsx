@@ -1,6 +1,11 @@
-// Datakallor:
-// - Webbkanaler: clearon.live (Supabase web_events) + clearon.se (Upsales)
-// - Annonskanaler: live via Adspirer MCP (Google + Meta + LinkedIn)
+// Kanaler — översikt över alla källor som driver trafik och leads.
+// Datakällor:
+// - Adspirer MCP: Google + Meta + LinkedIn live-data
+// - Supabase web_sessions: clearon.live-trafik
+// - Upsales /visits: clearon.se IP-identifierade besök (synkat till events)
+// - Upsales mail-events: open/click (synkat till events)
+// - DB ad_campaigns: kreativ + mail-utskick
+
 import { getContacts } from "@/lib/dashboard-data";
 import {
   buildWebChannelFlows,
@@ -10,7 +15,8 @@ import {
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { formatNumber } from "@/lib/utils";
 import { AdsOverview } from "@/components/dashboard/ads-overview";
-import { ArrowRight, Megaphone } from "lucide-react";
+import { ChannelHealth } from "@/components/dashboard/channel-health";
+import { ArrowRight, Megaphone, BarChart3 } from "lucide-react";
 
 export const dynamic = "force-dynamic";
 
@@ -25,22 +31,28 @@ export default async function KanalerPage() {
   return (
     <div className="space-y-6">
       <div>
-        <span className="section-prefix">/ Kanaler</span>
-        <h1 className="font-display text-2xl mt-1">Kanaloversikt</h1>
-        <p className="text-text-secondary text-sm mt-1">
-          clearon.live fran landningssidans tracking, clearon.se fran Upsales webbbesok, annonser via Adspirer.
+        <h1 className="flex items-center gap-2 text-2xl font-bold text-text-primary">
+          <BarChart3 className="h-6 w-6 text-accent" />
+          Kanaler
+        </h1>
+        <p className="mt-1 text-sm text-text-secondary">
+          Översikt över alla kanaler som genererar trafik och leads — webb, e-post och annonser.
+          Välj period nedan så uppdateras allt.
         </p>
       </div>
 
-      {/* Web-funnel: bara kolumner vi faktiskt har data för. Opportunities och
-          deals visas på /accounts och i KPI:erna på hemskärmen (events-graf).
-          Att inkludera dem här utan attribution skulle vara missvisande. */}
+      {/* Hero: kanal-hälsa över alla källor */}
+      <ChannelHealth defaultLookback={30} />
+
+      {/* Webb-funnel: visitors per webbkälla */}
       <Card>
         <CardHeader>
-          <CardTitle>Webbkanaler</CardTitle>
+          <CardTitle>Webb-funnel</CardTitle>
           <p className="text-xs text-text-secondary mt-1">
-            Besökare och leads per webbkälla. För opportunities-attribution per kanal,
-            se /accounts och hemskärmens KPI-kort.
+            Antal unika besökare och leads per webbkälla senaste 30 dagarna.
+            Leads = identifierade via form-submit eller mail-länk.
+            clearon.live är vår landningssida; clearon.se är ClearOns huvudsajt där
+            Upsales IP-identifierar besökande företag.
           </p>
         </CardHeader>
         <CardContent>
@@ -48,8 +60,8 @@ export default async function KanalerPage() {
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-border text-left text-xs text-text-muted uppercase tracking-wide">
-                  <th className="pb-2 pr-4">Kanal</th>
-                  <th className="pb-2 pr-4 text-right">Besokare</th>
+                  <th className="pb-2 pr-4">Källa</th>
+                  <th className="pb-2 pr-4 text-right">Besökare</th>
                   <th className="pb-2 pr-4 text-center"></th>
                   <th className="pb-2 pr-4 text-right">Leads</th>
                   <th className="pb-2 pr-4 text-center"></th>
@@ -62,7 +74,7 @@ export default async function KanalerPage() {
                 {channelFlows.length === 0 && (
                   <tr>
                     <td colSpan={8} className="py-6 text-center text-sm text-text-muted">
-                      Ingen webbdata an. Landningssidans events och Upsales webbbesok visas har nar de finns.
+                      Ingen webbdata än. Tracking via /api/tracking aktiveras när första besöket sker.
                     </td>
                   </tr>
                 )}
@@ -100,15 +112,16 @@ export default async function KanalerPage() {
         </CardContent>
       </Card>
 
+      {/* Annons-drilldown med egen period */}
       <Card>
         <CardHeader>
           <div className="flex items-center gap-2">
             <Megaphone className="h-5 w-5 text-accent" />
-            <CardTitle>Annonskanaler - vad spenderas och vad ger det?</CardTitle>
+            <CardTitle>Annons-drilldown — kampanj-nivå</CardTitle>
           </div>
           <p className="text-xs text-text-secondary mt-1">
-            Live spend, klick och konverteringar fran Google Ads, Meta och LinkedIn via Adspirer.
-            Valj period (rullande dagar eller specifik manad) for att se exakt vad som hant.
+            Live från Adspirer per plattform. Klicka på en plattform-sektion för
+            att se kampanjlistor och dagliga trender.
           </p>
         </CardHeader>
         <CardContent>

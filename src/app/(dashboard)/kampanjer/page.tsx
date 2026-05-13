@@ -14,17 +14,19 @@ import {
   Users,
   Megaphone,
   Calendar,
-  DollarSign,
+  Image as ImageIcon,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-interface Campaign {
+// ---- Types ----
+
+interface DbCampaign {
   id: string;
   platform: "meta" | "linkedin" | "google" | "email";
   campaign_id: string | null;
   campaign_name: string;
   product_slug: string | null;
-  status: "active" | "paused" | "completed" | string;
+  status: string;
   budget: number | null;
   spend: number | null;
   impressions: number | null;
@@ -42,6 +44,73 @@ interface Campaign {
   audience_name: string | null;
 }
 
+interface AdspirerCampaign {
+  campaign_id: string;
+  name: string;
+  status: string | null;
+  spend: number;
+  impressions: number;
+  clicks: number;
+  conversions: number;
+  ctr: number | null;
+  cpc: number | null;
+  cost_per_conversion: number | null;
+  daily_budget?: number | null;
+}
+
+interface AdsOverview {
+  period: { label: string; lookback_days?: number };
+  platforms: Array<{
+    platform: "google" | "meta" | "linkedin";
+    status: string;
+    currency: string;
+    reason: string | null;
+    dateRange: { start: string | null; end: string | null };
+    totals: {
+      spend: number;
+      impressions: number;
+      clicks: number;
+      conversions: number;
+      campaigns: number;
+    };
+    campaigns: AdspirerCampaign[];
+  }>;
+}
+
+/** Unified campaign view — kan komma från Adspirer (live), DB (kreativ-bibliotek) eller båda. */
+interface UnifiedCampaign {
+  key: string;
+  platform: "meta" | "linkedin" | "google" | "email";
+  name: string;
+  status: string;
+  source: "live" | "library" | "merged";
+  spend: number | null;
+  impressions: number | null;
+  clicks: number | null;
+  conversions: number | null;
+  budget: number | null;
+  currency: string;
+  startDate: string | null;
+  endDate: string | null;
+  headline: string | null;
+  body: string | null;
+  cta: string | null;
+  creativeImageUrl: string | null;
+  destinationUrl: string | null;
+  audienceName: string | null;
+  productSlug: string | null;
+  campaignId: string | null;
+}
+
+// ---- Helpers ----
+
+const PLATFORM_META = {
+  meta: { label: "Meta", color: "#1877F2", Icon: Globe },
+  linkedin: { label: "LinkedIn", color: "#0A66C2", Icon: Briefcase },
+  google: { label: "Google", color: "#EA4335", Icon: Search },
+  email: { label: "Upsales Mail", color: "#8bb347", Icon: Mail },
+} as const;
+
 const PRODUCT_LABELS: Record<string, string> = {
   "sales-promotion": "Sales Promotion",
   "customer-care": "Customer Care",
@@ -50,62 +119,33 @@ const PRODUCT_LABELS: Record<string, string> = {
   "send-a-gift": "Send a Gift",
   "clearing-solutions": "Clearing Solutions",
   kuponger: "Kuponger",
-  "mobila-presentkort": "Mobila Presentkort",
-};
-
-const PLATFORM_META = {
-  meta: {
-    label: "Meta",
-    color: "#1877F2",
-    bg: "rgba(24,119,242,0.08)",
-    Icon: Globe,
-  },
-  linkedin: {
-    label: "LinkedIn",
-    color: "#0A66C2",
-    bg: "rgba(10,102,194,0.08)",
-    Icon: Briefcase,
-  },
-  google: {
-    label: "Google",
-    color: "#EA4335",
-    bg: "rgba(234,67,53,0.08)",
-    Icon: Search,
-  },
-  email: {
-    label: "Upsales Mail",
-    color: "#8bb347",
-    bg: "rgba(139,179,71,0.08)",
-    Icon: Mail,
-  },
-} as const;
-
-const STATUS_META: Record<
-  string,
-  { label: string; color: string; bg: string; Icon: React.ComponentType<{ className?: string }> }
-> = {
-  active: { label: "LIVE", color: "#8bb347", bg: "rgba(139,179,71,0.15)", Icon: Play },
-  paused: { label: "Pausad", color: "#e8864c", bg: "rgba(232,134,76,0.15)", Icon: Pause },
-  completed: { label: "Avslutad", color: "#888", bg: "rgba(136,136,136,0.15)", Icon: Check },
 };
 
 type Platform = keyof typeof PLATFORM_META;
 
-function formatKr(n: number | null): string {
+const PERIOD_OPTIONS = [
+  { value: 7, label: "7d" },
+  { value: 30, label: "30d" },
+  { value: 60, label: "60d" },
+  { value: 90, label: "90d" },
+];
+
+function formatKr(n: number | null, currency = "SEK"): string {
   if (n == null || n === 0) return "—";
-  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)} MSEK`;
-  if (n >= 1000) return `${(n / 1000).toFixed(1)}k kr`;
-  return `${n} kr`;
+  const suffix = currency === "SEK" ? "kr" : currency;
+  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)} M${currency === "SEK" ? "SEK" : currency}`;
+  if (n >= 1000) return `${(n / 1000).toFixed(1)}k ${suffix}`;
+  return `${n.toFixed(0)} ${suffix}`;
 }
 
 function formatInt(n: number | null): string {
-  if (n == null) return "—";
+  if (n == null || n === 0) return "—";
   if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
   if (n >= 1000) return `${(n / 1000).toFixed(0)}k`;
   return n.toLocaleString("sv-SE");
 }
 
-function formatDate(iso: string | null): string {
+function formatDateShort(iso: string | null): string {
   if (!iso) return "—";
   try {
     return new Date(iso).toLocaleDateString("sv-SE", { day: "numeric", month: "short" });
@@ -116,26 +156,53 @@ function formatDate(iso: string | null): string {
 
 function dateRange(start: string | null, end: string | null): string {
   if (!start && !end) return "—";
-  if (start && end) return `${formatDate(start)} – ${formatDate(end)}`;
-  if (start) return `från ${formatDate(start)}`;
-  return `till ${formatDate(end)}`;
+  if (start && end) return `${formatDateShort(start)} – ${formatDateShort(end)}`;
+  if (start) return `från ${formatDateShort(start)}`;
+  return `till ${formatDateShort(end)}`;
 }
 
+function normalizeName(s: string): string {
+  return s
+    .toLowerCase()
+    .replace(/[^a-zåäö0-9]/g, "")
+    .slice(0, 50);
+}
+
+function unifyStatus(s: string | null): "active" | "paused" | "completed" {
+  const t = (s || "").toLowerCase();
+  if (t.includes("active") || t.includes("live")) return "active";
+  if (t.includes("paus")) return "paused";
+  return "completed";
+}
+
+// ---- Component ----
+
 export default function KampanjerPage() {
-  const [campaigns, setCampaigns] = useState<Campaign[]>([]);
+  const [period, setPeriod] = useState(30);
+  const [dbCampaigns, setDbCampaigns] = useState<DbCampaign[]>([]);
+  const [adsData, setAdsData] = useState<AdsOverview | null>(null);
   const [loading, setLoading] = useState(true);
-  const [platform, setPlatform] = useState<Platform>("meta");
-  const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [platformFilter, setPlatformFilter] = useState<Platform | "all">("all");
+  const [statusFilter, setStatusFilter] = useState<"all" | "active" | "paused" | "completed">("all");
 
   useEffect(() => {
     let cancelled = false;
+    setLoading(true);
     (async () => {
       try {
-        const res = await fetch("/api/campaigns");
-        const data = await res.json();
-        if (!cancelled) setCampaigns(data.campaigns || []);
+        const [dbRes, adsRes] = await Promise.all([
+          fetch("/api/campaigns").then((r) => r.json()),
+          fetch(`/api/ads/overview?lookback=${period}`).then((r) => r.json()),
+        ]);
+        if (!cancelled) {
+          setDbCampaigns(dbRes.campaigns || []);
+          setAdsData(adsRes && !adsRes.error ? adsRes : null);
+        }
       } catch {
-        if (!cancelled) setCampaigns([]);
+        if (!cancelled) {
+          setDbCampaigns([]);
+          setAdsData(null);
+        }
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -143,150 +210,206 @@ export default function KampanjerPage() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [period]);
 
-  // Plattform-aggregat
-  const byPlatform = useMemo(() => {
-    const out: Record<Platform, Campaign[]> = {
-      meta: [],
-      linkedin: [],
-      google: [],
-      email: [],
-    };
-    for (const c of campaigns) {
-      if (out[c.platform as Platform]) out[c.platform as Platform].push(c);
+  // Bygg unified campaigns från båda källor
+  const unified = useMemo<UnifiedCampaign[]>(() => {
+    const result: UnifiedCampaign[] = [];
+    const usedDbKeys = new Set<string>();
+
+    // 1. Lägg in alla Adspirer-kampanjer (live data)
+    if (adsData) {
+      for (const platform of adsData.platforms) {
+        for (const c of platform.campaigns) {
+          // Försök matcha till en DB-kampanj på liknande namn för att hämta kreativ
+          const cNorm = normalizeName(c.name);
+          const matchedDb = dbCampaigns.find(
+            (d) =>
+              d.platform === platform.platform &&
+              (d.campaign_id === c.campaign_id ||
+                normalizeName(d.campaign_name).includes(cNorm.slice(0, 12)) ||
+                cNorm.includes(normalizeName(d.campaign_name).slice(0, 12))),
+          );
+          if (matchedDb) usedDbKeys.add(matchedDb.id);
+
+          result.push({
+            key: `${platform.platform}-${c.campaign_id}`,
+            platform: platform.platform,
+            name: c.name,
+            status: c.status || "active",
+            source: matchedDb ? "merged" : "live",
+            spend: c.spend,
+            impressions: c.impressions,
+            clicks: c.clicks,
+            conversions: c.conversions,
+            budget: matchedDb?.budget ?? c.daily_budget ?? null,
+            currency: platform.currency,
+            startDate: matchedDb?.start_date ?? platform.dateRange.start,
+            endDate: matchedDb?.end_date ?? platform.dateRange.end,
+            headline: matchedDb?.headline ?? null,
+            body: matchedDb?.body_copy ?? null,
+            cta: matchedDb?.cta_text ?? null,
+            creativeImageUrl: matchedDb?.creative_image_url ?? null,
+            destinationUrl: matchedDb?.destination_url ?? null,
+            audienceName: matchedDb?.audience_name ?? null,
+            productSlug: matchedDb?.product_slug ?? null,
+            campaignId: c.campaign_id,
+          });
+        }
+      }
     }
-    return out;
-  }, [campaigns]);
 
+    // 2. Lägg in DB-kampanjer som inte matchades (kreativ-bibliotek + email)
+    for (const d of dbCampaigns) {
+      if (usedDbKeys.has(d.id)) continue;
+      result.push({
+        key: `db-${d.id}`,
+        platform: d.platform,
+        name: d.campaign_name,
+        status: d.status,
+        source: "library",
+        spend: d.spend,
+        impressions: d.impressions,
+        clicks: d.clicks,
+        conversions: d.conversions,
+        budget: d.budget,
+        currency: "SEK",
+        startDate: d.start_date,
+        endDate: d.end_date,
+        headline: d.headline,
+        body: d.body_copy,
+        cta: d.cta_text,
+        creativeImageUrl: d.creative_image_url,
+        destinationUrl: d.destination_url,
+        audienceName: d.audience_name,
+        productSlug: d.product_slug,
+        campaignId: d.campaign_id,
+      });
+    }
+
+    // Sortera: aktiva först, sen efter spend desc
+    return result.sort((a, b) => {
+      const aActive = unifyStatus(a.status) === "active" ? 0 : 1;
+      const bActive = unifyStatus(b.status) === "active" ? 0 : 1;
+      if (aActive !== bActive) return aActive - bActive;
+      return (b.spend || 0) - (a.spend || 0);
+    });
+  }, [dbCampaigns, adsData]);
+
+  // Filtrera
+  const visible = useMemo(() => {
+    return unified.filter((c) => {
+      if (platformFilter !== "all" && c.platform !== platformFilter) return false;
+      if (statusFilter !== "all" && unifyStatus(c.status) !== statusFilter) return false;
+      return true;
+    });
+  }, [unified, platformFilter, statusFilter]);
+
+  // Per-plattform-sammanfattning
   const platformSummary = useMemo(() => {
-    const result: Record<
-      Platform,
-      {
-        count: number;
-        active: number;
-        paused: number;
-        spend: number;
-        impressions: number;
-        clicks: number;
-        firstStart: string | null;
-        lastEnd: string | null;
-      }
-    > = {
-      meta: emptySummary(),
-      linkedin: emptySummary(),
-      google: emptySummary(),
-      email: emptySummary(),
+    const result: Record<Platform, { count: number; active: number; spend: number; conv: number; status: string }> = {
+      meta: { count: 0, active: 0, spend: 0, conv: 0, status: "—" },
+      linkedin: { count: 0, active: 0, spend: 0, conv: 0, status: "—" },
+      google: { count: 0, active: 0, spend: 0, conv: 0, status: "—" },
+      email: { count: 0, active: 0, spend: 0, conv: 0, status: "—" },
     };
-    for (const c of campaigns) {
-      const p = c.platform as Platform;
-      if (!result[p]) continue;
+    for (const c of unified) {
+      const p = c.platform;
       result[p].count++;
-      if (c.status === "active") result[p].active++;
-      if (c.status === "paused") result[p].paused++;
+      if (unifyStatus(c.status) === "active") result[p].active++;
       result[p].spend += c.spend || 0;
-      result[p].impressions += c.impressions || 0;
-      result[p].clicks += c.clicks || 0;
-      if (c.start_date && (!result[p].firstStart || c.start_date < result[p].firstStart!)) {
-        result[p].firstStart = c.start_date;
-      }
-      if (c.end_date && (!result[p].lastEnd || c.end_date > result[p].lastEnd!)) {
-        result[p].lastEnd = c.end_date;
+      result[p].conv += c.conversions || 0;
+    }
+    // Status från Adspirer per plattform
+    if (adsData) {
+      for (const ap of adsData.platforms) {
+        if (result[ap.platform]) result[ap.platform].status = ap.status;
       }
     }
     return result;
-  }, [campaigns]);
+  }, [unified, adsData]);
 
-  // Filtrerade kampanjer för aktiv plattform
-  const visibleCampaigns = useMemo(() => {
-    const list = byPlatform[platform] || [];
-    return list
-      .filter((c) => statusFilter === "all" || c.status === statusFilter)
-      .sort((a, b) => (b.spend || 0) - (a.spend || 0));
-  }, [byPlatform, platform, statusFilter]);
-
-  if (loading) {
-    return (
-      <div className="p-12 text-center text-sm text-text-muted">
-        Laddar kampanjer...
-      </div>
-    );
-  }
-
-  if (campaigns.length === 0) {
-    return (
-      <div className="flex flex-col gap-6">
-        <Header />
-        <div className="rounded-lg border border-dashed border-border p-12 text-center text-sm text-text-muted">
-          Inga kampanjer i databasen. Kor sync-jobben for att hamta fran Meta/LinkedIn/Upsales.
-        </div>
-      </div>
-    );
-  }
+  const periodLabel = adsData?.period.label || `senaste ${period} dagarna`;
 
   return (
     <div className="flex flex-col gap-6">
-      <Header />
+      <div>
+        <h1 className="flex items-center gap-2 text-2xl font-bold text-text-primary">
+          <Megaphone className="h-6 w-6 text-accent" />
+          Kampanjer
+        </h1>
+        <p className="mt-1 text-sm text-text-secondary">
+          Live data från Adspirer (Google/Meta/LinkedIn) kombinerat med kreativ-bibliotek.
+          Välj period så uppdateras spend, klick och konverteringar.
+        </p>
+      </div>
 
-      {/* Plattform-sammanfattning: spend + period + antal kampanjer */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+      {/* Period-väljare */}
+      <div className="flex flex-wrap items-center gap-3 rounded-lg border border-border bg-surface p-3">
+        <span className="text-[10px] uppercase tracking-wide text-text-muted">
+          Period
+        </span>
+        <div className="flex gap-1">
+          {PERIOD_OPTIONS.map((opt) => (
+            <button
+              key={opt.value}
+              onClick={() => setPeriod(opt.value)}
+              className={cn(
+                "rounded-full px-3 py-1 text-xs font-medium transition-colors",
+                period === opt.value
+                  ? "bg-text-primary text-surface"
+                  : "bg-surface-elevated text-text-secondary hover:text-text-primary",
+              )}
+            >
+              {opt.label}
+            </button>
+          ))}
+        </div>
+        <span className="ml-auto text-xs text-text-muted">
+          Visar: {periodLabel} · {visible.length} kampanjer
+        </span>
+      </div>
+
+      {/* Plattform-summary med spend och status */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         {(Object.keys(PLATFORM_META) as Platform[]).map((p) => {
           const meta = PLATFORM_META[p];
           const s = platformSummary[p];
-          const isActive = platform === p;
-          const hasData = s.count > 0;
+          const isFilterActive = platformFilter === p;
           return (
             <button
               key={p}
-              onClick={() => setPlatform(p)}
-              disabled={!hasData}
+              onClick={() => setPlatformFilter((cur) => (cur === p ? "all" : p))}
+              disabled={s.count === 0}
               className={cn(
-                "text-left rounded-lg border p-4 transition-all",
-                isActive
+                "text-left rounded-lg border p-3 transition-all",
+                isFilterActive
                   ? "border-text-primary bg-surface-elevated"
-                  : hasData
+                  : s.count > 0
                     ? "border-border bg-surface hover:bg-surface-elevated/50"
                     : "border-border/50 bg-surface opacity-50 cursor-not-allowed",
               )}
             >
-              <div className="flex items-center justify-between gap-2 mb-2">
-                <div className="flex items-center gap-2">
+              <div className="flex items-center justify-between gap-2 mb-1.5">
+                <div className="flex items-center gap-1.5">
                   <span
-                    className="h-2.5 w-2.5 rounded-full"
+                    className="h-2 w-2 rounded-full"
                     style={{ backgroundColor: meta.color }}
                   />
-                  <span className="text-sm font-semibold">{meta.label}</span>
+                  <span className="text-xs font-semibold">{meta.label}</span>
                 </div>
-                {s.active > 0 && (
-                  <span
-                    className="rounded-full px-1.5 py-0.5 text-[9px] font-bold uppercase"
-                    style={{ background: "rgba(139,179,71,0.15)", color: "#8bb347" }}
-                  >
-                    {s.active} live
-                  </span>
-                )}
+                <StatusPill status={s.status} active={s.active} />
               </div>
-              {hasData ? (
-                <>
-                  <div className="text-[10px] uppercase tracking-wide text-text-muted">
-                    Spenderat
-                  </div>
-                  <div className="mt-0.5 font-display text-2xl tabular-nums">
-                    {p === "email" ? "—" : formatKr(s.spend)}
-                  </div>
-                  <div className="mt-2 flex items-center gap-3 text-[10px] text-text-muted">
-                    <span>{s.count} kampanjer</span>
-                    {(s.firstStart || s.lastEnd) && (
-                      <span className="flex items-center gap-1">
-                        <Calendar className="h-2.5 w-2.5" />
-                        {dateRange(s.firstStart, s.lastEnd)}
-                      </span>
-                    )}
-                  </div>
-                </>
-              ) : (
-                <div className="text-[10px] text-text-muted">Ingen data</div>
-              )}
+              <div className="text-[9px] uppercase tracking-wide text-text-muted">
+                Spend i perioden
+              </div>
+              <div className="font-display text-xl tabular-nums">
+                {formatKr(s.spend)}
+              </div>
+              <div className="mt-1 flex items-center gap-2 text-[10px] text-text-muted">
+                <span>{s.count} kampanjer</span>
+                {s.conv > 0 && <span>· {s.conv} konv.</span>}
+              </div>
             </button>
           );
         })}
@@ -298,7 +421,7 @@ export default function KampanjerPage() {
           <span className="text-[10px] uppercase tracking-wide text-text-muted">
             Status
           </span>
-          {["all", "active", "paused", "completed"].map((s) => (
+          {(["all", "active", "paused", "completed"] as const).map((s) => (
             <button
               key={s}
               onClick={() => setStatusFilter(s)}
@@ -309,30 +432,35 @@ export default function KampanjerPage() {
                   : "bg-surface-elevated text-text-secondary hover:text-text-primary",
               )}
             >
-              {s === "all"
-                ? "Alla"
-                : s === "active"
-                  ? "Live"
-                  : s === "paused"
-                    ? "Pausad"
-                    : "Avslutad"}
+              {s === "all" ? "Alla" : s === "active" ? "Live" : s === "paused" ? "Pausad" : "Avslutad"}
             </button>
           ))}
         </div>
-        <div className="text-xs text-text-muted">
-          {visibleCampaigns.length} kampanjer pa {PLATFORM_META[platform].label}
-        </div>
+        {(platformFilter !== "all" || statusFilter !== "all") && (
+          <button
+            onClick={() => {
+              setPlatformFilter("all");
+              setStatusFilter("all");
+            }}
+            className="text-xs text-accent hover:underline"
+          >
+            Återställ filter
+          </button>
+        )}
       </div>
 
-      {/* Kampanj-grid för aktiv plattform */}
-      {visibleCampaigns.length === 0 ? (
+      {loading ? (
+        <div className="rounded-lg border border-border bg-surface p-12 text-center text-sm text-text-muted">
+          Laddar kampanjer från Adspirer + DB...
+        </div>
+      ) : visible.length === 0 ? (
         <div className="rounded-lg border border-dashed border-border p-12 text-center text-sm text-text-muted">
           Inga kampanjer matchar valt filter.
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {visibleCampaigns.map((c) => (
-            <CampaignCard key={c.id} c={c} />
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
+          {visible.map((c) => (
+            <CampaignCard key={c.key} c={c} />
           ))}
         </div>
       )}
@@ -340,180 +468,202 @@ export default function KampanjerPage() {
   );
 }
 
-function Header() {
-  return (
-    <div>
-      <h1 className="flex items-center gap-2 text-2xl font-bold text-text-primary">
-        <Megaphone className="h-6 w-6 text-accent" />
-        Kampanjer
-      </h1>
-      <p className="mt-1 text-sm text-text-secondary">
-        Annonser per plattform med kreativ, period och spend. Valj plattform overst,
-        filter pa status, klick pa kampanj for landningssida.
-      </p>
-    </div>
-  );
+function StatusPill({ status, active }: { status: string; active: number }) {
+  if (status === "live") {
+    return (
+      <span className="inline-flex items-center gap-1 rounded-full bg-[#8bb347]/15 px-1.5 py-0.5 text-[9px] font-bold uppercase text-[#8bb347]">
+        <span className="relative flex h-1.5 w-1.5">
+          <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-[#8bb347] opacity-75" />
+          <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-[#8bb347]" />
+        </span>
+        Live
+      </span>
+    );
+  }
+  if (status === "structure_only") {
+    return (
+      <span
+        className="rounded-full px-1.5 py-0.5 text-[9px] font-bold uppercase"
+        style={{ background: "rgba(232,134,76,0.15)", color: "#e8864c" }}
+      >
+        Synkar
+      </span>
+    );
+  }
+  if (active > 0) {
+    return (
+      <span className="rounded-full bg-[#8bb347]/15 px-1.5 py-0.5 text-[9px] font-bold uppercase text-[#8bb347]">
+        {active} live
+      </span>
+    );
+  }
+  return <span className="text-[9px] text-text-muted">—</span>;
 }
 
-function CampaignCard({ c }: { c: Campaign }) {
-  const platformMeta = PLATFORM_META[c.platform as Platform] || PLATFORM_META.meta;
-  const statusMeta = STATUS_META[c.status] || STATUS_META.completed;
-  const isActive = c.status === "active";
+function CampaignCard({ c }: { c: UnifiedCampaign }) {
+  const platformMeta = PLATFORM_META[c.platform];
+  const status = unifyStatus(c.status);
+  const isActive = status === "active";
+  const StatusIcon = status === "active" ? Play : status === "paused" ? Pause : Check;
   const ctr = c.clicks && c.impressions ? (c.clicks / c.impressions) * 100 : 0;
-  const cpl = c.leads_generated && c.spend ? Math.round(c.spend / c.leads_generated) : 0;
-  const spendPct = c.budget ? Math.min(100, ((c.spend || 0) / c.budget) * 100) : 0;
+  const cpl =
+    c.conversions && c.spend ? Math.round(c.spend / c.conversions) : 0;
 
   return (
     <div
       className={cn(
-        "group relative overflow-hidden rounded-lg border bg-surface transition-all flex flex-col",
-        isActive ? "border-border hover:border-accent/40" : "border-border/50",
+        "group relative overflow-hidden rounded-lg border bg-surface flex flex-col text-xs",
+        isActive ? "border-border" : "border-border/50",
       )}
     >
-      {/* Status-pill */}
-      <div className="absolute top-2 right-2 z-10">
-        <div
-          className="flex items-center gap-1 rounded-full px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide backdrop-blur-sm"
-          style={{ background: statusMeta.bg, color: statusMeta.color }}
-        >
-          {isActive && (
-            <span className="relative flex h-1.5 w-1.5">
-              <span
-                className="absolute inline-flex h-full w-full animate-ping rounded-full"
-                style={{ background: statusMeta.color, opacity: 0.75 }}
-              />
-              <span
-                className="relative inline-flex h-1.5 w-1.5 rounded-full"
-                style={{ background: statusMeta.color }}
-              />
-            </span>
-          )}
-          <statusMeta.Icon className="h-2.5 w-2.5" />
-          {statusMeta.label}
-        </div>
-      </div>
-
-      {/* Creative-bild */}
-      {c.creative_image_url ? (
+      {/* Creative */}
+      {c.creativeImageUrl ? (
         // eslint-disable-next-line @next/next/no-img-element
         <img
-          src={c.creative_image_url}
-          alt={c.campaign_name}
+          src={c.creativeImageUrl}
+          alt={c.name}
           className={cn("w-full object-cover", isActive ? "" : "grayscale")}
           style={{ aspectRatio: "16 / 9" }}
         />
       ) : (
         <div
-          className="w-full flex items-center justify-center bg-surface-elevated"
+          className="w-full flex items-center justify-center bg-surface-elevated relative"
           style={{ aspectRatio: "16 / 9" }}
         >
-          <platformMeta.Icon className="h-8 w-8 text-text-muted" />
+          <platformMeta.Icon className="h-7 w-7" style={{ color: platformMeta.color }} />
+          {c.source === "live" && (
+            <div className="absolute bottom-1.5 right-1.5 text-[9px] text-text-muted flex items-center gap-1">
+              <ImageIcon className="h-2.5 w-2.5" />
+              Ingen kreativ
+            </div>
+          )}
         </div>
       )}
 
-      <div className="p-3 flex flex-col gap-2 flex-1">
-        <div>
-          <div className="flex items-center gap-1.5 text-[10px] text-text-muted">
+      <div className="p-2.5 flex flex-col gap-1.5 flex-1">
+        {/* Header */}
+        <div className="flex items-center justify-between gap-1.5">
+          <div className="flex items-center gap-1 min-w-0">
             <span
-              className="h-1.5 w-1.5 rounded-full"
+              className="h-1.5 w-1.5 rounded-full shrink-0"
               style={{ backgroundColor: platformMeta.color }}
             />
-            <span className="font-medium">{platformMeta.label}</span>
-            {c.product_slug && (
+            <span className="text-[10px] font-semibold text-text-secondary">
+              {platformMeta.label}
+            </span>
+            {c.productSlug && (
               <>
-                <span>·</span>
-                <span>{PRODUCT_LABELS[c.product_slug] || c.product_slug}</span>
+                <span className="text-[9px] text-text-muted">·</span>
+                <span className="text-[9px] text-text-muted truncate">
+                  {PRODUCT_LABELS[c.productSlug] || c.productSlug}
+                </span>
               </>
             )}
           </div>
-          <div className="mt-1 text-xs font-semibold text-text-primary truncate">
-            {c.campaign_name}
-          </div>
-          {c.headline && (
-            <div className="mt-1 text-sm font-bold leading-tight text-text-primary line-clamp-2">
-              {c.headline}
-            </div>
-          )}
-          {c.body_copy && (
-            <div className="mt-1 text-[11px] leading-snug text-text-secondary line-clamp-2">
-              {c.body_copy}
-            </div>
-          )}
+          <span
+            className={cn(
+              "inline-flex items-center gap-0.5 rounded-full px-1.5 py-0.5 text-[8px] font-bold uppercase shrink-0",
+              isActive
+                ? "bg-[#8bb347]/15 text-[#8bb347]"
+                : status === "paused"
+                  ? "bg-[#e8864c]/15 text-[#e8864c]"
+                  : "bg-text-muted/15 text-text-muted",
+            )}
+          >
+            <StatusIcon className="h-2 w-2" />
+            {isActive ? "Live" : status === "paused" ? "Pausad" : "Avsl."}
+          </span>
         </div>
 
-        {c.cta_text && c.destination_url && (
+        {/* Campaign name */}
+        <div className="text-xs font-semibold text-text-primary line-clamp-2 leading-tight">
+          {c.name}
+        </div>
+
+        {/* Headline + body */}
+        {c.headline && (
+          <div className="text-[11px] font-medium text-text-primary leading-snug line-clamp-2">
+            {c.headline}
+          </div>
+        )}
+        {c.body && (
+          <div className="text-[10px] text-text-secondary leading-snug line-clamp-2">
+            {c.body}
+          </div>
+        )}
+
+        {/* CTA */}
+        {c.cta && c.destinationUrl && (
           <Link
-            href={c.destination_url}
+            href={c.destinationUrl}
             target="_blank"
             rel="noreferrer"
-            className="inline-flex items-center gap-1 text-[11px] font-medium hover:underline w-fit"
+            className="inline-flex items-center gap-0.5 text-[10px] font-medium hover:underline w-fit"
             style={{ color: platformMeta.color }}
           >
-            {c.cta_text} <ExternalLink className="h-2.5 w-2.5" />
+            {c.cta} <ExternalLink className="h-2 w-2" />
           </Link>
         )}
 
         {/* Period */}
-        {(c.start_date || c.end_date) && (
+        {(c.startDate || c.endDate) && (
           <div className="flex items-center gap-1 text-[10px] text-text-muted">
             <Calendar className="h-2.5 w-2.5" />
-            {dateRange(c.start_date, c.end_date)}
+            {dateRange(c.startDate, c.endDate)}
           </div>
         )}
 
-        {c.audience_name && (
+        {/* Audience */}
+        {c.audienceName && (
           <div className="flex items-start gap-1 text-[10px] text-text-muted">
-            <Users className="h-3 w-3 shrink-0 mt-0.5" />
-            <span className="leading-tight line-clamp-2">{c.audience_name}</span>
+            <Users className="h-2.5 w-2.5 shrink-0 mt-0.5" />
+            <span className="leading-tight line-clamp-1">{c.audienceName}</span>
           </div>
         )}
 
-        {/* Spend */}
-        {c.spend != null && c.spend > 0 && (
-          <div className="mt-auto pt-2 border-t border-border/50">
+        {/* Spend + metrics */}
+        <div className="mt-auto pt-1.5 border-t border-border/50 space-y-1">
+          {c.spend != null && c.spend > 0 && (
             <div className="flex items-center justify-between">
-              <div className="flex items-center gap-1 text-[10px] uppercase tracking-wide text-text-muted">
-                <DollarSign className="h-2.5 w-2.5" />
+              <span className="text-[10px] uppercase tracking-wide text-text-muted">
                 Spend
-              </div>
-              <div className="text-sm font-bold tabular-nums text-text-primary">
-                {formatKr(c.spend)}
-                {c.budget && (
-                  <span className="text-[10px] text-text-muted font-normal ml-1">
-                    / {formatKr(c.budget)}
+              </span>
+              <span className="text-xs font-bold tabular-nums">
+                {formatKr(c.spend, c.currency)}
+                {c.budget && c.platform !== "email" && (
+                  <span className="text-[9px] text-text-muted font-normal ml-1">
+                    / {formatKr(c.budget, c.currency)}
                   </span>
                 )}
-              </div>
+              </span>
             </div>
-            {c.budget && (
-              <div className="mt-1 h-1 overflow-hidden rounded-full bg-surface-elevated">
-                <div
-                  className="h-full rounded-full"
-                  style={{ width: `${spendPct}%`, background: platformMeta.color }}
-                />
-              </div>
-            )}
-          </div>
-        )}
+          )}
 
-        {/* Metrics-rad */}
-        <div className="grid grid-cols-4 gap-1 text-[10px]">
-          <Metric label="Impr" value={formatInt(c.impressions)} />
-          <Metric label="Klick" value={formatInt(c.clicks)} />
-          <Metric label="CTR" value={ctr > 0 ? `${ctr.toFixed(1)}%` : "—"} />
-          <Metric
-            label="CPL"
-            value={cpl > 0 ? `${cpl}kr` : "—"}
-            highlight={cpl > 0 && cpl < 500}
-          />
+          <div className="grid grid-cols-4 gap-1">
+            <Metric label="Impr" value={formatInt(c.impressions)} />
+            <Metric label="Klick" value={formatInt(c.clicks)} />
+            <Metric label="CTR" value={ctr > 0 ? `${ctr.toFixed(1)}%` : "—"} />
+            <Metric
+              label="Konv"
+              value={formatInt(c.conversions)}
+              highlight={(c.conversions || 0) > 0}
+            />
+          </div>
+          {cpl > 0 && (
+            <div className="text-[10px] text-text-muted">
+              CPK: <span className="text-text-secondary font-medium">{cpl} {c.currency}</span>
+            </div>
+          )}
         </div>
 
-        {(c.leads_generated || 0) > 0 && (
-          <div className="flex items-center gap-1 text-[10px] text-text-muted">
-            <Users className="h-2.5 w-2.5" />
-            {c.leads_generated} leads
-          </div>
-        )}
+        {/* Source-indicator */}
+        <div className="flex items-center gap-1 pt-1 border-t border-border/30 text-[9px] text-text-muted">
+          {c.source === "merged" && (
+            <span className="text-[#8bb347]">● Live data + kreativ</span>
+          )}
+          {c.source === "live" && <span>● Live från Adspirer</span>}
+          {c.source === "library" && <span>● Kreativ-bibliotek</span>}
+        </div>
       </div>
     </div>
   );
@@ -530,10 +680,12 @@ function Metric({
 }) {
   return (
     <div className="flex flex-col">
-      <span className="text-[9px] uppercase tracking-wide text-text-muted">{label}</span>
+      <span className="text-[8px] uppercase tracking-wide text-text-muted">
+        {label}
+      </span>
       <span
         className={cn(
-          "text-xs font-semibold tabular-nums",
+          "text-[11px] font-semibold tabular-nums",
           highlight ? "text-[#8bb347]" : "text-text-primary",
         )}
       >
@@ -541,17 +693,4 @@ function Metric({
       </span>
     </div>
   );
-}
-
-function emptySummary() {
-  return {
-    count: 0,
-    active: 0,
-    paused: 0,
-    spend: 0,
-    impressions: 0,
-    clicks: 0,
-    firstStart: null,
-    lastEnd: null,
-  };
 }
