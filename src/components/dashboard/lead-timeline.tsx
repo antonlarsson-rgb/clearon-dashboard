@@ -39,7 +39,7 @@ function getSignalIcon(type: string) {
 function getSignalLabel(type: string) {
   switch (type) {
     case "page_view":
-      return "Webbbesok";
+      return "Webbesök";
     case "download":
       return "Nedladdning";
     case "email_click":
@@ -49,7 +49,7 @@ function getSignalLabel(type: string) {
     case "ad_click":
       return "Annonsklick";
     case "search":
-      return "Sokmotor";
+      return "Sökmotor";
     default:
       return type;
   }

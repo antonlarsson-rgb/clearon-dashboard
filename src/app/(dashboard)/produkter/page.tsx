@@ -37,8 +37,8 @@ export default async function ProdukterPage() {
         <span className="section-prefix">/ Produkter</span>
         <h1 className="font-display text-2xl mt-1">Produktportfolj</h1>
         <p className="text-text-secondary text-sm mt-1">
-          ClearOns produkter med lead-intresse fran Upsales CRM. Siffrorna nedan ar
-          Upsales rule-based score; for AI-driven buying-intent per person, se /persons.
+          ClearOns produkter med lead-intresse från Upsales CRM. Siffrorna nedan ar
+          Upsales rule-based score; för AI-driven buying-intent per person, se /persons.
         </p>
       </div>
 

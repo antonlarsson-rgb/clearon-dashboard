@@ -41,13 +41,13 @@ function priorityColor(priority: number): string {
 function priorityLabel(priority: number): string {
   switch (priority) {
     case 1:
-      return "Braddskande";
+      return "Brådskande";
     case 2:
-      return "Hog";
+      return "Hög";
     case 3:
       return "Normal";
     default:
-      return "Lag";
+      return "Låg";
   }
 }
 
@@ -100,7 +100,7 @@ function TaskCard({ task }: { task: ClickUpTask }) {
         <Calendar className="h-3 w-3 text-text-muted" />
         <span className={cn("text-[11px]", isOverdue ? "text-danger font-medium" : "text-text-muted")}>
           {formatDate(task.due_date)}
-          {isOverdue && " (forsenad)"}
+          {isOverdue && " (försenad)"}
         </span>
       </div>
       <div className="text-[11px] text-text-muted">{task.list_name}</div>
@@ -146,7 +146,7 @@ export function KanbanBoard() {
   if (loading) {
     return (
       <div className="rounded-lg border border-border bg-surface p-12 text-center text-sm text-text-muted">
-        Laddar uppgifter fran ClickUp...
+        Laddar uppgifter från ClickUp...
       </div>
     );
   }
@@ -157,14 +157,14 @@ export function KanbanBoard() {
         <div className="flex items-start gap-3">
           <FolderKanban className="h-5 w-5 shrink-0 text-accent mt-0.5" />
           <div className="space-y-1">
-            <div className="text-sm font-medium text-text-primary">ClickUp ar inte anslutet</div>
+            <div className="text-sm font-medium text-text-primary">ClickUp är inte anslutet</div>
             <div className="text-xs text-text-secondary leading-relaxed">
-              Lagg till <code className="font-mono">CLICKUP_API_KEY</code> och{" "}
+              Lägg till <code className="font-mono">CLICKUP_API_KEY</code> och{" "}
               <code className="font-mono">CLICKUP_TEAM_ID</code> i .env.local och Vercel-env, eller se{" "}
               <Link href="/installningar" className="text-accent hover:underline">
-                installningar
+                inställningar
               </Link>{" "}
-              for status.
+              för status.
             </div>
           </div>
         </div>
@@ -175,7 +175,7 @@ export function KanbanBoard() {
   if (error || !tasks || tasks.length === 0) {
     return (
       <div className="rounded-lg border border-dashed border-border bg-surface p-8 text-center text-sm text-text-muted">
-        Inga uppgifter fran ClickUp.
+        Inga uppgifter från ClickUp.
       </div>
     );
   }

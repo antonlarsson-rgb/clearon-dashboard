@@ -165,11 +165,11 @@ export function LeadProfileClient({
                 </Button>
                 <Button variant="outline" className="w-full justify-start gap-2">
                   <Users className="h-4 w-4" />
-                  Lagg till i Meta-audience
+                  Lägg till i Meta-audience
                 </Button>
                 <Button variant="outline" className="w-full justify-start gap-2">
                   <CalendarPlus className="h-4 w-4" />
-                  Boka mote
+                  Boka möte
                 </Button>
                 <Button variant="outline" className="w-full justify-start gap-2" asChild>
                   <a
@@ -203,7 +203,7 @@ export function LeadProfileClient({
                 </div>
                 <div>
                   <div className="text-text-muted text-xs font-mono uppercase">
-                    Foretag
+                    Företag
                   </div>
                   <div className="text-text-primary">{contact.company}</div>
                 </div>
@@ -215,7 +215,7 @@ export function LeadProfileClient({
                 </div>
                 <div>
                   <div className="text-text-muted text-xs font-mono uppercase">
-                    Kalla
+                    Källa
                   </div>
                   <div className="text-text-primary">{contact.sourceChannel}</div>
                 </div>

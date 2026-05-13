@@ -187,7 +187,7 @@ function effectivePeriodLabel(data: OverviewData, period: PeriodSelection): stri
 }
 
 function effectiveDateRange(data: OverviewData): string | null {
-  // Plocka faktiskt datum-intervall fran forsta plattformen som har en dateRange
+  // Plocka faktiskt datum-intervall från första plattformen som har en dateRange
   const ranges = data.platforms
     .map((p) => p.dateRange)
     .filter((r) => r.start && r.end);
@@ -255,10 +255,10 @@ export function AdsOverview() {
         <div className="flex items-start gap-3">
           <AlertCircle className="h-5 w-5 shrink-0 text-warning mt-0.5" />
           <div className="space-y-1">
-            <div className="text-sm font-medium text-text-primary">Adspirer ar inte anslutet</div>
+            <div className="text-sm font-medium text-text-primary">Adspirer är inte anslutet</div>
             <div className="text-xs text-text-secondary leading-relaxed">
-              Lagg till <code className="font-mono">ADSPIRER_TOKEN</code> i Vercel-env och .env.local.
-              Hamta token pa{" "}
+              Lägg till <code className="font-mono">ADSPIRER_TOKEN</code> i Vercel-env och .env.local.
+              Hämta token pa{" "}
               <a
                 href="https://adspirer.ai/account"
                 target="_blank"
@@ -340,7 +340,7 @@ export function AdsOverview() {
         <div className="flex items-center gap-3">
           {data?.fetched_at && (
             <span className="text-[11px] text-text-muted">
-              Hamtat{" "}
+              Hämtat{" "}
               {new Date(data.fetched_at).toLocaleTimeString("sv-SE", {
                 hour: "2-digit",
                 minute: "2-digit",
@@ -529,7 +529,7 @@ export function AdsOverview() {
 
       {data && data.totalsByCurrency.length === 0 && !loading && (
         <div className="rounded-lg border border-dashed border-border p-6 text-center text-sm text-text-muted">
-          Ingen live-data for vald period an. Prova en annan period.
+          Ingen live-data för vald period än. Prova en annan period.
         </div>
       )}
 
@@ -550,16 +550,16 @@ export function AdsOverview() {
         ))}
       </div>
 
-      {/* Quota + kalla */}
+      {/* Quota + källa */}
       {data?.quota && (
         <div className="flex flex-wrap items-center gap-3 rounded-lg border border-border bg-surface-elevated/50 px-4 py-2.5 text-xs text-text-secondary">
           <span className="text-text-muted">Live via Adspirer ({data.quota.tier}-tier).</span>
           <span>
-            Anvandning:{" "}
+            Användning:{" "}
             <span className="font-mono font-medium text-text-primary">
               {data.quota.used} / {data.quota.limit}
             </span>{" "}
-            anrop denna manad ({data.quota.usage_percent.toFixed(1)}%).
+            anrop denna månad ({data.quota.usage_percent.toFixed(1)}%).
           </span>
           <span className="text-text-muted">Cache 30 min.</span>
         </div>

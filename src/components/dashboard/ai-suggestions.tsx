@@ -32,8 +32,8 @@ function generateSuggestions(leads: DashboardContact[]): Suggestion[] {
       priority: "kritiskt",
       category: "HET LEAD",
       metric: `${top.company} / SCORE ${top.score}`,
-      title: `${top.name} (${top.company}) bor kontaktas nu`,
-      description: `Score ${top.score}. ${top.contactNowReason}. ${top.hasVisit ? "Har besökt webbplatsen. " : ""}${top.hasForm ? "Har skickat formularet. " : ""}${top.hasMail ? "Har interagerat med mail. " : ""}${top.topProduct ? `Troligt intresse: ${top.topProduct}.` : ""}`,
+      title: `${top.name} (${top.company}) bör kontaktas nu`,
+      description: `Score ${top.score}. ${top.contactNowReason}. ${top.hasVisit ? "Har besökt webbplatsen. " : ""}${top.hasForm ? "Har skickat formuläret. " : ""}${top.hasMail ? "Har interagerat med mail. " : ""}${top.topProduct ? `Troligt intresse: ${top.topProduct}.` : ""}`,
       cta_primary: top.phone ? `Ring ${top.name.split(" ")[0]}` : `Maila ${top.name.split(" ")[0]}`,
       cta_secondary: "Visa profil",
     });
@@ -46,7 +46,7 @@ function generateSuggestions(leads: DashboardContact[]): Suggestion[] {
       priority: "hog",
       category: "ATT KONTAKTA",
       metric: `${contactNow.length} LEADS`,
-      title: `${contactNow.length} leads bor kontaktas idag`,
+      title: `${contactNow.length} leads bör kontaktas idag`,
       description: contactNow.slice(0, 4).map((l) => `${l.name} (${l.company})`).join(", ") + (contactNow.length > 4 ? ` och ${contactNow.length - 4} till` : ""),
       cta_primary: "Visa alla",
       cta_secondary: "Exportera lista",
@@ -61,8 +61,8 @@ function generateSuggestions(leads: DashboardContact[]): Suggestion[] {
       priority: "hog",
       category: "WEBB-BESOKARE",
       metric: `${visitNoForm.length} BESOKARE`,
-      title: `${visitNoForm.length} aktiva webbbesokare har inte konverterat`,
-      description: `Dessa har besökt webbplatsen och har score over 30, men har inte skickat nagot formularer. Overvag att rikta mail-kampanj eller retargeting.`,
+      title: `${visitNoForm.length} aktiva webbesökare har inte konverterat`,
+      description: `Dessa har besökt webbplatsen och har score över 30, men har inte skickat något formulär. Överväg att rikta mail-kampanj eller retargeting.`,
       cta_primary: "Skicka kampanjmail",
       cta_secondary: "Visa segment",
     });
@@ -80,8 +80,8 @@ function generateSuggestions(leads: DashboardContact[]): Suggestion[] {
       priority: "medel",
       category: "PRODUKTINTRESSE",
       metric: `${topProduct[0].toUpperCase()} / ${topProduct[1]} LEADS`,
-      title: `${topProduct[1]} leads visar intresse for ${topProduct[0]}`,
-      description: `Baserat pa titlar och roller. Se till att landningssidan for denna produkt ar optimerad och att kampanjerna riktas ratt.`,
+      title: `${topProduct[1]} leads visar intresse för ${topProduct[0]}`,
+      description: `Baserat på titlar och roller. Se till att landningssidan för denna produkt är optimerad och att kampanjerna riktas rätt.`,
       cta_primary: "Visa leads",
       cta_secondary: "Visa landningssida",
     });
@@ -96,7 +96,7 @@ function generateSuggestions(leads: DashboardContact[]): Suggestion[] {
       category: "EMAIL-SEGMENT",
       metric: `${mailNoCta.length} KONTAKTER`,
       title: `${mailNoCta.length} kontakter oppnar mail men besöker inte webben`,
-      description: `Dessa interagerar med mail men har aldrig besökt webbplatsen. Testa att inkludera starkare CTA eller erbjudande i nasta utskick.`,
+      description: `Dessa interagerar med mail men har aldrig besökt webbplatsen. Testa att inkludera starkare CTA eller erbjudande i nästa utskick.`,
       cta_primary: "Skapa kampanj",
       cta_secondary: "Visa segment",
     });
@@ -124,7 +124,7 @@ export function AiSuggestions({ leads }: AiSuggestionsProps) {
     <Card>
       <div className="p-5 border-b border-border">
         <span className="section-prefix">/ AI AGENT FORESLAR</span>
-        <p className="text-sm text-text-secondary mt-1">Prioriterade atgarder baserat pa riktig data</p>
+        <p className="text-sm text-text-secondary mt-1">Prioriterade åtgärder baserat pa riktig data</p>
       </div>
       <div className="divide-y divide-border">
         {suggestions.map((suggestion) => (
@@ -165,7 +165,7 @@ export function AiSuggestions({ leads }: AiSuggestionsProps) {
         ))}
         {suggestions.length === 0 && (
           <div className="p-5 text-center text-text-muted text-sm">
-            Inga forslag just nu. Mer data behövs.
+            Inga förslag just nu. Mer data behövs.
           </div>
         )}
       </div>

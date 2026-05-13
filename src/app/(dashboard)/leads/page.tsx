@@ -17,16 +17,16 @@ export default async function LeadsPage() {
       <div>
         <h1 className="font-display text-2xl text-text-primary">Upsales CRM-leads</h1>
         <p className="text-sm text-text-secondary mt-1">
-          {contacts.length} kontakter direkt fran Upsales sorterade efter Upsales-score
-          (rule-based). Innehaller Glass-kampanjer, MG-leverantorer, formularsvar och
+          {contacts.length} kontakter direkt från Upsales sorterade efter Upsales-score
+          (rule-based). Innehåller Glass-kampanjer, MG-leverantörer, formulärsvar och
           andra Upsales-kategorier.
         </p>
         <div className="mt-3 rounded-md border border-accent/20 bg-accent/5 p-3 text-xs text-text-secondary">
-          Letar du efter buying-intent, beteende-monster eller anonyma webb-besokare?{" "}
+          Letar du efter buying-intent, beteende-mönster eller anonyma webb-besökare?{" "}
           <Link href="/persons" className="font-medium text-accent hover:underline">
-            Ga till Leads &amp; Personer
+            Gå till Leads &amp; Personer
           </Link>{" "}
-          for hela bilden — clearon.live, mail, ads, opportunities och Upsales i samma vy.
+          för hela bilden — clearon.live, mail, ads, opportunities och Upsales i samma vy.
         </div>
       </div>
       <LeadsTable contacts={contacts} />

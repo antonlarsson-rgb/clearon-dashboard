@@ -12,9 +12,9 @@ const typeIcons: Record<string, React.ElementType> = {
   Telefonsamtal: Phone,
   "E-post": Mail,
   Todo: FileText,
-  Webbbesok: Globe,
+  Webbesök: Globe,
   Rapport: BarChart3,
-  Mote: Users,
+  Möte: Users,
 };
 
 export function LiveFeed({ activities }: LiveFeedProps) {
@@ -24,7 +24,7 @@ export function LiveFeed({ activities }: LiveFeedProps) {
         <span className="section-prefix">/ SENASTE AKTIVITET</span>
         <div className="flex items-center gap-1.5">
           <span className="h-2 w-2 rounded-full bg-accent pulse-live" />
-          <span className="text-xs text-text-muted">Live fran Upsales</span>
+          <span className="text-xs text-text-muted">Live från Upsales</span>
         </div>
       </div>
       <div className="divide-y divide-border">

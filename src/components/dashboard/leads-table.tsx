@@ -127,7 +127,7 @@ export function LeadsTable({ contacts }: LeadsTableProps) {
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-text-muted" />
           <input
             type="text"
-            placeholder="Sok namn, foretag eller email..."
+            placeholder="Sök namn, företag eller email..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="w-full pl-9 pr-3 py-2 text-sm bg-surface border border-border rounded-md focus:outline-none focus:ring-2 focus:ring-accent/50 font-body"
@@ -181,7 +181,7 @@ export function LeadsTable({ contacts }: LeadsTableProps) {
               </select>
             </div>
             <div className="flex items-center gap-2">
-              <label className="text-xs text-text-muted font-mono uppercase">Kalla</label>
+              <label className="text-xs text-text-muted font-mono uppercase">Källa</label>
               <select
                 value={channelFilter}
                 onChange={(e) => setChannelFilter(e.target.value)}
@@ -244,13 +244,13 @@ export function LeadsTable({ contacts }: LeadsTableProps) {
                 </th>
                 <th className="py-3 px-4 text-left">
                   <button onClick={() => handleSort("company")} className="flex items-center gap-1 text-text-muted font-mono text-xs uppercase cursor-pointer">
-                    Foretag <ArrowUpDown className="h-3 w-3" />
+                    Företag <ArrowUpDown className="h-3 w-3" />
                   </button>
                 </th>
                 <th className="py-3 px-4 text-left text-text-muted font-mono text-xs uppercase">Titel</th>
                 <th className="py-3 px-4 text-left text-text-muted font-mono text-xs uppercase">Produkt</th>
                 <th className="py-3 px-4 text-left text-text-muted font-mono text-xs uppercase">Kategori</th>
-                <th className="py-3 px-4 text-left text-text-muted font-mono text-xs uppercase">Kalla</th>
+                <th className="py-3 px-4 text-left text-text-muted font-mono text-xs uppercase">Källa</th>
                 <th className="py-3 px-4 text-left text-text-muted font-mono text-xs uppercase">Status</th>
                 <th className="py-3 px-4 text-center text-text-muted font-mono text-xs uppercase">Aktion</th>
               </tr>

@@ -94,15 +94,15 @@ export default function AccountsPage() {
       <div>
         <h1 className="flex items-center gap-2 text-2xl font-bold text-text-primary">
           <Building2 className="h-6 w-6 text-accent" />
-          Foretag
+          Företag
         </h1>
         <p className="mt-1 text-sm text-text-secondary">
-          Identifierade foretag fran clearon.live + clearon.se. Sortera, filtrera och oppna 360-vy.
+          Identifierade företag från clearon.live + clearon.se. Sortera, filtrera och oppna 360-vy.
         </p>
       </div>
 
       <div className="grid grid-cols-4 gap-4">
-        <Stat label="Foretag totalt" value={accounts.length} />
+        <Stat label="Företag totalt" value={accounts.length} />
         <Stat label="Kunder" value={customerCount} color="#8bb347" />
         <Stat label="Prospects" value={prospectCount} color="#ff6b35" />
         <Stat label="Identifierade personer" value={totalPersons} />
@@ -118,7 +118,7 @@ export default function AccountsPage() {
             type="text"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="Sok foretag..."
+            placeholder="Sök företag..."
             className="rounded-md border border-border bg-surface-elevated px-3 py-1.5 text-xs text-text-primary placeholder:text-text-muted focus:outline-none focus:border-accent"
           />
         </div>
@@ -133,7 +133,7 @@ export default function AccountsPage() {
           <table className="w-full text-xs">
             <thead className="border-b border-border bg-surface-elevated text-[10px] uppercase tracking-wide text-text-muted">
               <tr>
-                <th className="p-3 text-left font-medium">Foretag</th>
+                <th className="p-3 text-left font-medium">Företag</th>
                 <th className="p-3 text-left font-medium">Lifecycle</th>
                 <th className="p-3 text-left font-medium">Segment</th>
                 <th className="p-3 text-right font-medium">Score</th>
@@ -215,8 +215,8 @@ export default function AccountsPage() {
                 <tr>
                   <td colSpan={8} className="p-12 text-center text-sm text-text-muted">
                     {accounts.length === 0
-                      ? "Inga foretag i Supabase an. Kor tracking-pipeline for att populera."
-                      : "Inga foretag matchar filter eller sokning."}
+                      ? "Inga företag i Supabase än. Kör tracking-pipeline för att populera."
+                      : "Inga företag matchar filter eller sökning."}
                   </td>
                 </tr>
               )}

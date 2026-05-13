@@ -95,9 +95,9 @@ export default async function ProductDetailPage(
                 <thead>
                   <tr className="border-b border-border text-left text-xs text-text-muted uppercase tracking-wide">
                     <th className="pb-2 pr-4">Namn</th>
-                    <th className="pb-2 pr-4">Foretag</th>
+                    <th className="pb-2 pr-4">Företag</th>
                     <th className="pb-2 pr-4">Titel</th>
-                    <th className="pb-2 pr-4">Kalla</th>
+                    <th className="pb-2 pr-4">Källa</th>
                     <th className="pb-2 pr-4 text-right">Score</th>
                     <th className="pb-2 text-center">Aktion</th>
                   </tr>
@@ -142,7 +142,7 @@ export default async function ProductDetailPage(
             </div>
           ) : (
             <p className="text-sm text-text-muted">
-              Inga leads registrerade for denna produkt
+              Inga leads registrerade för denna produkt
             </p>
           )}
         </CardContent>
@@ -187,7 +187,7 @@ export default async function ProductDetailPage(
             </div>
           ) : (
             <p className="text-sm text-text-muted">
-              Ingen kanaldata for denna produkt
+              Ingen kanaldata för denna produkt
             </p>
           )}
         </CardContent>

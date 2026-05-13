@@ -13,11 +13,11 @@ interface Message {
 
 const suggestedPrompts = [
   "Vilka leads ska jag ringa idag?",
-  "Skriv ett mail till alla som tittat pa Engage 3+ ganger",
-  "Visa organisationskartan for Fazer",
+  "Skriv ett mail till alla som tittat på Engage 3+ gånger",
+  "Visa organisationskartan för Fazer",
   "Vilken produkt har mest momentum just nu?",
   "Sammanfatta vad Stellar levererat denna vecka",
-  "Skapa en Meta-malgrupp av vara hetaste leads",
+  "Skapa en Meta-målgrupp av våra hetaste leads",
 ];
 
 export function AiChat() {
@@ -118,7 +118,7 @@ export function AiChat() {
             ? {
                 ...m,
                 content:
-                  "Kunde inte na AI Agent just nu. Forsok igen om en stund.",
+                  "Kunde inte na AI Agent just nu. Försök igen om en stund.",
               }
             : m
         )
@@ -161,7 +161,7 @@ export function AiChat() {
           {!hasMessages && (
             <div className="space-y-3">
               <p className="text-xs text-text-muted uppercase tracking-wide font-mono">
-                Foreslagna fragor
+                Föreslagna frågor
               </p>
               <div className="flex flex-wrap gap-2">
                 {suggestedPrompts.map((prompt) => (
@@ -234,7 +234,7 @@ export function AiChat() {
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={handleKeyDown}
-              placeholder="Fraga ClearOn AI nagot..."
+              placeholder="Fråga ClearOn AI något..."
               rows={1}
               className="flex-1 resize-none bg-transparent px-2 py-1.5 text-sm text-text-primary placeholder:text-text-muted focus:outline-none"
             />
@@ -256,10 +256,10 @@ export function AiChat() {
           <div className="flex flex-1 items-center justify-center px-12">
             <div className="text-center">
               <h2 className="font-display text-2xl text-text-primary">
-                Vad ska vi gora for ClearOns forsaljning idag?
+                Vad ska vi göra för ClearOns försäljning idag?
               </h2>
               <p className="mt-3 text-sm text-text-secondary">
-                Stall en fraga till AI Agent for att komma igang. Jag kan
+                Ställ en fråga till AI Agent för att komma igång. Jag kan
                 analysera leads, skriva mail, visa data och mycket mer.
               </p>
             </div>

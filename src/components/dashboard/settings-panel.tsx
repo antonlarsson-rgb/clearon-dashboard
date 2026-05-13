@@ -15,7 +15,7 @@ import { Check, X, ExternalLink, RefreshCw } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { EVENT_WEIGHTS, HALFLIFE_DAYS, halflifeFor } from "@/lib/event-weights";
 
-// --- INTEGRATIONER (live status fran /api/integrations/status) ---
+// --- INTEGRATIONER (live status från /api/integrations/status) ---
 
 interface IntegrationStatus {
   id: string;
@@ -59,7 +59,7 @@ function IntegrationCard({ integration }: { integration: IntegrationStatus }) {
       <CardContent className="space-y-3">
         <div className="space-y-1.5">
           <div className="text-[10px] uppercase tracking-wide text-text-muted">
-            Miljovariabler
+            Miljövariabler
           </div>
           <div className="flex flex-wrap gap-1.5">
             {integration.envVars.map((envVar) => (
@@ -138,7 +138,7 @@ function IntegrationsTab() {
   if (!data) {
     return (
       <div className="rounded-lg border border-border bg-surface p-12 text-center text-sm text-text-muted">
-        Kunde inte hamta integrationsstatus.
+        Kunde inte hämta integrationsstatus.
       </div>
     );
   }
@@ -147,7 +147,7 @@ function IntegrationsTab() {
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <p className="text-sm text-text-secondary">
-          {data.summary.connected} av {data.summary.total} integrationer ar anslutna. Konfigurera via miljovariabler i Vercel-projektet.
+          {data.summary.connected} av {data.summary.total} integrationer är anslutna. Konfigurera via miljövariabler i Vercel-projektet.
         </p>
         <Button variant="outline" size="sm" onClick={refresh}>
           <RefreshCw className="h-3.5 w-3.5 mr-1.5" />

@@ -16,15 +16,15 @@ import {
 import { cn } from "@/lib/utils";
 
 const navItems = [
-  { href: "/", label: "Oversikt", icon: LayoutDashboard },
+  { href: "/", label: "Översikt", icon: LayoutDashboard },
   { href: "/hot", label: "Hot Now", icon: Flame, pulse: true },
-  { href: "/accounts", label: "Foretag", icon: Building2 },
+  { href: "/accounts", label: "Företag", icon: Building2 },
   { href: "/persons", label: "Leads & Personer", icon: UserCircle },
   { href: "/kampanjer", label: "Kampanjer", icon: Megaphone },
   { href: "/kanaler", label: "Kanaler", icon: BarChart3 },
   { href: "/ai-agent", label: "AI Agent", icon: Bot },
   { href: "/stellar", label: "Stellar", icon: FolderKanban },
-  { href: "/installningar", label: "Installningar", icon: Settings },
+  { href: "/installningar", label: "Inställningar", icon: Settings },
 ];
 
 export function Sidebar() {
