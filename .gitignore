@@ -33,9 +33,20 @@ yarn-error.log*
 # env files
 .env
 .env*.local
+.env.production
 
 # vercel
 .vercel
+
+# Claude Code local settings (kan innehalla tokens/credentials)
+.claude/settings.local.json
+.claude/.credentials.json
+.claude/cache/
+
+# MCP local overrides (om vi nagon gang skapar en .mcp.local.json med riktig token)
+.mcp.local.json
+*.token
+*secrets*.json
 
 # typescript
 *.tsbuildinfo
