@@ -1,0 +1,102 @@
+---
+description: Doktrin, gäller hela repot
+globs:
+alwaysApply: true
+---
+
+# Doktrin
+
+## Syfte
+
+Detta projekt är en del av Antons portfolj. Bygg minimalistiskt, datadrivet och mot riktig data. Front end är sanningen.
+
+## Hard rules
+
+- Riktig data från milstolpe ett. Aldrig mockdata, fixtures eller påhittade rader. Genomtänkt tomt tillstånd när data saknas.
+- Inga tankstreck eller langa bindestreck, i kod, copy eller commits. Komma, kolon eller radbrytning.
+- Inga gradienter, ingen emoji, ingen Chart.js, ingen default shadcn look.
+- Hardkoda aldrig modellnamn eller hemligheter. Allt i env.
+- Hemligheter när aldrig klienten.
+- Ingen browser localStorage eller sessionStorage. State i React eller Neon.
+- Allt agentarbete som ändrar något kräver godkännande och syns i gränssnittet.
+- Klickbart framför text. Förslag väljs som kort eller knappar, skrivs inte.
+- Front end är sanningen. Allt som händer i bakgrunden syns i klartext.
+- Minimalistiskt, cleant, lugnt för hjärnan. En sak per skärm.
+- Premium SaaS-kvalitet på all UI. Använd apple-design-dna och apple-hig som grund, ui-ux-pro-max för visuell puts, ux-heuristics för användbarhet, ux-writing-skill för copy. Kör UI-granskningen innan något UI räknas som klart.
+- Inter, Inter 4.1 InterVariable, är standard UI-font i alla projekt. Self-hostad via next/font/local. Repon som saknar den ska föreslås byta till den.
+- Svensk copy ska alltid ha å, ä och ö. Engelsk copy ska inte ha dem. Aldrig ASCII-ersättningar i svensk text.
+
+## Kanonisk mappstruktur
+
+- README.md (file) Vad, för vem, hur det kopplar till visionen, hur man kör/testar/deployar, var viktig kod bor.
+- AGENTS.md (file) Regler, kommandon, konventioner, vad som ej får ändras utan att fråga, hur arbete valideras, långsiktig riktning.
+- CLAUDE.md (file) Doktrin och projektkontext för Claude Code.
+- .cursor/rules/doctrine.mdc (file) Samma doktrin som Cursor-regler.
+- .env.example (file) Alla env-nycklar dokumenterade, utan värden.
+- .gitignore (file) Minst node_modules, .next, .env.
+- docs/product/vision.md (file) Product compass: north star, MVP-mål, målanvändare, smärta, strategiska vad.
+- docs/product/roadmap.md (file) Nuvarande scope och nästa prioriteringar.
+- docs/product/decisions.md (file) Viktiga beslut, var och en kopplad till visionen.
+- docs/product/value-discovery-report.md (file) Genereras av Värdesökar-cronen, kundvärde framför teknik.
+- docs/architecture/overview.md (file) Systemöversikt, datamodell, API-kontrakt.
+- docs/workflows/main-flows.md (file) De viktigaste användarflödena.
+- docs/ops/reliability.md (file) Reliability-principer, vad som testas och hur fel hanteras.
+- docs/ops/security.md (file) Säkerhetschecklista, hemligheter, behörigheter per integration.
+- docs/ops/monitoring.md (file) Uptime, fel, cron, externa anrop, larm.
+- docs/ops/cron-jobs.md (file) Varje cron: vad, hur ofta, läser/skriver, fel, om-körning, avstängning, verifiering.
+- docs/ops/incident-runbook.md (file) Vad man gör när något går sönder.
+- docs/ops/release-checklist.md (file) Vad som måste passera innan deploy.
+- docs/ops/value-discovery-cron.md (file) Hur Värdesökar-cronen fungerar.
+- tests (dir) unit, integration, e2e, fixtures, evals.
+- .github/workflows (dir) CI: lint, typecheck, test, build, säkerhetskoll, env-validering.
+- scripts (dir) Setup, checks och automation.
+- apps (dir) Deploybara appar och tjänster.
+- packages (dir) Delad kod: ui, db, auth, ai, integrations, config, monitoring, jobs.
+
+## UI och UX standard
+
+Vårt design-DNA, genomsyrar allt: dashboarden, alla repon, alla agenter.
+- Responsivitet först, aldrig en kompromiss. Allt svarar inom 100ms, UI:t är alltid levande. Vi väljer den responsiva upplevelsen först och löser tekniken bakom efteråt.
+- Apples filosofi: klarhet, deference, djup. Innehållet i fokus, minimal chrome, tydliga lager och hierarki.
+- Norman: tydliga affordances och signifiers, synlig status, naturlig mapping, omedelbar feedback, designa för fel med enkel återställning.
+- Fitts lag: gör den primära handlingen stor, nära och lätt att träffa. Utnyttja kanter och hörn.
+- Nielsens tio heuristiker: granska varje flöde, åtgärda hög allvarlighetsgrad först.
+- Apple-känsla i vår egen röst: egna ikoner, Apple-nära typsnitt (inte identiskt), en återhållsam accent.
+- Tillgänglighet som default: AA-kontrast, tangentbord, reducerad rörelse, läsbara textstorlekar, mörkt och ljust.
+
+Källor att gå till (ha alltid med dig):
+- Apple Human Interface Guidelines: https://developer.apple.com/design/human-interface-guidelines/
+- Apple Developer Documentation: https://developer.apple.com/documentation/
+- Don Norman: https://en.wikipedia.org/wiki/Don_Norman
+- Fitts lag: https://en.wikipedia.org/wiki/Fitts%27s_law
+- Heuristisk utvärdering: https://en.wikipedia.org/wiki/Heuristic_evaluation
+- Responsivitet: https://en.wikipedia.org/wiki/Responsiveness
+
+När du bygger eller ändrar UI, använd dessa skills:
+- apple-design-dna för grunden i allt: Apples filosofi, Don Norman, Fitts lag, heuristik och responsivitet. Börja här.
+- apple-hig för djup Apple HIG-referens: principer (hierarki, harmoni, konsistens), färg, typografi, layout, motion, komponenter och mönster.
+- apple-docs för Apples utvecklardokumentation, API och plattformsidiom när du behöver det exakta.
+- ui-ux-pro-max för visuell riktning, layout, typografi, spacing, färg, motion och komponentputs.
+- ux-heuristics för granska användbarhet, informationshierarki, navigation, formulär och kognitiv last.
+- ux-writing-skill för knapptexter, felmeddelanden, tomt-tillstånd, onboarding och hjälptext.
+
+Designmål:
+- Premium SaaS-kvalitet
+- Tydlig hierarki
+- Minimalt brus
+- Starkt spacing
+- Mobile first
+- Tillgänglig kontrast
+- Tydlig primar handling
+- Hjalpsamma tomt-, fel- och laddningstillstand
+- Inga generiska AI-doftande gradienter om de inte tjanar varumarket
+
+Innan du avslutar, kör UI-granskningen:
+1. Svarar allt inom 100ms och är UI:t alltid responsivt? Responsivitet kompromissar vi aldrig med.
+2. Är det uppenbart vad som är klickbart (affordances, signifiers, synligt fokus)?
+3. Är den primära handlingen stor, nära och lätt att träffa (Fitts)?
+4. En tydlig fokuspunkt per skärm, minimal chrome, innehållet först (klarhet, deference)?
+5. Klarar den Nielsens tio heuristiker, särskilt status, felförebyggande och återställning?
+6. Tillgänglig: AA-kontrast, tangentbord, reducerad rörelse, läsbara storlekar, mörkt och ljust?
+7. Vad ser amatörmässigt ut, vad är förvirrande, vad har svag hierarki, vilken copy är vag?
+8. Känns det Apple-grade men i vår egen röst, och som hemma bredvid Linear, Stripe, Vercel?
