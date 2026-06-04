@@ -16,6 +16,14 @@
 
 const WINDSOR_BASE = "https://connectors.windsor.ai";
 
+// ClearOns konton hos respektive plattform. Bytas ut om kontonamn andras.
+// Google: server-side filter funkar (account_name).
+// LinkedIn: server-side filter funkar (account_name, case-sensitive).
+// Facebook: server-side _filter ar OPALITLIG, vi filtrerar klient-side pa account_id.
+const CLEARON_GOOGLE_ACCOUNT_NAME = "Clearon";
+const CLEARON_LINKEDIN_ACCOUNT_NAME = "ClearOn";
+const CLEARON_META_ACCOUNT_ID = "1771733670071985";
+
 // ---- Typer (matchar adspirer.ts exakt) ----
 
 export interface PeriodArgs {
@@ -126,7 +134,7 @@ function dateRangeParams(period: PeriodArgs): { date_from?: string; date_to?: st
 
 async function fetchWindsor(
   connector: "google_ads" | "facebook" | "linkedin",
-  filter: string,
+  filter: string | null,
   period: PeriodArgs,
   revalidateSeconds: number,
 ): Promise<WindsorRow[]> {
@@ -137,9 +145,9 @@ async function fetchWindsor(
     api_key: key,
     fields:
       "date,account_name,account_id,campaign,campaign_id,campaign_status,spend,impressions,clicks,conversions,currency",
-    _filter: filter,
     _limit: "5000",
   });
+  if (filter) params.set("_filter", filter);
 
   const dates = dateRangeParams(period);
   for (const [k, v] of Object.entries(dates)) if (v) params.set(k, v);
@@ -316,7 +324,7 @@ export async function getGooglePerformance(
   }
   const rows = await fetchWindsor(
     "google_ads",
-    "account_name::EQUAL::Clearon",
+    `account_name::EQUAL::${CLEARON_GOOGLE_ACCOUNT_NAME}`,
     period,
     revalidateSeconds,
   );
@@ -348,7 +356,7 @@ export async function getLinkedInPerformance(
   }
   const rows = await fetchWindsor(
     "linkedin",
-    "account_name::EQUAL::ClearOn",
+    `account_name::EQUAL::${CLEARON_LINKEDIN_ACCOUNT_NAME}`,
     period,
     revalidateSeconds,
   );
@@ -372,14 +380,47 @@ export async function getLinkedInPerformance(
 }
 
 export async function getMetaPerformance(
-  _period: PeriodArgs,
-  _revalidateSeconds = 1800,
+  period: PeriodArgs,
+  revalidateSeconds = 1800,
 ): Promise<PlatformPerformance> {
-  // ClearOns Meta-konto finns inte i Windsor-kontots facebook-connector.
-  // Returnera oforandrat tomt resultat tills kontot kopplas in via Windsor.
-  return emptyPlatform(
-    "meta",
-    "unavailable",
-    "ClearOns Meta/Facebook-konto ar inte anslutet till Windsor an. Anslut det via app.windsor.ai for att fa live-data.",
+  if (!getApiKey()) {
+    return emptyPlatform("meta", "unavailable", "WINDSOR_API_KEY saknas");
+  }
+  // Windsors _filter ar opalitlig pa facebook-connectorn (returnerar alla
+  // konton oavsett filter), sa vi hamtar utan filter och filtrerar
+  // klient-side pa account_id = ClearOns Meta-konto.
+  const allRows = await fetchWindsor("facebook", null, period, revalidateSeconds);
+  const rows = allRows.filter(
+    (r) => String(r.account_id || "") === CLEARON_META_ACCOUNT_ID,
   );
+
+  if (rows.length === 0) {
+    return emptyPlatform(
+      "meta",
+      "unavailable",
+      `ClearOns Meta-konto (${CLEARON_META_ACCOUNT_ID}) ar inte anslutet till Windsor an. Anslut det via app.windsor.ai > Connectors > Facebook for att fa live-data. Foljande konton ar idag uppkopplade: ${[
+        ...new Set(allRows.map((r) => r.account_name).filter(Boolean)),
+      ].join(", ") || "inga"}.`,
+    );
+  }
+
+  const campaigns = aggregateByCampaign(rows);
+  return {
+    platform: "meta",
+    available: true,
+    status: "live",
+    reason: null,
+    currency: detectCurrency(rows, "SEK"),
+    currencyNote: null,
+    dateRange: dateExtent(rows),
+    totals: totalsOf(campaigns),
+    campaigns,
+    rawJson: {
+      source: "windsor",
+      connector: "facebook",
+      account_id: CLEARON_META_ACCOUNT_ID,
+      rowCount: rows.length,
+    },
+    quota: null,
+  };
 }
