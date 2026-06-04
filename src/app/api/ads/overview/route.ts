@@ -5,7 +5,7 @@ import {
   getMetaPerformance,
   getLinkedInPerformance,
   type PeriodArgs,
-} from "@/lib/adspirer";
+} from "@/lib/windsor";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -17,9 +17,9 @@ function isValidDate(s: string): boolean {
 }
 
 export async function GET(request: Request) {
-  if (!process.env.ADSPIRER_TOKEN?.trim()) {
+  if (!process.env.WINDSOR_API_KEY?.trim()) {
     return NextResponse.json(
-      { error: "not-configured", message: "ADSPIRER_TOKEN saknas" },
+      { error: "not-configured", message: "WINDSOR_API_KEY saknas" },
       { status: 503 },
     );
   }

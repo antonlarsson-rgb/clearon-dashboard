@@ -42,12 +42,12 @@ export async function GET() {
       docsUrl: "https://console.anthropic.com",
     },
     {
-      id: "adspirer",
-      name: "Adspirer MCP",
-      description: "Live ad-data: Meta + Google Ads + LinkedIn (en endpoint)",
-      connected: hasEnv("ADSPIRER_TOKEN"),
-      envVars: ["ADSPIRER_TOKEN"],
-      docsUrl: "https://adspirer.ai/account",
+      id: "windsor",
+      name: "Windsor.ai",
+      description: "Live ad-data: Google Ads + LinkedIn (Meta vantar pa anslutning)",
+      connected: hasEnv("WINDSOR_API_KEY"),
+      envVars: ["WINDSOR_API_KEY"],
+      docsUrl: "https://windsor.ai/api-keys",
     },
     {
       id: "upsales",

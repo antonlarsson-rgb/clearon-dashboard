@@ -255,17 +255,17 @@ export function AdsOverview() {
         <div className="flex items-start gap-3">
           <AlertCircle className="h-5 w-5 shrink-0 text-warning mt-0.5" />
           <div className="space-y-1">
-            <div className="text-sm font-medium text-text-primary">Adspirer är inte anslutet</div>
+            <div className="text-sm font-medium text-text-primary">Windsor är inte anslutet</div>
             <div className="text-xs text-text-secondary leading-relaxed">
-              Lägg till <code className="font-mono">ADSPIRER_TOKEN</code> i Vercel-env och .env.local.
-              Hämta token pa{" "}
+              Lägg till <code className="font-mono">WINDSOR_API_KEY</code> i Vercel-env och .env.local.
+              Hämta nyckel pa{" "}
               <a
-                href="https://adspirer.ai/account"
+                href="https://windsor.ai/api-keys"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="text-accent hover:underline"
               >
-                adspirer.ai/account
+                windsor.ai/api-keys
               </a>
               .
             </div>
