@@ -7,23 +7,21 @@ interface ChatMessage {
 
 const SYSTEM_PROMPT = `Du ar ClearOns AI-agent for Stellar och ClearOn-teamet.
 
-Du har tillgang till Adspirer MCP-servern som ger dig live-data och kontroll over annonser pa Meta, Google Ads, LinkedIn (och TikTok).
+ClearOn anvander Windsor.ai som datakalla for annonser pa Google Ads, Meta och LinkedIn.
+Du har inte direkt tool-access till annonsplattformarna - data hamtas fran dashboardens
+egen API pa /api/ads/overview (Windsor-data), och anvandaren kan klistra in siffror eller
+skarmbilder direkt i chatten nar du behover dem.
 
 Du hjalper anvandaren att:
 - Analysera annonsprestanda (ROAS, CPA, CTR, konverteringar) tvars over plattformar
 - Identifiera vinnande och underpresterande kampanjer
 - Foresla budget-omfordelningar och optimeringar
-- Pausa underpresterande kampanjer (alltid efter explicit bekraftelse)
-- Skapa nya kampanjer (alltid i PAUSED status forst)
-- Hamta keyword-research, malgrupps-insikter och creative-data
+- Foresla nya kampanjer (anvandaren skapar dem manuellt i Ads Manager / Campaign Manager)
+- Tolka funnel-data fran clearon.live (popup_filled, lead_submitted, etc.)
 
-Sakerhetsregler (icke-forhandlingsbart):
-- Bekrafta ALLTID med anvandaren innan du skapar kampanjer eller andrar live-budgetar
-- Skapa nya kampanjer i PAUSED status om inte anvandaren explicit godkant aktivering
-- Aldrig auto-retry vid fel pa kampanjskapande - visa felet for anvandaren och stanna
-- Aldrig modifiera live-budgetar utan explicit godkannande
-
-Forsta steget i varje arbetsfloede ar att kalla get_connections_status for att se vilka plattformar som ar kopplade. Om en plattform inte ar kopplad, hanvisa anvandaren till https://adspirer.ai/connections.
+Sakerhetsregler:
+- Du har inte tool-access att andra live-kampanjer - foreslag, anvandaren agerar
+- Var transparent nar du gissar (t.ex. om Meta-data saknas i Windsor)
 
 Sprak och ton:
 - Svara pa svenska om inte anvandaren skriver engelska
@@ -45,15 +43,9 @@ export async function POST(request: Request) {
   }
 
   const anthropicKey = process.env.ANTHROPIC_API_KEY?.trim();
-  const adspirerToken = process.env.ADSPIRER_TOKEN?.trim();
 
   if (!anthropicKey) {
     return sseError("ANTHROPIC_API_KEY saknas - lagg till i .env.local och Vercel-env.");
-  }
-  if (!adspirerToken) {
-    return sseError(
-      "ADSPIRER_TOKEN saknas - hamta pa https://adspirer.ai/account och lagg till i .env.local och Vercel-env.",
-    );
   }
 
   const client = new Anthropic({ apiKey: anthropicKey });
@@ -72,10 +64,10 @@ export async function POST(request: Request) {
       };
 
       try {
-        const stream = await client.beta.messages.create({
+        const stream = await client.messages.create({
           model: "claude-opus-4-7",
           max_tokens: 16000,
-          thinking: { type: "adaptive" },
+          thinking: { type: "enabled", budget_tokens: 4000 },
           system: [
             {
               type: "text",
@@ -83,20 +75,9 @@ export async function POST(request: Request) {
               cache_control: { type: "ephemeral" },
             },
           ],
-          mcp_servers: [
-            {
-              type: "url",
-              name: "adspirer",
-              url: "https://mcp.adspirer.com/mcp",
-              authorization_token: adspirerToken,
-            },
-          ],
           messages: messages.map((m) => ({ role: m.role, content: m.content })),
           stream: true,
-          betas: ["mcp-client-2025-04-04"],
         });
-
-        let toolUseAnnounced = false;
 
         for await (const event of stream) {
           if (
@@ -104,16 +85,6 @@ export async function POST(request: Request) {
             event.delta.type === "text_delta"
           ) {
             send(event.delta.text);
-            toolUseAnnounced = false;
-          } else if (
-            event.type === "content_block_start" &&
-            event.content_block.type === "mcp_tool_use"
-          ) {
-            const toolName = event.content_block.name;
-            if (!toolUseAnnounced) {
-              send(`\n\n_Hamtar live-data via ${toolName}..._\n\n`);
-              toolUseAnnounced = true;
-            }
           }
         }
 

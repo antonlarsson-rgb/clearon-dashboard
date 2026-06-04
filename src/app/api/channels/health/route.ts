@@ -32,10 +32,10 @@ export async function GET(request: Request) {
 
     const supabase = getServiceClient();
 
-    // 1. Hämta Adspirer-data (Google, Meta, LinkedIn live)
+    // 1. Hämta Ads-data (Windsor) (Google, Meta, LinkedIn live)
     const baseUrl = new URL(request.url);
     const adsUrl = `${baseUrl.protocol}//${baseUrl.host}/api/ads/overview?lookback=${lookback}`;
-    let adspirer: {
+    let ads: {
       platforms?: Array<{
         platform: string;
         status: string;
@@ -53,7 +53,7 @@ export async function GET(request: Request) {
     } = {};
     try {
       const res = await fetch(adsUrl, { cache: "no-store" });
-      if (res.ok) adspirer = await res.json();
+      if (res.ok) ads = await res.json();
     } catch {
       // ignore
     }
@@ -160,8 +160,8 @@ export async function GET(request: Request) {
       note: `${mailOpenCount} öppningar · ${mailClickCount} klick i perioden`,
     });
 
-    // Ads (Google, Meta, LinkedIn från Adspirer)
-    for (const p of adspirer.platforms || []) {
+    // Ads (Google, Meta, LinkedIn fran Windsor)
+    for (const p of ads.platforms || []) {
       const totals = p.totals;
       const activeCampaigns = p.campaigns.filter(
         (c) => (c.status as string | null)?.toLowerCase() === "active",
@@ -197,7 +197,7 @@ export async function GET(request: Request) {
         conversions: totals.conversions,
         campaigns_active: activeCampaigns,
         campaigns_total: p.campaigns.length,
-        note: p.status === "structure_only" ? "Adspirer synkar metrics nattligt — kampanjstruktur visas" : p.reason,
+        note: p.status === "structure_only" ? "Windsor synkar dagligt" : p.reason,
       });
     }
 
