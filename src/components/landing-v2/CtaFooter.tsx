@@ -123,7 +123,16 @@ function ContactForm({ track, sessionId, segment, score }: {
         }),
       });
 
-      track("lead:submit", { has_company: !!form.company, segment, score });
+      // lead_submitted = stage 5 i CAPI-taxonomin (riktig demo/kontaktform).
+      // Email skickas med sa server-side CAPI kan hasha for Meta + LinkedIn matchning.
+      track("lead_submitted", {
+        email: form.email,
+        company: form.company || undefined,
+        source: "cta_footer",
+        has_company: !!form.company,
+        segment,
+        score,
+      });
       trackLead("landing-v2", { segment });
       setSubmitted(true);
     } catch {

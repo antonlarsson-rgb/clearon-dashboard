@@ -1,4 +1,5 @@
 import { v4 as uuidv4 } from "uuid";
+import { matchEvent, FUNNEL_LABELS } from "@/lib/event-taxonomy";
 
 const SESSION_KEY = "clearon_session_id";
 const CONSENT_KEY = "clearon_consent";
@@ -161,13 +162,51 @@ export function getReferrer(): string {
 declare global {
   interface Window {
     lintrk?: (action: string, data: Record<string, unknown>) => void;
+    fbq?: (...args: unknown[]) => void;
   }
 }
 
+// Speglar LINKEDIN_RULES i src/lib/event-taxonomy.ts. Anvands av legacy
+// client-side trackLinkedIn() - server-side CAPI ar primar kanal nu.
 export const LINKEDIN_CONVERSIONS = {
-  LEAD_FORM_SUBMITTED: 26457801,
-  PHONE_LEAD_CAPTURED: 26457809,
+  POPUP_FILLED: 26457809, // Glass Popup, SIGN_UP
+  LEAD_FORM_SUBMITTED: 23533217, // Lead formular, LEAD
+  QUALIFIED_LEAD: 20994401, // Tack-sida
+  PHONE_LEAD_CAPTURED: 23533217, // fallback till LEAD_FORM tills egen telefonregel finns
 };
+
+/**
+ * Fyr Meta Pixel klient-side med samma eventID som server-sidan anvander mot
+ * Conversions API. Da dedupliserar Meta automatiskt och vi far full tackning
+ * aven om en av kanalerna fallerar (adblock, fetch-fel, etc).
+ */
+function fireMetaPixel(
+  internalEventName: string,
+  properties: Record<string, unknown>,
+  eventId: string
+): void {
+  if (typeof window === "undefined" || typeof window.fbq !== "function") return;
+
+  const match = matchEvent(internalEventName, { properties });
+  const customData: Record<string, unknown> = {
+    funnel_stage: match.funnelStage,
+    funnel_label: FUNNEL_LABELS[match.funnelStage],
+    source_event: internalEventName,
+  };
+  if (properties.product || properties.product_slug) {
+    customData.content_name = properties.product ?? properties.product_slug;
+    customData.content_category = "product";
+  }
+  if (properties.page_section) customData.page_section = properties.page_section;
+  if (properties.variant) customData.variant = properties.variant;
+
+  try {
+    const command = match.metaIsStandard ? "track" : "trackCustom";
+    window.fbq(command, match.metaEventName, customData, { eventID: eventId });
+  } catch (e) {
+    console.warn("Meta pixel fire error:", e);
+  }
+}
 
 export function trackLinkedIn(conversionId: number): void {
   if (!conversionId) return;
@@ -204,6 +243,11 @@ export async function track(eventName: string, properties: TrackingProperties = 
     timestamp: new Date().toISOString(),
   };
 
+  // Samma eventId pa klient-pixel och server-CAPI -> Meta dedupliserar.
+  const eventId = uuidv4();
+
+  fireMetaPixel(eventName, enrichedProperties, eventId);
+
   try {
     await fetch("/api/tracking", {
       method: "POST",
@@ -212,6 +256,7 @@ export async function track(eventName: string, properties: TrackingProperties = 
         sessionId,
         visitorId,
         eventName,
+        eventId,
         properties: enrichedProperties,
       }),
     });

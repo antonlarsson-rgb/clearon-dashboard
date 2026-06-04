@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { createHmac, timingSafeEqual } from "node:crypto";
+import { createHmac, randomUUID, timingSafeEqual } from "node:crypto";
 import { getServiceClient } from "@/lib/supabase";
 import {
   ENGAGEMENT_POINTS,
@@ -10,6 +10,37 @@ import {
 } from "@/lib/scoring";
 import { resolveOrCreatePerson } from "@/lib/identity";
 import { logEvent } from "@/lib/events";
+import { relayInBackground, type RelayContext } from "@/lib/capi";
+
+function readCookie(cookieHeader: string | null, name: string): string | undefined {
+  if (!cookieHeader) return undefined;
+  for (const part of cookieHeader.split(";")) {
+    const [k, ...rest] = part.trim().split("=");
+    if (k === name) return decodeURIComponent(rest.join("="));
+  }
+  return undefined;
+}
+
+function clientIpFull(request: Request): string | undefined {
+  const xff = request.headers.get("x-forwarded-for");
+  if (xff) return xff.split(",")[0].trim();
+  const real = request.headers.get("x-real-ip");
+  return real || undefined;
+}
+
+function buildEventSourceUrl(request: Request, pagePath: string | undefined): string {
+  const origin = request.headers.get("origin") || request.headers.get("referer");
+  if (origin) {
+    try {
+      const u = new URL(origin);
+      return `${u.protocol}//${u.host}${pagePath || u.pathname}`;
+    } catch {
+      // fall through
+    }
+  }
+  const host = request.headers.get("host") || "clearon.live";
+  return `https://${host}${pagePath || "/"}`;
+}
 
 /**
  * Verifiera mail-länk-token. Upsales-mail-länkar genereras med
@@ -75,7 +106,7 @@ interface VisitorRow {
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { sessionId, visitorId, eventName, properties } = body;
+    const { sessionId, visitorId, eventName, properties, eventId: eventIdFromBody } = body;
 
     if (!sessionId || !eventName) {
       return NextResponse.json(
@@ -83,6 +114,8 @@ export async function POST(request: Request) {
         { status: 400 }
       );
     }
+
+    const eventId: string = eventIdFromBody || randomUUID();
 
     const supabase = getServiceClient();
     const props = (properties as Record<string, unknown>) || {};
@@ -357,7 +390,29 @@ export async function POST(request: Request) {
       }
     }
 
-    return NextResponse.json({ success: true, eventId: eventData?.id });
+    // --- 4. Fan-out till Meta CAPI + LinkedIn CAPI (fire-and-forget) ---
+    const cookieHeader = request.headers.get("cookie");
+    const relayCtx: RelayContext = {
+      eventName,
+      eventId,
+      eventTimeSeconds: Math.floor(Date.now() / 1000),
+      eventSourceUrl: buildEventSourceUrl(
+        request,
+        (props.page_path as string) || (props.page_section as string)
+      ),
+      clientIpAddress: clientIpFull(request),
+      clientUserAgent: request.headers.get("user-agent") || undefined,
+      fbp: readCookie(cookieHeader, "_fbp"),
+      fbc: readCookie(cookieHeader, "_fbc"),
+      liFatId: readCookie(cookieHeader, "li_fat_id"),
+      email: (identifiedEmail as string | null) || (props.email as string) || undefined,
+      phone: (props.phone as string) || undefined,
+      visitorId: visitorId || undefined,
+      properties: props,
+    };
+    void relayInBackground(relayCtx);
+
+    return NextResponse.json({ success: true, eventId: eventData?.id, capiEventId: eventId });
   } catch (error) {
     console.error("Track error:", error);
     return NextResponse.json({ error: "Failed to track event" }, { status: 500 });

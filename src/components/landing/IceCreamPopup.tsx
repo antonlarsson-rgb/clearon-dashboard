@@ -77,9 +77,16 @@ export function IceCreamPopup({
         }),
       }).catch(() => {});
 
-      trackEvent("lead_submitted", { variant, source: "popup", has_email: true });
+      // popup_filled = stage 1 i CAPI-taxonomin (lagfriktions-emailcapture).
+      // Skicka med email sa server-side CAPI kan hasha for Meta enhanced match + LinkedIn.
+      trackEvent("popup_filled", {
+        variant,
+        source: "popup",
+        email,
+        company: popupCompany || undefined,
+      });
       trackIceCreamCoupon(variant, "popup");
-      trackLinkedIn(LINKEDIN_CONVERSIONS.PHONE_LEAD_CAPTURED);
+      trackLinkedIn(LINKEDIN_CONVERSIONS.POPUP_FILLED);
       setIsSubmitted(true);
       confetti({
         particleCount: 80,
