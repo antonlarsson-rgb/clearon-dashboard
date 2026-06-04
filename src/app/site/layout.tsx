@@ -2,9 +2,34 @@ import type { Metadata } from "next";
 import Script from "next/script";
 
 export const metadata: Metadata = {
+  metadataBase: new URL("https://clearon.live"),
   title: "ClearOn - Digitala kuponger for battre kundrelationer",
   description:
     "Skicka digitala kuponger via SMS direkt till kundens telefon. Fungerar i 5 000+ butiker i hela Sverige.",
+  openGraph: {
+    type: "website",
+    url: "https://clearon.live",
+    title: "ClearOn - Digitala kuponger for battre kundrelationer",
+    description:
+      "Skicka digitala kuponger via SMS direkt till kundens telefon. Fungerar i 5 000+ butiker i hela Sverige.",
+    siteName: "ClearOn",
+    images: [
+      {
+        url: "/clearon-logo.png",
+        width: 539,
+        height: 119,
+        alt: "ClearOn",
+      },
+    ],
+    locale: "sv_SE",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "ClearOn - Digitala kuponger for battre kundrelationer",
+    description:
+      "Skicka digitala kuponger via SMS direkt till kundens telefon. Fungerar i 5 000+ butiker i hela Sverige.",
+    images: ["/clearon-logo.png"],
+  },
 };
 
 // Pixel-ID levt fran Meta Events Manager. Hardkodat for klient-snutten
