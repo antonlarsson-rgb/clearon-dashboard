@@ -627,9 +627,26 @@ interface AdInfo {
   impressions: number;
   clicks: number;
   conversions: number;
+  conversion_types: Array<{ label: string; value: number }>;
   ctr: number | null;
   cpc: number | null;
   currency: string;
+}
+
+interface KeywordRow {
+  text: string;
+  campaign_name: string | null;
+  clicks: number;
+  spend: number;
+  conversions: number;
+  cost_per_conversion: number | null;
+}
+
+interface NamedConversion {
+  platform: "google" | "meta" | "linkedin";
+  campaign_name: string | null;
+  conversion_name: string;
+  value: number;
 }
 
 interface AdsResponse {
@@ -639,6 +656,8 @@ interface AdsResponse {
     reason: string | null;
     ads: AdInfo[];
   }>;
+  googleKeywords?: { keywords: KeywordRow[]; searchTerms: KeywordRow[] };
+  namedConversions?: NamedConversion[];
 }
 
 type AdWithPlatform = AdInfo & { platform: "google" | "meta" | "linkedin" };
@@ -771,6 +790,13 @@ function AdsGrid({
         </span>
       </div>
 
+      {/* Konverteringar i perioden, per plattform och namn */}
+      <ConversionSummary
+        conversions={(data?.namedConversions || []).filter(
+          (n) => platformFilter === "all" || n.platform === platformFilter,
+        )}
+      />
+
       {grouping === "flat" ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
           {ads.map((a) => (
@@ -779,6 +805,151 @@ function AdsGrid({
         </div>
       ) : (
         groups.map((g) => <AdSetSection key={g.key} g={g} />)
+      )}
+
+      {/* Google ar sok snarare an visuellt - visa vilka sokord som
+          konverterar nar Google ingar i vyn */}
+      {(platformFilter === "all" || platformFilter === "google") &&
+        data?.googleKeywords &&
+        (data.googleKeywords.keywords.length > 0 ||
+          data.googleKeywords.searchTerms.length > 0) && (
+          <GoogleKeywordsPanel gk={data.googleKeywords} />
+        )}
+    </div>
+  );
+}
+
+function ConversionSummary({ conversions }: { conversions: NamedConversion[] }) {
+  if (conversions.length === 0) return null;
+
+  // Summera per plattform + konverteringsnamn (over kampanjer)
+  const byName = new Map<string, NamedConversion & { campaigns: number }>();
+  for (const c of conversions) {
+    const key = `${c.platform}::${c.conversion_name}`;
+    const existing = byName.get(key);
+    if (existing) {
+      existing.value += c.value;
+      existing.campaigns++;
+    } else {
+      byName.set(key, { ...c, campaigns: 1 });
+    }
+  }
+  const rows = Array.from(byName.values()).sort((a, b) => b.value - a.value);
+
+  return (
+    <div className="rounded-lg border border-border bg-surface p-3">
+      <div className="mb-2 text-[10px] uppercase tracking-wide text-text-muted">
+        Konverteringar i perioden
+      </div>
+      <div className="flex flex-wrap gap-2">
+        {rows.map((r, i) => {
+          const meta = PLATFORM_META[r.platform];
+          return (
+            <div
+              key={i}
+              className="flex items-center gap-1.5 rounded-full border border-border/60 bg-surface-elevated px-2.5 py-1 text-[11px]"
+            >
+              <span
+                className="h-1.5 w-1.5 rounded-full shrink-0"
+                style={{ backgroundColor: meta.color }}
+              />
+              <span className="text-text-secondary">{r.conversion_name}</span>
+              <span className="font-bold tabular-nums text-[#8bb347]">
+                {r.value >= 100 ? formatInt(Math.round(r.value)) : r.value.toFixed(r.value % 1 === 0 ? 0 : 1)}
+              </span>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+function GoogleKeywordsPanel({
+  gk,
+}: {
+  gk: { keywords: KeywordRow[]; searchTerms: KeywordRow[] };
+}) {
+  const [tab, setTab] = useState<"keywords" | "searchTerms">("keywords");
+  const rows = tab === "keywords" ? gk.keywords : gk.searchTerms;
+
+  return (
+    <div className="rounded-lg border border-border bg-surface p-4">
+      <div className="flex flex-wrap items-center gap-3 mb-1">
+        <h2 className="flex items-center gap-2 text-sm font-bold text-text-primary">
+          <Search className="h-4 w-4" style={{ color: PLATFORM_META.google.color }} />
+          Sökord som konverterar (Google)
+        </h2>
+        <div className="flex gap-1 ml-auto">
+          {(
+            [
+              { value: "keywords", label: `Sökord (${gk.keywords.length})` },
+              { value: "searchTerms", label: `Faktiska söktermer (${gk.searchTerms.length})` },
+            ] as const
+          ).map((opt) => (
+            <button
+              key={opt.value}
+              onClick={() => setTab(opt.value)}
+              className={cn(
+                "rounded-full px-2.5 py-1 text-[11px] font-medium transition-colors",
+                tab === opt.value
+                  ? "bg-text-primary text-surface"
+                  : "bg-surface-elevated text-text-secondary hover:text-text-primary",
+              )}
+            >
+              {opt.label}
+            </button>
+          ))}
+        </div>
+      </div>
+      <p className="mb-3 text-xs text-text-secondary">
+        {tab === "keywords"
+          ? "Sökorden ni bjuder på, sorterade på konverteringar i perioden."
+          : "Vad folk faktiskt sökte på när annonsen visades - bra för att hitta nya sökord och negativa sökord."}
+      </p>
+
+      {rows.length === 0 ? (
+        <div className="py-4 text-center text-xs text-text-muted">
+          Ingen sökordsdata i perioden.
+        </div>
+      ) : (
+        <div className="overflow-x-auto">
+          <table className="w-full text-xs">
+            <thead>
+              <tr className="border-b border-border/50 text-left text-[9px] uppercase tracking-wide text-text-muted">
+                <th className="py-1.5 pr-3 font-medium">Sökord</th>
+                <th className="py-1.5 pr-3 font-medium">Kampanj</th>
+                <th className="py-1.5 pr-3 font-medium text-right">Klick</th>
+                <th className="py-1.5 pr-3 font-medium text-right">Spend</th>
+                <th className="py-1.5 pr-3 font-medium text-right">Konv</th>
+                <th className="py-1.5 font-medium text-right">Kostnad/konv</th>
+              </tr>
+            </thead>
+            <tbody>
+              {rows.slice(0, 15).map((r, i) => (
+                <tr key={i} className="border-b border-border/30">
+                  <td className="py-1.5 pr-3 font-medium text-text-primary">{r.text}</td>
+                  <td className="py-1.5 pr-3 text-text-muted truncate max-w-[200px]">
+                    {r.campaign_name || "—"}
+                  </td>
+                  <td className="py-1.5 pr-3 text-right tabular-nums">{formatInt(r.clicks)}</td>
+                  <td className="py-1.5 pr-3 text-right tabular-nums">{formatKr(r.spend)}</td>
+                  <td
+                    className={cn(
+                      "py-1.5 pr-3 text-right tabular-nums font-bold",
+                      r.conversions > 0 ? "text-[#8bb347]" : "text-text-muted",
+                    )}
+                  >
+                    {r.conversions > 0 ? r.conversions.toFixed(1) : "—"}
+                  </td>
+                  <td className="py-1.5 text-right tabular-nums text-text-secondary">
+                    {r.cost_per_conversion != null ? `${Math.round(r.cost_per_conversion)} kr` : "—"}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       )}
     </div>
   );
@@ -948,10 +1119,36 @@ function AdCard({ a }: { a: AdInfo & { platform: "google" | "meta" | "linkedin" 
             <Metric label="CTR" value={a.ctr ? `${a.ctr.toFixed(1)}%` : "—"} />
             <Metric
               label="Konv"
-              value={formatInt(a.conversions)}
+              value={
+                a.conversions > 0
+                  ? a.conversions >= 100
+                    ? formatInt(Math.round(a.conversions))
+                    : a.conversions.toFixed(a.conversions % 1 === 0 ? 0 : 1)
+                  : "—"
+              }
               highlight={a.conversions > 0}
             />
           </div>
+          {a.conversion_types.length > 0 && (
+            <div className="flex flex-wrap gap-x-2 text-[10px] text-text-muted">
+              {a.conversion_types.map((ct, i) => (
+                <span key={i}>
+                  {ct.label}:{" "}
+                  <span className="font-medium text-[#8bb347]">
+                    {formatInt(Math.round(ct.value)) === "—" ? ct.value : formatInt(Math.round(ct.value))}
+                  </span>
+                </span>
+              ))}
+            </div>
+          )}
+          {a.conversions > 0 && a.spend > 0 && (
+            <div className="text-[10px] text-text-muted">
+              Kostnad/konv:{" "}
+              <span className="text-text-secondary font-medium">
+                {Math.round(a.spend / a.conversions)} {a.currency}
+              </span>
+            </div>
+          )}
         </div>
       </div>
     </div>

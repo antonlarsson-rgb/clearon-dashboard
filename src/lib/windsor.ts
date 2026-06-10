@@ -130,6 +130,8 @@ export interface AdInfo {
   impressions: number;
   clicks: number;
   conversions: number;
+  /** Konverteringar per typ, t.ex. [{label: "Leads", value: 11}] */
+  conversion_types: Array<{ label: string; value: number }>;
   ctr: number | null;
   cpc: number | null;
   currency: string;
@@ -157,6 +159,13 @@ interface WindsorRow {
   clicks?: number | string;
   conversions?: number | string;
   currency?: string;
+  // Plattformsspecifika konverteringsfalt. Det generiska "conversions" ar
+  // tomt/fel pa facebook (null) och linkedin (share conversions) - ratt
+  // varden ligger i action-falten nedan.
+  actions_lead?: number | string;
+  actions_purchase?: number | string;
+  externalwebsiteconversions?: number | string;
+  oneclickleads?: number | string;
 }
 
 interface WindsorResponse {
@@ -191,6 +200,28 @@ function dateRangeParams(period: PeriodArgs): { date_from?: string; date_to?: st
   return { date_preset: period.date_range ? map[period.date_range] || "last_30d" : "last_30d" };
 }
 
+// Kampanjniva-falt per connector. Konverteringar hamtas fran ratt falt:
+// google = conversions, facebook = actions_lead + actions_purchase,
+// linkedin = externalwebsiteconversions + oneclickleads.
+const CAMPAIGN_FIELDS = {
+  google_ads:
+    "date,account_name,account_id,campaign,campaign_id,campaign_status,spend,impressions,clicks,conversions,currency",
+  facebook:
+    "date,account_name,account_id,campaign,campaign_id,campaign_status,spend,impressions,clicks,actions_lead,actions_purchase,currency",
+  linkedin:
+    "date,account_name,account_id,campaign,campaign_id,campaign_status,spend,impressions,clicks,externalwebsiteconversions,oneclickleads,currency",
+} as const;
+
+function rowConversions(
+  connector: "google_ads" | "facebook" | "linkedin",
+  r: WindsorRow,
+): number {
+  if (connector === "facebook") return num(r.actions_lead) + num(r.actions_purchase);
+  if (connector === "linkedin")
+    return num(r.externalwebsiteconversions) + num(r.oneclickleads);
+  return num(r.conversions);
+}
+
 async function fetchWindsor(
   connector: "google_ads" | "facebook" | "linkedin",
   accountId: string,
@@ -202,8 +233,7 @@ async function fetchWindsor(
 
   const params = new URLSearchParams({
     api_key: key,
-    fields:
-      "date,account_name,account_id,campaign,campaign_id,campaign_status,spend,impressions,clicks,conversions,currency",
+    fields: CAMPAIGN_FIELDS[connector],
     // Hogt tak: nyckeln tacker hela Stellar-portfoljen sa dagsrader for alla
     // konton kan bli manga - truncering ger tyst fel data.
     _limit: "30000",
@@ -234,7 +264,10 @@ async function fetchWindsor(
   }
 }
 
-function aggregateByCampaign(rows: WindsorRow[]): CampaignRow[] {
+function aggregateByCampaign(
+  rows: WindsorRow[],
+  connector: "google_ads" | "facebook" | "linkedin",
+): CampaignRow[] {
   const map = new Map<string, CampaignRow>();
   for (const r of rows) {
     const id = String(r.campaign_id || r.campaign || "unknown");
@@ -243,7 +276,7 @@ function aggregateByCampaign(rows: WindsorRow[]): CampaignRow[] {
     const spend = num(r.spend) + (existing?.spend || 0);
     const impressions = num(r.impressions) + (existing?.impressions || 0);
     const clicks = num(r.clicks) + (existing?.clicks || 0);
-    const conversions = num(r.conversions) + (existing?.conversions || 0);
+    const conversions = rowConversions(connector, r) + (existing?.conversions || 0);
     map.set(id, {
       campaign_id: id,
       name,
@@ -339,11 +372,11 @@ function emptyPlatform(
 
 function livePlatform(
   platform: PlatformPerformance["platform"],
-  connector: string,
+  connector: "google_ads" | "facebook" | "linkedin",
   accountId: string,
   rows: WindsorRow[],
 ): PlatformPerformance {
-  const campaigns = aggregateByCampaign(rows);
+  const campaigns = aggregateByCampaign(rows, connector);
   return {
     platform,
     available: true,
@@ -368,9 +401,9 @@ const AD_FIELDS = {
   google_ads:
     "account_id,campaign,campaign_id,campaign_status,ad_group_id,ad_group_name,ad_id,ad_name,ad_status,ad_group_status,ad_final_urls,ad_type,spend,impressions,clicks,conversions,currency",
   facebook:
-    "account_id,campaign,campaign_id,campaign_status,adset_id,adset_name,ad_id,ad_name,title,body,thumbnail_url,link_url,effective_status,adset_status,spend,impressions,clicks,conversions,currency",
+    "account_id,campaign,campaign_id,campaign_status,adset_id,adset_name,ad_id,ad_name,title,body,thumbnail_url,link_url,effective_status,adset_status,spend,impressions,clicks,actions_lead,actions_purchase,currency",
   linkedin:
-    "account_id,campaign,campaign_id,campaign_status,campaign_group_id,campaign_group_name,creative_id,sponsored_creative_content_title,sponsored_creative_content_description,creative_thumbnail,creative_status,landing_page,spend,impressions,clicks,conversions,currency",
+    "account_id,campaign,campaign_id,campaign_status,campaign_group_id,campaign_group_name,creative_id,sponsored_creative_content_title,sponsored_creative_content_description,creative_thumbnail,creative_status,landing_page,spend,impressions,clicks,externalwebsiteconversions,oneclickleads,currency",
 } as const;
 
 interface WindsorAdRow extends WindsorRow {
@@ -484,10 +517,27 @@ function normalizeAd(
   const spend = num(r.spend);
   const impressions = num(r.impressions);
   const clicks = num(r.clicks);
-  const conversions = num(r.conversions);
   // Skippa annonser utan aktivitet i perioden (gamla utkast/avstangda
   // annonser ligger kvar som nollrader hos plattformarna)
   if (impressions === 0 && spend === 0) return null;
+
+  let conversions: number;
+  const conversionTypes: Array<{ label: string; value: number }> = [];
+  if (platform === "meta") {
+    const leads = num(r.actions_lead);
+    const purchases = num(r.actions_purchase);
+    conversions = leads + purchases;
+    if (leads > 0) conversionTypes.push({ label: "Leads", value: leads });
+    if (purchases > 0) conversionTypes.push({ label: "Köp", value: purchases });
+  } else if (platform === "linkedin") {
+    const web = num(r.externalwebsiteconversions);
+    const forms = num(r.oneclickleads);
+    conversions = web + forms;
+    if (web > 0) conversionTypes.push({ label: "Webbplatskonv.", value: web });
+    if (forms > 0) conversionTypes.push({ label: "Lead gen-formulär", value: forms });
+  } else {
+    conversions = num(r.conversions);
+  }
 
   let base: Pick<
     AdInfo,
@@ -559,10 +609,192 @@ function normalizeAd(
     impressions,
     clicks,
     conversions,
+    conversion_types: conversionTypes,
     ctr: impressions > 0 ? (clicks / impressions) * 100 : null,
     cpc: clicks > 0 ? spend / clicks : null,
     currency: r.currency || "SEK",
   };
+}
+
+// ---- Google sokord + namngivna konverteringar ----
+
+export interface KeywordRow {
+  text: string;
+  campaign_name: string | null;
+  clicks: number;
+  spend: number;
+  conversions: number;
+  cost_per_conversion: number | null;
+}
+
+export interface GoogleKeywords {
+  keywords: KeywordRow[];
+  searchTerms: KeywordRow[];
+}
+
+async function fetchKeywordRows(
+  accountId: string,
+  textField: "keyword_text" | "search_term",
+  period: PeriodArgs,
+  revalidateSeconds: number,
+): Promise<KeywordRow[]> {
+  const key = getApiKey();
+  if (!key) return [];
+  const params = new URLSearchParams({
+    api_key: key,
+    fields: `account_id,campaign,${textField},clicks,spend,conversions`,
+    _limit: "30000",
+  });
+  const dates = dateRangeParams(period);
+  for (const [k, v] of Object.entries(dates)) if (v) params.set(k, v);
+
+  try {
+    const res = await fetch(`${WINDSOR_BASE}/google_ads?${params}`, {
+      next: { revalidate: revalidateSeconds },
+      headers: { Accept: "application/json" },
+    });
+    if (!res.ok) return [];
+    const json = (await res.json()) as {
+      data?: Array<WindsorRow & { keyword_text?: string; search_term?: string }>;
+    };
+    const map = new Map<string, KeywordRow>();
+    for (const r of json.data || []) {
+      if (String(r.account_id || "") !== accountId) continue;
+      const text = (textField === "keyword_text" ? r.keyword_text : r.search_term) || "";
+      if (!text) continue;
+      const k = `${text}::${r.campaign || ""}`;
+      const existing = map.get(k);
+      const clicks = num(r.clicks) + (existing?.clicks || 0);
+      const spend = num(r.spend) + (existing?.spend || 0);
+      const conversions = num(r.conversions) + (existing?.conversions || 0);
+      map.set(k, {
+        text,
+        campaign_name: r.campaign || null,
+        clicks,
+        spend,
+        conversions,
+        cost_per_conversion: conversions > 0 ? spend / conversions : null,
+      });
+    }
+    return Array.from(map.values())
+      .filter((r) => r.clicks > 0 || r.conversions > 0)
+      .sort((a, b) => b.conversions - a.conversions || b.clicks - a.clicks)
+      .slice(0, 30);
+  } catch (e) {
+    console.warn(`Windsor ${textField} fetch error:`, e instanceof Error ? e.message : e);
+    return [];
+  }
+}
+
+/** Sokord (keywords) + faktiska soktermer for ett Google Ads-konto. */
+export async function getGoogleKeywords(
+  period: PeriodArgs,
+  revalidateSeconds = 1800,
+  account: AccountSet = "clearon",
+): Promise<GoogleKeywords> {
+  const accountId = ACCOUNTS[account].google;
+  if (!accountId || !getApiKey()) return { keywords: [], searchTerms: [] };
+  const [keywords, searchTerms] = await Promise.all([
+    fetchKeywordRows(accountId, "keyword_text", period, revalidateSeconds),
+    fetchKeywordRows(accountId, "search_term", period, revalidateSeconds),
+  ]);
+  return { keywords, searchTerms };
+}
+
+/** Namngiven konvertering per kampanj, t.ex. "Sign-up | Clearon.live": 11. */
+export interface NamedConversion {
+  platform: PlatformAds["platform"];
+  campaign_name: string | null;
+  conversion_name: string;
+  value: number;
+}
+
+export async function getNamedConversions(
+  period: PeriodArgs,
+  revalidateSeconds = 1800,
+  account: AccountSet = "clearon",
+): Promise<NamedConversion[]> {
+  const key = getApiKey();
+  if (!key) return [];
+  const acc = ACCOUNTS[account];
+  const out: NamedConversion[] = [];
+
+  const fetchRows = async (connector: string, fields: string) => {
+    const params = new URLSearchParams({ api_key: key, fields, _limit: "30000" });
+    const dates = dateRangeParams(period);
+    for (const [k, v] of Object.entries(dates)) if (v) params.set(k, v);
+    try {
+      const res = await fetch(`${WINDSOR_BASE}/${connector}?${params}`, {
+        next: { revalidate: revalidateSeconds },
+        headers: { Accept: "application/json" },
+      });
+      if (!res.ok) return [];
+      const json = (await res.json()) as { data?: Array<Record<string, unknown>> };
+      return json.data || [];
+    } catch {
+      return [];
+    }
+  };
+
+  const [googleRows, linkedinRows, metaRows] = await Promise.all([
+    acc.google
+      ? fetchRows("google_ads", "account_id,campaign,conversion_action_name,conversions")
+      : Promise.resolve([]),
+    acc.linkedin
+      ? fetchRows(
+          "linkedin",
+          "account_id,campaign,conversion_name,externalwebsiteconversions,oneclickleads",
+        )
+      : Promise.resolve([]),
+    acc.meta
+      ? fetchRows("facebook", "account_id,campaign,actions_lead,actions_purchase")
+      : Promise.resolve([]),
+  ]);
+
+  const push = (
+    platform: PlatformAds["platform"],
+    campaign: unknown,
+    name: string,
+    value: number,
+  ) => {
+    if (value <= 0 || !name) return;
+    const existing = out.find(
+      (n) =>
+        n.platform === platform &&
+        n.campaign_name === (campaign || null) &&
+        n.conversion_name === name,
+    );
+    if (existing) existing.value += value;
+    else
+      out.push({
+        platform,
+        campaign_name: (campaign as string) || null,
+        conversion_name: name,
+        value,
+      });
+  };
+
+  for (const r of googleRows) {
+    if (String(r.account_id || "") !== acc.google) continue;
+    push("google", r.campaign, String(r.conversion_action_name || ""), num(r.conversions as number));
+  }
+  for (const r of linkedinRows) {
+    if (String(r.account_id || "") !== acc.linkedin) continue;
+    const name = String(r.conversion_name || "");
+    push(
+      "linkedin",
+      r.campaign,
+      name,
+      num(r.externalwebsiteconversions as number) + num(r.oneclickleads as number),
+    );
+  }
+  for (const r of metaRows) {
+    if (String(r.account_id || "") !== acc.meta) continue;
+    push("meta", r.campaign, "Leads", num(r.actions_lead as number));
+    push("meta", r.campaign, "Köp", num(r.actions_purchase as number));
+  }
+
+  return out.sort((a, b) => b.value - a.value);
 }
 
 export async function getPlatformAds(

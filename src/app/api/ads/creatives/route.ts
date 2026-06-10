@@ -1,5 +1,10 @@
 import { NextResponse } from "next/server";
-import { getPlatformAds, resolveAccountSet } from "@/lib/windsor";
+import {
+  getPlatformAds,
+  getGoogleKeywords,
+  getNamedConversions,
+  resolveAccountSet,
+} from "@/lib/windsor";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -24,10 +29,12 @@ export async function GET(request: Request) {
   const lookback = ALLOWED_LOOKBACKS.includes(requestedLookback) ? requestedLookback : 30;
   const period = { lookback_days: lookback };
 
-  const [google, meta, linkedin] = await Promise.all([
+  const [google, meta, linkedin, googleKeywords, namedConversions] = await Promise.all([
     getPlatformAds("google", period, 1800, account),
     getPlatformAds("meta", period, 1800, account),
     getPlatformAds("linkedin", period, 1800, account),
+    getGoogleKeywords(period, 1800, account),
+    getNamedConversions(period, 1800, account),
   ]);
 
   return NextResponse.json({
@@ -35,5 +42,7 @@ export async function GET(request: Request) {
     period: { label: `senaste ${lookback} dagarna`, lookback_days: lookback },
     fetched_at: new Date().toISOString(),
     platforms: [google, meta, linkedin],
+    googleKeywords,
+    namedConversions,
   });
 }
