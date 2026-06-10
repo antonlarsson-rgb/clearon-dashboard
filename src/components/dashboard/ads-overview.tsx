@@ -193,7 +193,7 @@ function effectiveDateRange(data: OverviewData): string | null {
     .filter((r) => r.start && r.end);
   if (ranges.length === 0) {
     if (data.period.start_date && data.period.end_date) {
-      return `Adspirer-data: ${formatDate(data.period.start_date)} - ${formatDate(data.period.end_date)}`;
+      return `Annonsdata: ${formatDate(data.period.start_date)} - ${formatDate(data.period.end_date)}`;
     }
     return null;
   }
@@ -553,7 +553,7 @@ export function AdsOverview() {
       {/* Quota + källa */}
       {data?.quota && (
         <div className="flex flex-wrap items-center gap-3 rounded-lg border border-border bg-surface-elevated/50 px-4 py-2.5 text-xs text-text-secondary">
-          <span className="text-text-muted">Live via Adspirer ({data.quota.tier}-tier).</span>
+          <span className="text-text-muted">Live via Windsor.ai ({data.quota.tier}-tier).</span>
           <span>
             Användning:{" "}
             <span className="font-mono font-medium text-text-primary">

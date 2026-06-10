@@ -23,6 +23,7 @@ interface ChannelHealth {
   leads: number | null;
   clicks: number | null;
   conversions: number | null;
+  cost_per_conversion: number | null;
   campaigns_active: number | null;
   campaigns_total: number | null;
   note: string | null;
@@ -278,7 +279,30 @@ function ChannelCard({ channel: c }: { channel: ChannelHealth }) {
         {c.category === "ads" ? (
           <>
             <Metric label="Spend" value={formatKr(c.spend, c.currency)} bold />
-            <Metric label="Konv" value={formatInt(c.conversions)} highlight={(c.conversions || 0) > 0} />
+            <Metric
+              label="Konv"
+              value={
+                c.conversions != null && c.conversions > 0
+                  ? c.conversions >= 100
+                    ? formatInt(Math.round(c.conversions))
+                    : c.conversions.toFixed(c.conversions % 1 === 0 ? 0 : 1)
+                  : "—"
+              }
+              highlight={(c.conversions || 0) > 0}
+            />
+            <Metric
+              label="Kostnad/konv"
+              value={
+                c.cost_per_conversion != null
+                  ? `${Math.round(c.cost_per_conversion)} ${c.currency}`
+                  : "—"
+              }
+            />
+            <Metric
+              label="Leads (attribuerade)"
+              value={formatInt(c.leads)}
+              highlight={(c.leads || 0) > 0}
+            />
             <Metric label="Klick" value={formatInt(c.clicks)} />
             <Metric
               label="Kampanjer"

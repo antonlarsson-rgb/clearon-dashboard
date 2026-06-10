@@ -1,6 +1,6 @@
 // Kanaler — översikt över alla källor som driver trafik och leads.
 // Datakällor:
-// - Adspirer MCP: Google + Meta + LinkedIn live-data
+// - Windsor.ai: Google + Meta + LinkedIn live-data
 // - Supabase web_sessions: clearon.live-trafik
 // - Upsales /visits: clearon.se IP-identifierade besök (synkat till events)
 // - Upsales mail-events: open/click (synkat till events)
@@ -120,8 +120,8 @@ export default async function KanalerPage() {
             <CardTitle>Annons-drilldown — kampanj-nivå</CardTitle>
           </div>
           <p className="text-xs text-text-secondary mt-1">
-            Live från Adspirer per plattform. Klicka på en plattform-sektion för
-            att se kampanjlistor och dagliga trender.
+            Live från annonsplattformarna via Windsor.ai. Klicka på en
+            plattform-sektion för att se kampanjlistor och dagliga trender.
           </p>
         </CardHeader>
         <CardContent>

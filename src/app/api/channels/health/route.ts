@@ -19,9 +19,22 @@ interface ChannelHealth {
   leads: number | null;
   clicks: number | null;
   conversions: number | null;
+  cost_per_conversion: number | null;
   campaigns_active: number | null;
   campaigns_total: number | null;
   note: string | null;
+}
+
+// Samma harledning som /api/ads/attribution - vilken plattform kom leadet fran
+function deriveAdPlatform(meta: Record<string, unknown>): string | null {
+  const explicit = meta.ad_platform as string | null;
+  if (explicit) return explicit;
+  const src = String(meta.utm_source || "").toLowerCase();
+  if (meta.gclid || src.includes("google")) return "google";
+  if (meta.fbclid || src.includes("facebook") || src.includes("meta") || src.includes("instagram"))
+    return "meta";
+  if (meta.li_fat_id || src.includes("linkedin")) return "linkedin";
+  return null;
 }
 
 export async function GET(request: Request) {
@@ -59,7 +72,7 @@ export async function GET(request: Request) {
     }
 
     // 2. Hämta web-data (clearon.live från web_sessions, clearon.se från Upsales-events)
-    const [webSessionsRes, leadEventsRes, upsalesVisitsRes, mailEventsRes, mailCampaignsRes] =
+    const [webSessionsRes, leadEventsRes, leadAttributionRes, upsalesVisitsRes, mailEventsRes, mailCampaignsRes] =
       await Promise.all([
         supabase
           .from("web_sessions")
@@ -70,6 +83,12 @@ export async function GET(request: Request) {
           .select("person_id", { count: "exact", head: true })
           .in("event_type", ["lead_submitted", "form_submit"])
           .gte("occurred_at", since),
+        supabase
+          .from("events")
+          .select("metadata")
+          .eq("event_type", "lead_submitted")
+          .gte("occurred_at", since)
+          .limit(2000),
         supabase
           .from("events")
           .select("account_id", { count: "exact", head: true })
@@ -100,6 +119,13 @@ export async function GET(request: Request) {
       (e) => e.event_type === "mail_click",
     ).length;
 
+    // Leads per annonsplattform fran attributionen pa lead-eventen
+    const leadsByPlatform = new Map<string, number>();
+    for (const row of leadAttributionRes.data || []) {
+      const platform = deriveAdPlatform((row.metadata as Record<string, unknown>) || {});
+      if (platform) leadsByPlatform.set(platform, (leadsByPlatform.get(platform) || 0) + 1);
+    }
+
     const channels: ChannelHealth[] = [];
 
     // clearon.live (web)
@@ -116,6 +142,7 @@ export async function GET(request: Request) {
       leads: liveLeads,
       clicks: null,
       conversions: null,
+      cost_per_conversion: null,
       campaigns_active: null,
       campaigns_total: null,
       note: liveVisitors === 0 ? "Ingen trafik registrerad i perioden" : null,
@@ -134,6 +161,7 @@ export async function GET(request: Request) {
       leads: null,
       clicks: null,
       conversions: null,
+      cost_per_conversion: null,
       campaigns_active: null,
       campaigns_total: null,
       note: upsalesVisits === 0 ? "Inga IP-identifierade besök i perioden" : "IP-identifierade besök via Upsales",
@@ -155,6 +183,7 @@ export async function GET(request: Request) {
       leads: null,
       clicks: mailClickCount,
       conversions: null,
+      cost_per_conversion: null,
       campaigns_active: emailActive,
       campaigns_total: emailCampaigns.length,
       note: `${mailOpenCount} öppningar · ${mailClickCount} klick i perioden`,
@@ -163,9 +192,11 @@ export async function GET(request: Request) {
     // Ads (Google, Meta, LinkedIn fran Windsor)
     for (const p of ads.platforms || []) {
       const totals = p.totals;
-      const activeCampaigns = p.campaigns.filter(
-        (c) => (c.status as string | null)?.toLowerCase() === "active",
-      ).length;
+      // Google rapporterar "ENABLED", Meta/LinkedIn "ACTIVE"
+      const activeCampaigns = p.campaigns.filter((c) => {
+        const s = (c.status as string | null)?.toLowerCase() || "";
+        return s === "active" || s === "enabled";
+      }).length;
       const platformName =
         p.platform === "google"
           ? "Google Ads"
@@ -192,9 +223,11 @@ export async function GET(request: Request) {
         spend: totals.spend,
         currency: p.currency,
         visitors: null,
-        leads: null,
+        leads: leadsByPlatform.get(p.platform) || 0,
         clicks: totals.clicks,
         conversions: totals.conversions,
+        cost_per_conversion:
+          totals.conversions > 0 ? totals.spend / totals.conversions : null,
         campaigns_active: activeCampaigns,
         campaigns_total: p.campaigns.length,
         note: p.status === "structure_only" ? "Windsor synkar dagligt" : p.reason,

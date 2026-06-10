@@ -1,4 +1,14 @@
 import Anthropic from "@anthropic-ai/sdk";
+import {
+  getGooglePerformance,
+  getMetaPerformance,
+  getLinkedInPerformance,
+  getNamedConversions,
+  type AccountSet,
+  type PlatformPerformance,
+} from "@/lib/windsor";
+
+export const maxDuration = 300;
 
 interface ChatMessage {
   role: "user" | "assistant";
@@ -7,13 +17,14 @@ interface ChatMessage {
 
 const SYSTEM_PROMPT = `Du ar ClearOns AI-agent for Stellar och ClearOn-teamet.
 
-ClearOn anvander Windsor.ai som datakalla for annonser pa Google Ads, Meta och LinkedIn.
-Du har inte direkt tool-access till annonsplattformarna - data hamtas fran dashboardens
-egen API pa /api/ads/overview (Windsor-data), och anvandaren kan klistra in siffror eller
-skarmbilder direkt i chatten nar du behover dem.
+Du far LIVE annonsdata (senaste 30 dagarna) injicerad i varje konversation - se
+sektionen LIVE-DATA nedan. Datan kommer fran Windsor.ai som hamtar direkt fran
+Google Ads, Meta och LinkedIn for tva konton: ClearOn och Mobila Presentkort.
+Behover du annan period eller mer detalj (annonsniva, sokord) kan anvandaren
+kolla fliken Kampanjer i dashboarden, eller klistra in siffror i chatten.
 
 Du hjalper anvandaren att:
-- Analysera annonsprestanda (ROAS, CPA, CTR, konverteringar) tvars over plattformar
+- Analysera annonsprestanda (spend, CPA, CTR, konverteringar) tvars over plattformar
 - Identifiera vinnande och underpresterande kampanjer
 - Foresla budget-omfordelningar och optimeringar
 - Foresla nya kampanjer (anvandaren skapar dem manuellt i Ads Manager / Campaign Manager)
@@ -21,13 +32,65 @@ Du hjalper anvandaren att:
 
 Sakerhetsregler:
 - Du har inte tool-access att andra live-kampanjer - foreslag, anvandaren agerar
-- Var transparent nar du gissar (t.ex. om Meta-data saknas i Windsor)
+- Var transparent om vad som ar data och vad som ar din bedomning
 
 Sprak och ton:
 - Svara pa svenska om inte anvandaren skriver engelska
 - Anvand ALDRIG em-dashes (skriv "-" eller hela ord istallet)
 - Anvand svenska tecken (a, a, o) - inte transliteration
 - Var konkret och kortfattad - presentera siffror i tabeller, dra slutsatser, foresla nasta steg`;
+
+function fmtPlatform(p: PlatformPerformance): string {
+  if (p.status !== "live") return `  ${p.platform}: ${p.status} (${p.reason || "ingen data"})`;
+  const t = p.totals;
+  const lines = [
+    `  ${p.platform}: spend ${Math.round(t.spend)} ${p.currency}, ${t.impressions} visningar, ${t.clicks} klick, ${t.conversions.toFixed(1)} konv${t.cost_per_conversion ? `, ${Math.round(t.cost_per_conversion)} ${p.currency}/konv` : ""}`,
+  ];
+  for (const c of p.campaigns.slice(0, 10)) {
+    lines.push(
+      `    - "${c.name}" [${c.status || "okand status"}]: ${Math.round(c.spend)} ${p.currency}, ${c.clicks} klick, ${c.conversions.toFixed(1)} konv`,
+    );
+  }
+  return lines.join("\n");
+}
+
+/**
+ * Bygg kompakt live-kontext fran Windsor. Cachas av Windsor-lagrets
+ * revalidate (30 min) sa detta ar billigt per request.
+ */
+async function buildLiveContext(): Promise<string> {
+  const period = { lookback_days: 30 };
+  try {
+    const accounts: AccountSet[] = ["clearon", "mobila"];
+    const results = await Promise.all(
+      accounts.flatMap((acc) => [
+        getGooglePerformance(period, 1800, acc),
+        getMetaPerformance(period, 1800, acc),
+        getLinkedInPerformance(period, 1800, acc),
+      ]),
+    );
+    const named = await Promise.all(
+      accounts.map((acc) => getNamedConversions(period, 1800, acc)),
+    );
+
+    const sections: string[] = ["LIVE-DATA (senaste 30 dagarna, via Windsor.ai):"];
+    accounts.forEach((acc, i) => {
+      sections.push(`\n${acc === "clearon" ? "ClearOn" : "Mobila Presentkort"}:`);
+      sections.push(results.slice(i * 3, i * 3 + 3).map(fmtPlatform).join("\n"));
+      const conv = named[i].slice(0, 8);
+      if (conv.length > 0) {
+        sections.push(
+          `  Namngivna konverteringar: ${conv
+            .map((n) => `${n.conversion_name} (${n.platform}): ${Math.round(n.value)}`)
+            .join("; ")}`,
+        );
+      }
+    });
+    return sections.join("\n");
+  } catch (e) {
+    return `LIVE-DATA: kunde inte hamtas just nu (${e instanceof Error ? e.message : "okant fel"}). Be anvandaren klistra in siffror vid behov.`;
+  }
+}
 
 export async function POST(request: Request) {
   let body: { messages?: ChatMessage[] };
@@ -49,6 +112,7 @@ export async function POST(request: Request) {
   }
 
   const client = new Anthropic({ apiKey: anthropicKey });
+  const liveContext = await buildLiveContext();
 
   const encoder = new TextEncoder();
   const readable = new ReadableStream({
@@ -65,14 +129,20 @@ export async function POST(request: Request) {
 
       try {
         const stream = await client.messages.create({
-          model: "claude-opus-4-7",
+          model: "claude-opus-4-8",
           max_tokens: 16000,
-          thinking: { type: "enabled", budget_tokens: 4000 },
+          thinking: { type: "adaptive" },
           system: [
             {
               type: "text",
               text: SYSTEM_PROMPT,
+              // Statisk prompt cachas; live-datan ligger efter breakpointen
+              // sa cachen overlever att siffrorna uppdateras
               cache_control: { type: "ephemeral" },
+            },
+            {
+              type: "text",
+              text: liveContext,
             },
           ],
           messages: messages.map((m) => ({ role: m.role, content: m.content })),
