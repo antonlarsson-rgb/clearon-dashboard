@@ -1,12 +1,9 @@
 import Anthropic from "@anthropic-ai/sdk";
 import {
-  getGooglePerformance,
-  getMetaPerformance,
-  getLinkedInPerformance,
-  getNamedConversions,
-  type AccountSet,
-  type PlatformPerformance,
-} from "@/lib/windsor";
+  AGENT_TOOLS,
+  executeAgentTool,
+  serializeToolResult,
+} from "@/lib/ai-agent-tools";
 
 export const maxDuration = 300;
 
@@ -15,82 +12,46 @@ interface ChatMessage {
   content: string;
 }
 
-const SYSTEM_PROMPT = `Du ar ClearOns AI-agent for Stellar och ClearOn-teamet.
+const MAX_TOOL_ITERATIONS = 8;
 
-Du far LIVE annonsdata (senaste 30 dagarna) injicerad i varje konversation - se
-sektionen LIVE-DATA nedan. Datan kommer fran Windsor.ai som hamtar direkt fran
-Google Ads, Meta och LinkedIn for tva konton: ClearOn och Mobila Presentkort.
-Behover du annan period eller mer detalj (annonsniva, sokord) kan anvandaren
-kolla fliken Kampanjer i dashboarden, eller klistra in siffror i chatten.
+const SYSTEM_PROMPT = `Du ar ClearOns AI-agent for Stellar och ClearOn-teamet, inbyggd i intelligence-dashboarden pa dashboard.clearon.live.
 
-Du hjalper anvandaren att:
-- Analysera annonsprestanda (spend, CPA, CTR, konverteringar) tvars over plattformar
-- Identifiera vinnande och underpresterande kampanjer
-- Foresla budget-omfordelningar och optimeringar
-- Foresla nya kampanjer (anvandaren skapar dem manuellt i Ads Manager / Campaign Manager)
-- Tolka funnel-data fran clearon.live (popup_filled, lead_submitted, etc.)
+Du har verktyg som ger dig tillgang till ALL data i systemet:
+- Annonser: kampanj- och annonsniva for Google/Meta/LinkedIn via Windsor.ai, for tva konton (clearon = ClearOn AB, mobila = Mobila Presentkort). Sokord och soktermer for Google. Namngivna konverteringar.
+- Leads och personer: buying intent-rankade leads fran person-grafen (beteendedata fran clearon.live, mail, annonsklick, Upsales), person-sokning, lead-attribution (vilken plattform/kampanj varje lead kom fran).
+- CRM: Upsales-kontakter med score och kategorier, senaste salj-aktiviteter, KPI:er och pipeline.
+- Webb: landningssidornas trafik, leads och konverteringsgrad, kanalfloden.
 
-Sakerhetsregler:
-- Du har inte tool-access att andra live-kampanjer - foreslag, anvandaren agerar
+Arbetssatt:
+- Hamta data med verktygen innan du svarar pa datafragor - gissa aldrig siffror
+- Valj ratt period: anvand lookback_days som matchar fragan (default 30 dagar)
+- Kombinera kallor nar det ger battre svar (t.ex. spend fran annonser + leads fran attributionen = verklig kostnad per lead)
+- Du har inte tool-access att ANDRA kampanjer eller skicka mail - foreslag, anvandaren agerar
 - Var transparent om vad som ar data och vad som ar din bedomning
+
+Kontext om verksamheten:
+- ClearOn saljer kupong- och presentkortslosningar B2B (produkter: sales-promotion, customer-care, interactive-engage, kampanja, send-a-gift, clearing-solutions, kuponger)
+- clearon.live ar lead-gen-landningssidor, clearon.se ar huvudsajten (Upsales IP-identifierar foretag dar)
+- Mobila Presentkort ar ett separat varumarke (B2C, glass/presentkort) vars annonskonton ocksa foljs har
 
 Sprak och ton:
 - Svara pa svenska om inte anvandaren skriver engelska
 - Anvand ALDRIG em-dashes (skriv "-" eller hela ord istallet)
-- Anvand svenska tecken (a, a, o) - inte transliteration
+- Anvand svenska tecken (a, a, o)
 - Var konkret och kortfattad - presentera siffror i tabeller, dra slutsatser, foresla nasta steg`;
 
-function fmtPlatform(p: PlatformPerformance): string {
-  if (p.status !== "live") return `  ${p.platform}: ${p.status} (${p.reason || "ingen data"})`;
-  const t = p.totals;
-  const lines = [
-    `  ${p.platform}: spend ${Math.round(t.spend)} ${p.currency}, ${t.impressions} visningar, ${t.clicks} klick, ${t.conversions.toFixed(1)} konv${t.cost_per_conversion ? `, ${Math.round(t.cost_per_conversion)} ${p.currency}/konv` : ""}`,
-  ];
-  for (const c of p.campaigns.slice(0, 10)) {
-    lines.push(
-      `    - "${c.name}" [${c.status || "okand status"}]: ${Math.round(c.spend)} ${p.currency}, ${c.clicks} klick, ${c.conversions.toFixed(1)} konv`,
-    );
-  }
-  return lines.join("\n");
-}
-
-/**
- * Bygg kompakt live-kontext fran Windsor. Cachas av Windsor-lagrets
- * revalidate (30 min) sa detta ar billigt per request.
- */
-async function buildLiveContext(): Promise<string> {
-  const period = { lookback_days: 30 };
-  try {
-    const accounts: AccountSet[] = ["clearon", "mobila"];
-    const results = await Promise.all(
-      accounts.flatMap((acc) => [
-        getGooglePerformance(period, 1800, acc),
-        getMetaPerformance(period, 1800, acc),
-        getLinkedInPerformance(period, 1800, acc),
-      ]),
-    );
-    const named = await Promise.all(
-      accounts.map((acc) => getNamedConversions(period, 1800, acc)),
-    );
-
-    const sections: string[] = ["LIVE-DATA (senaste 30 dagarna, via Windsor.ai):"];
-    accounts.forEach((acc, i) => {
-      sections.push(`\n${acc === "clearon" ? "ClearOn" : "Mobila Presentkort"}:`);
-      sections.push(results.slice(i * 3, i * 3 + 3).map(fmtPlatform).join("\n"));
-      const conv = named[i].slice(0, 8);
-      if (conv.length > 0) {
-        sections.push(
-          `  Namngivna konverteringar: ${conv
-            .map((n) => `${n.conversion_name} (${n.platform}): ${Math.round(n.value)}`)
-            .join("; ")}`,
-        );
-      }
-    });
-    return sections.join("\n");
-  } catch (e) {
-    return `LIVE-DATA: kunde inte hamtas just nu (${e instanceof Error ? e.message : "okant fel"}). Be anvandaren klistra in siffror vid behov.`;
-  }
-}
+const TOOL_LABELS: Record<string, string> = {
+  get_ads_overview: "Hämtar kampanjdata",
+  get_live_ads: "Hämtar live-annonser",
+  get_google_keywords: "Hämtar Google-sökord",
+  get_lead_attribution: "Hämtar lead-attribution",
+  get_top_leads: "Hämtar leads",
+  search_person: "Söker person",
+  get_crm_contacts: "Hämtar CRM-kontakter",
+  get_web_analytics: "Hämtar webbtrafik",
+  get_recent_activities: "Hämtar säljaktiviteter",
+  get_kpis: "Hämtar KPI:er",
+};
 
 export async function POST(request: Request) {
   let body: { messages?: ChatMessage[] };
@@ -100,8 +61,8 @@ export async function POST(request: Request) {
     return new Response("Invalid JSON body", { status: 400 });
   }
 
-  const messages = body.messages;
-  if (!messages || !Array.isArray(messages) || messages.length === 0) {
+  const chatMessages = body.messages;
+  if (!chatMessages || !Array.isArray(chatMessages) || chatMessages.length === 0) {
     return new Response("Messages required", { status: 400 });
   }
 
@@ -112,7 +73,6 @@ export async function POST(request: Request) {
   }
 
   const client = new Anthropic({ apiKey: anthropicKey });
-  const liveContext = await buildLiveContext();
 
   const encoder = new TextEncoder();
   const readable = new ReadableStream({
@@ -128,36 +88,69 @@ export async function POST(request: Request) {
       };
 
       try {
-        const stream = await client.messages.create({
-          model: "claude-opus-4-8",
-          max_tokens: 16000,
-          thinking: { type: "adaptive" },
-          system: [
-            {
-              type: "text",
-              text: SYSTEM_PROMPT,
-              // Statisk prompt cachas; live-datan ligger efter breakpointen
-              // sa cachen overlever att siffrorna uppdateras
-              cache_control: { type: "ephemeral" },
-            },
-            {
-              type: "text",
-              text: liveContext,
-            },
-          ],
-          messages: messages.map((m) => ({ role: m.role, content: m.content })),
-          stream: true,
-        });
+        let messages: Anthropic.MessageParam[] = chatMessages.map((m) => ({
+          role: m.role,
+          content: m.content,
+        }));
 
-        for await (const event of stream) {
-          if (
-            event.type === "content_block_delta" &&
-            event.delta.type === "text_delta"
-          ) {
-            send(event.delta.text);
+        for (let iteration = 0; iteration < MAX_TOOL_ITERATIONS; iteration++) {
+          const stream = client.messages.stream({
+            model: "claude-opus-4-8",
+            max_tokens: 16000,
+            thinking: { type: "adaptive" },
+            system: [
+              {
+                type: "text",
+                text: SYSTEM_PROMPT,
+                cache_control: { type: "ephemeral" },
+              },
+              {
+                type: "text",
+                text: `Dagens datum: ${new Date().toISOString().slice(0, 10)}`,
+              },
+            ],
+            tools: AGENT_TOOLS,
+            messages,
+          });
+
+          stream.on("text", (delta) => send(delta));
+
+          const message = await stream.finalMessage();
+
+          if (message.stop_reason !== "tool_use") {
+            done();
+            return;
           }
+
+          // Kor verktygen och loopa vidare
+          messages = [...messages, { role: "assistant", content: message.content }];
+
+          const toolResults: Anthropic.ToolResultBlockParam[] = [];
+          for (const block of message.content) {
+            if (block.type !== "tool_use") continue;
+            send(`\n\n*${TOOL_LABELS[block.name] || `Kör ${block.name}`}...*\n\n`);
+            let result: unknown;
+            try {
+              result = await executeAgentTool(
+                block.name,
+                (block.input as Record<string, unknown>) || {},
+              );
+            } catch (e) {
+              result = {
+                error: e instanceof Error ? e.message : "Verktygsfel",
+              };
+            }
+            toolResults.push({
+              type: "tool_result",
+              tool_use_id: block.id,
+              content: serializeToolResult(result),
+            });
+          }
+
+          messages = [...messages, { role: "user", content: toolResults }];
         }
 
+        send("\n\n[Avbrot: for manga verktygsanrop i en och samma fraga. Stall en foljdfraga sa fortsatter jag.]");
         done();
       } catch (err) {
         const msg = err instanceof Error ? err.message : "Okant streamingfel";
