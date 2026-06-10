@@ -99,6 +99,99 @@ export function getUtmParams(): Record<string, string> {
 }
 
 /**
+ * Annons-attribution: UTM-parametrar + plattformarnas klick-id:n.
+ *   gclid     -> Google Ads (auto-tagging, alltid med pa annonsklick)
+ *   fbclid    -> Meta (alltid med pa annonsklick)
+ *   li_fat_id -> LinkedIn (med pa annonsklick om enablat)
+ *   msclkid   -> Microsoft/Bing
+ *
+ * Parametrarna finns bara i URL:en pa landningssidan och tappas vid
+ * navigering, sa vi persisterar: forsta beroring i localStorage (overlever
+ * sessioner, 400d-cookien ar anda var identitet) och senaste beroring i
+ * sessionStorage. Lead-submit skickar med bada sa varje lead kan knytas
+ * till plattform + kampanj.
+ */
+const ATTR_FIRST_KEY = "clearon_attr_first";
+const ATTR_LAST_KEY = "clearon_attr_last";
+
+const ATTRIBUTION_PARAMS = [
+  "utm_source",
+  "utm_medium",
+  "utm_campaign",
+  "utm_content",
+  "utm_term",
+  "gclid",
+  "fbclid",
+  "li_fat_id",
+  "msclkid",
+] as const;
+
+export interface Attribution {
+  utm_source?: string;
+  utm_medium?: string;
+  utm_campaign?: string;
+  utm_content?: string;
+  utm_term?: string;
+  gclid?: string;
+  fbclid?: string;
+  li_fat_id?: string;
+  msclkid?: string;
+  referrer?: string;
+  landing_page?: string;
+  captured_at?: string;
+}
+
+/**
+ * Las attribution fran aktuell URL och persistera. Anropas implicit av
+ * track() sa varje sidladdning med annons-parametrar fangas.
+ */
+export function captureAttribution(): void {
+  if (typeof window === "undefined") return;
+
+  const params = new URLSearchParams(window.location.search);
+  const attr: Attribution = {};
+  let hasAdParams = false;
+  for (const key of ATTRIBUTION_PARAMS) {
+    const value = params.get(key);
+    if (value) {
+      attr[key] = value;
+      hasAdParams = true;
+    }
+  }
+  if (!hasAdParams) return;
+
+  attr.referrer = document.referrer || undefined;
+  attr.landing_page = window.location.pathname;
+  attr.captured_at = new Date().toISOString();
+
+  try {
+    sessionStorage.setItem(ATTR_LAST_KEY, JSON.stringify(attr));
+    if (!localStorage.getItem(ATTR_FIRST_KEY)) {
+      localStorage.setItem(ATTR_FIRST_KEY, JSON.stringify(attr));
+    }
+  } catch {
+    // storage full/blocked - ignore
+  }
+}
+
+export function getAttribution(): { first: Attribution | null; last: Attribution | null } {
+  if (typeof window === "undefined") return { first: null, last: null };
+  captureAttribution();
+  const read = (storage: Storage, key: string): Attribution | null => {
+    try {
+      const raw = storage.getItem(key);
+      return raw ? (JSON.parse(raw) as Attribution) : null;
+    } catch {
+      return null;
+    }
+  };
+  return {
+    first: read(localStorage, ATTR_FIRST_KEY),
+    last: read(sessionStorage, ATTR_LAST_KEY),
+  };
+}
+
+/**
  * Identifierings-token från mail-länkar.
  *   ?clearon_pid=12345     → upsales_contact_id för stitching
  *   ?clearon_email=base64  → email base64-encoded
@@ -222,7 +315,10 @@ export function trackLinkedIn(conversionId: number): void {
 export async function track(eventName: string, properties: TrackingProperties = {}): Promise<void> {
   const sessionId = getSessionId();
   const visitorId = getVisitorId();
-  const utmParams = getUtmParams();
+  // Persisterad last-touch som bas, aktuella URL-parametrar vinner. Da bar
+  // events utm/klick-id aven efter navigering bort fran landnings-URL:en.
+  const { last: lastAttribution } = getAttribution();
+  const utmParams = { ...(lastAttribution || {}), ...getUtmParams() };
   const pageContext =
     typeof window !== "undefined"
       ? {

@@ -4,6 +4,7 @@ import {
   getGooglePerformance,
   getMetaPerformance,
   getLinkedInPerformance,
+  resolveAccountSet,
   type PeriodArgs,
 } from "@/lib/windsor";
 
@@ -25,6 +26,7 @@ export async function GET(request: Request) {
   }
 
   const url = new URL(request.url);
+  const account = resolveAccountSet(url.searchParams.get("account"));
   const startDate = url.searchParams.get("start_date");
   const endDateRaw = url.searchParams.get("end_date");
   const requestedLookback = Number(url.searchParams.get("lookback")) || 30;
@@ -52,9 +54,9 @@ export async function GET(request: Request) {
   // Cache 30 min for performance, 60 min for connections
   const [connectionsResult, google, meta, linkedin] = await Promise.all([
     getConnections(3600),
-    getGooglePerformance(period, 1800),
-    getMetaPerformance(period, 1800),
-    getLinkedInPerformance(period, 1800),
+    getGooglePerformance(period, 1800, account),
+    getMetaPerformance(period, 1800, account),
+    getLinkedInPerformance(period, 1800, account),
   ]);
 
   const platforms = [google, meta, linkedin];
@@ -98,6 +100,7 @@ export async function GET(request: Request) {
   const quota = google.quota || meta.quota || linkedin.quota || null;
 
   return NextResponse.json({
+    account,
     period: {
       label,
       lookback_days: startDate && endDate ? null : lookback,

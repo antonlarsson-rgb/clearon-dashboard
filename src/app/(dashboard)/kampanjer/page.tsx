@@ -130,6 +130,13 @@ const PERIOD_OPTIONS = [
   { value: 90, label: "90d" },
 ];
 
+type AccountTab = "clearon" | "mobila";
+
+const ACCOUNT_TABS: Array<{ value: AccountTab; label: string; platforms: Platform[] }> = [
+  { value: "clearon", label: "ClearOn", platforms: ["meta", "linkedin", "google", "email"] },
+  { value: "mobila", label: "Mobila Presentkort", platforms: ["meta", "linkedin", "google"] },
+];
+
 function formatKr(n: number | null, currency = "SEK"): string {
   if (n == null || n === 0) return "—";
   const suffix = currency === "SEK" ? "kr" : currency;
@@ -173,11 +180,12 @@ function unifyStatus(
   spend?: number | null,
 ): "active" | "paused" | "completed" | "library" | "unknown" {
   const t = (s || "").toLowerCase();
-  if (t.includes("active") || t.includes("live")) return "active";
+  // Google rapporterar "ENABLED", Meta/LinkedIn "ACTIVE"
+  if (t.includes("active") || t.includes("enabled") || t.includes("live")) return "active";
   if (t.includes("paus")) return "paused";
   if (t.includes("completed") || t.includes("avslutad")) return "completed";
   if (t.includes("library")) return "library";
-  // Adspirer kan returnera status=null. Om spend > 0 är kampanjen aktiv;
+  // Plattformen kan returnera status=null. Om spend > 0 är kampanjen aktiv;
   // annars osäker.
   if (!s) {
     if ((spend || 0) > 0) return "active";
@@ -190,6 +198,8 @@ function unifyStatus(
 
 export default function KampanjerPage() {
   const [period, setPeriod] = useState(30);
+  const [account, setAccount] = useState<AccountTab>("clearon");
+  const [view, setView] = useState<"campaigns" | "ads">("campaigns");
   const [dbCampaigns, setDbCampaigns] = useState<DbCampaign[]>([]);
   const [adsData, setAdsData] = useState<AdsOverview | null>(null);
   const [loading, setLoading] = useState(true);
@@ -200,11 +210,12 @@ export default function KampanjerPage() {
 
   useEffect(() => {
     const ctrl = { cancelled: false };
+    setLoading(true);
     (async () => {
       try {
         const [dbRes, adsRes] = await Promise.all([
           fetch("/api/campaigns").then((r) => r.json()),
-          fetch(`/api/ads/overview?lookback=${period}`).then((r) => r.json()),
+          fetch(`/api/ads/overview?lookback=${period}&account=${account}`).then((r) => r.json()),
         ]);
         if (!ctrl.cancelled) {
           setDbCampaigns(dbRes.campaigns || []);
@@ -222,14 +233,16 @@ export default function KampanjerPage() {
     return () => {
       ctrl.cancelled = true;
     };
-  }, [period]);
+  }, [period, account]);
+
+  const tabPlatforms = ACCOUNT_TABS.find((t) => t.value === account)!.platforms;
 
   // Bygg unified campaigns från båda källor
   const unified = useMemo<UnifiedCampaign[]>(() => {
     const result: UnifiedCampaign[] = [];
     const usedDbKeys = new Set<string>();
 
-    // 1. Lägg in alla Adspirer-kampanjer (live data)
+    // 1. Lägg in alla live-kampanjer från Windsor
     if (adsData) {
       for (const platform of adsData.platforms) {
         for (const c of platform.campaigns) {
@@ -271,11 +284,13 @@ export default function KampanjerPage() {
       }
     }
 
-    // 2. Lägg in DB-kampanjer som inte matchades (kreativ-bibliotek + email)
-    // Viktigt: kalla dem inte "Live" — vi har ingen Adspirer-bekräftelse på
+    // 2. Lägg in DB-kampanjer som inte matchades (kreativ-bibliotek + email).
+    // Bara på ClearOn-fliken — Mobila Presentkort visar enbart live-data,
+    // kreativ används endast där den matchat en live-kampanj ovan.
+    // Viktigt: kalla dem inte "Live" — vi har ingen plattforms-bekräftelse på
     // att de faktiskt körs i Meta/LinkedIn just nu. Email är annorlunda
     // (faktiska utskick från Upsales).
-    for (const d of dbCampaigns) {
+    for (const d of account === "clearon" ? dbCampaigns : []) {
       if (usedDbKeys.has(d.id)) continue;
       // Email-mailings är historiska utskick — markera som completed.
       // Övriga DB-kampanjer som vi inte hittat i Adspirer: status "library"
@@ -323,7 +338,7 @@ export default function KampanjerPage() {
       if (r !== 0) return r;
       return (b.spend || 0) - (a.spend || 0);
     });
-  }, [dbCampaigns, adsData]);
+  }, [dbCampaigns, adsData, account]);
 
   // Filtrera
   const visible = useMemo(() => {
@@ -369,8 +384,8 @@ export default function KampanjerPage() {
         result[p].conv += c.conversions || 0;
       }
     }
-    // Adspirer-totalsumma är auktoritativ för spend i perioden (täcker även
-    // kampanjer Adspirer rapporterar utan kreativ-match).
+    // Plattforms-totalsumman är auktoritativ för spend i perioden (täcker även
+    // kampanjer som rapporteras utan kreativ-match).
     if (adsData) {
       for (const ap of adsData.platforms) {
         if (result[ap.platform]) {
@@ -393,15 +408,37 @@ export default function KampanjerPage() {
           Kampanjer
         </h1>
         <p className="mt-1 text-sm text-text-secondary">
-          Status och spend kommer live från Adspirer (Google, Meta, LinkedIn).
-          Kreativ syns där det matchas mot en sparad annons. Kampanjer som
-          endast finns som sparad kreativ — utan live-bekräftelse från
-          plattformen — märks som <strong className="text-[#a363d9]">Sparad</strong>,
-          inte Live.
+          Status och spend kommer live från annonsplattformarna via Windsor.ai
+          (Google, Meta, LinkedIn). Kreativ syns där det matchas mot en sparad
+          annons. Kampanjer som endast finns som sparad kreativ — utan
+          live-bekräftelse från plattformen — märks som{" "}
+          <strong className="text-[#a363d9]">Sparad</strong>, inte Live.
         </p>
       </div>
 
-      {/* Period-väljare */}
+      {/* Konto-flikar: ClearOn (default) och Mobila Presentkort */}
+      <div className="flex items-center gap-1 border-b border-border">
+        {ACCOUNT_TABS.map((tab) => (
+          <button
+            key={tab.value}
+            onClick={() => {
+              setAccount(tab.value);
+              setPlatformFilter("all");
+              setStatusFilter("all");
+            }}
+            className={cn(
+              "px-4 py-2 text-sm font-medium transition-colors border-b-2 -mb-px",
+              account === tab.value
+                ? "border-accent text-text-primary"
+                : "border-transparent text-text-secondary hover:text-text-primary",
+            )}
+          >
+            {tab.label}
+          </button>
+        ))}
+      </div>
+
+      {/* Period-väljare + vy-växel */}
       <div className="flex flex-wrap items-center gap-3 rounded-lg border border-border bg-surface p-3">
         <span className="text-[10px] uppercase tracking-wide text-text-muted">
           Period
@@ -422,15 +459,40 @@ export default function KampanjerPage() {
             </button>
           ))}
         </div>
+        <span className="text-[10px] uppercase tracking-wide text-text-muted ml-2">
+          Visa
+        </span>
+        <div className="flex gap-1">
+          {(
+            [
+              { value: "campaigns", label: "Kampanjer" },
+              { value: "ads", label: "Annonser" },
+            ] as const
+          ).map((opt) => (
+            <button
+              key={opt.value}
+              onClick={() => setView(opt.value)}
+              className={cn(
+                "rounded-full px-3 py-1 text-xs font-medium transition-colors",
+                view === opt.value
+                  ? "bg-text-primary text-surface"
+                  : "bg-surface-elevated text-text-secondary hover:text-text-primary",
+              )}
+            >
+              {opt.label}
+            </button>
+          ))}
+        </div>
         <span className="ml-auto text-xs text-text-muted">
-          Visar: {periodLabel} · {visible.length} kampanjer
+          Visar: {periodLabel}
+          {view === "campaigns" && <> · {visible.length} kampanjer</>}
         </span>
       </div>
 
-      {/* Plattform-summary: visar bara LIVE-kampanjer (Adspirer-bekräftade),
+      {/* Plattform-summary: visar bara LIVE-kampanjer (plattforms-bekräftade),
           pausade och sparade-kreativ separat. Inga inflations-siffror. */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-        {(Object.keys(PLATFORM_META) as Platform[]).map((p) => {
+        {tabPlatforms.map((p) => {
           const meta = PLATFORM_META[p];
           const s = platformSummary[p];
           const total = s.live + s.paused + s.library;
@@ -478,7 +540,8 @@ export default function KampanjerPage() {
         })}
       </div>
 
-      {/* Status-filter */}
+      {/* Status-filter (bara kampanj-vyn) */}
+      {view === "campaigns" && (
       <div className="flex items-center justify-between gap-3">
         <div className="flex items-center gap-2">
           <span className="text-[10px] uppercase tracking-wide text-text-muted">
@@ -519,10 +582,13 @@ export default function KampanjerPage() {
           </button>
         )}
       </div>
+      )}
 
-      {loading ? (
+      {view === "ads" ? (
+        <AdsGrid lookback={period} account={account} platformFilter={platformFilter} />
+      ) : loading ? (
         <div className="rounded-lg border border-border bg-surface p-12 text-center text-sm text-text-muted">
-          Laddar kampanjer från Adspirer + DB...
+          Laddar live-kampanjer från annonsplattformarna...
         </div>
       ) : visible.length === 0 ? (
         <div className="rounded-lg border border-dashed border-border p-12 text-center text-sm text-text-muted">
@@ -533,6 +599,490 @@ export default function KampanjerPage() {
           {visible.map((c) => (
             <CampaignCard key={c.key} c={c} />
           ))}
+        </div>
+      )}
+
+      {/* Lead-attribution: bara pa ClearOn-fliken — leads kommer fran
+          clearon.live, inte fran Mobila Presentkorts trattar */}
+      {account === "clearon" && <AttributionPanel lookback={period} />}
+    </div>
+  );
+}
+
+// ---- Faktiska annonser (ads/creatives) ----
+
+interface AdInfo {
+  ad_id: string;
+  name: string;
+  headline: string | null;
+  body: string | null;
+  group_id: string | null;
+  group_name: string | null;
+  campaign_id: string | null;
+  campaign_name: string | null;
+  status: string | null;
+  thumbnail_url: string | null;
+  destination_url: string | null;
+  spend: number;
+  impressions: number;
+  clicks: number;
+  conversions: number;
+  ctr: number | null;
+  cpc: number | null;
+  currency: string;
+}
+
+interface AdsResponse {
+  platforms: Array<{
+    platform: "google" | "meta" | "linkedin";
+    status: string;
+    reason: string | null;
+    ads: AdInfo[];
+  }>;
+}
+
+type AdWithPlatform = AdInfo & { platform: "google" | "meta" | "linkedin" };
+
+interface AdGroup {
+  key: string;
+  platform: "google" | "meta" | "linkedin";
+  name: string;
+  campaignName: string | null;
+  ads: AdWithPlatform[];
+  spend: number;
+  impressions: number;
+  clicks: number;
+  conversions: number;
+  currency: string;
+}
+
+function AdsGrid({
+  lookback,
+  account,
+  platformFilter,
+}: {
+  lookback: number;
+  account: AccountTab;
+  platformFilter: Platform | "all";
+}) {
+  const [data, setData] = useState<AdsResponse | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [grouping, setGrouping] = useState<"adset" | "flat">("adset");
+
+  useEffect(() => {
+    const ctrl = { cancelled: false };
+    setLoading(true);
+    fetch(`/api/ads/creatives?lookback=${lookback}&account=${account}`)
+      .then((r) => r.json())
+      .then((json) => {
+        if (!ctrl.cancelled) {
+          setData(json && !json.error ? json : null);
+          setLoading(false);
+        }
+      })
+      .catch(() => {
+        if (!ctrl.cancelled) {
+          setData(null);
+          setLoading(false);
+        }
+      });
+    return () => {
+      ctrl.cancelled = true;
+    };
+  }, [lookback, account]);
+
+  if (loading) {
+    return (
+      <div className="rounded-lg border border-border bg-surface p-12 text-center text-sm text-text-muted">
+        Laddar annonser från plattformarna...
+      </div>
+    );
+  }
+
+  const ads: AdWithPlatform[] = (data?.platforms || [])
+    .filter((p) => platformFilter === "all" || p.platform === platformFilter)
+    .flatMap((p) => p.ads.map((a) => ({ ...a, platform: p.platform })))
+    .sort((a, b) => b.spend - a.spend);
+
+  if (ads.length === 0) {
+    return (
+      <div className="rounded-lg border border-dashed border-border p-12 text-center text-sm text-text-muted">
+        Inga live-annonser i aktiva kampanjer just nu.
+      </div>
+    );
+  }
+
+  // Gruppera per ad set (Meta) / annonsgrupp (Google) / kampanj (LinkedIn)
+  const groups: AdGroup[] = [];
+  if (grouping === "adset") {
+    const map = new Map<string, AdGroup>();
+    for (const a of ads) {
+      const key = `${a.platform}-${a.group_id || a.campaign_id || "ovrigt"}`;
+      const g = map.get(key) || {
+        key,
+        platform: a.platform,
+        name: a.group_name || a.campaign_name || "Övrigt",
+        campaignName: a.campaign_name,
+        ads: [],
+        spend: 0,
+        impressions: 0,
+        clicks: 0,
+        conversions: 0,
+        currency: a.currency,
+      };
+      g.ads.push(a);
+      g.spend += a.spend;
+      g.impressions += a.impressions;
+      g.clicks += a.clicks;
+      g.conversions += a.conversions;
+      map.set(key, g);
+    }
+    groups.push(...Array.from(map.values()).sort((a, b) => b.spend - a.spend));
+  }
+
+  return (
+    <div className="flex flex-col gap-4">
+      <div className="flex items-center gap-2">
+        <span className="text-[10px] uppercase tracking-wide text-text-muted">
+          Gruppering
+        </span>
+        {(
+          [
+            { value: "adset", label: "Per ad set" },
+            { value: "flat", label: "Alla annonser" },
+          ] as const
+        ).map((opt) => (
+          <button
+            key={opt.value}
+            onClick={() => setGrouping(opt.value)}
+            className={cn(
+              "rounded-full px-2.5 py-1 text-[11px] font-medium transition-colors",
+              grouping === opt.value
+                ? "bg-text-primary text-surface"
+                : "bg-surface-elevated text-text-secondary hover:text-text-primary",
+            )}
+          >
+            {opt.label}
+          </button>
+        ))}
+        <span className="ml-auto text-xs text-text-muted">
+          {ads.length} live-annonser
+          {grouping === "adset" && <> i {groups.length} ad sets</>}
+        </span>
+      </div>
+
+      {grouping === "flat" ? (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
+          {ads.map((a) => (
+            <AdCard key={`${a.platform}-${a.ad_id}`} a={a} />
+          ))}
+        </div>
+      ) : (
+        groups.map((g) => <AdSetSection key={g.key} g={g} />)
+      )}
+    </div>
+  );
+}
+
+function AdSetSection({ g }: { g: AdGroup }) {
+  const platformMeta = PLATFORM_META[g.platform];
+  const ctr = g.impressions > 0 ? (g.clicks / g.impressions) * 100 : 0;
+  const groupKind =
+    g.platform === "google" ? "Annonsgrupp" : g.platform === "linkedin" ? "Kampanj" : "Ad set";
+
+  return (
+    <div className="rounded-lg border border-border bg-surface overflow-hidden">
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-1 border-b border-border/50 bg-surface-elevated/40 px-3 py-2">
+        <div className="flex items-center gap-1.5 min-w-0">
+          <span
+            className="h-2 w-2 rounded-full shrink-0"
+            style={{ backgroundColor: platformMeta.color }}
+          />
+          <span className="text-[9px] uppercase tracking-wide text-text-muted shrink-0">
+            {groupKind}
+          </span>
+          <span className="text-xs font-bold text-text-primary truncate">{g.name}</span>
+          {g.campaignName && g.campaignName !== g.name && (
+            <span className="text-[10px] text-text-muted truncate">
+              · {g.campaignName}
+            </span>
+          )}
+        </div>
+        <div className="ml-auto flex items-center gap-3 text-[11px] tabular-nums shrink-0">
+          <span className="font-bold">{formatKr(g.spend, g.currency)}</span>
+          <span className="text-text-muted">{formatInt(g.impressions)} impr</span>
+          <span className="text-text-muted">{formatInt(g.clicks)} klick</span>
+          <span className="text-text-muted">{ctr > 0 ? `${ctr.toFixed(1)}% CTR` : "—"}</span>
+          {g.conversions > 0 && (
+            <span className="text-[#8bb347] font-medium">{formatInt(g.conversions)} konv</span>
+          )}
+          <span className="text-text-muted">
+            {g.ads.length} {g.ads.length === 1 ? "annons" : "annonser"}
+          </span>
+        </div>
+      </div>
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 p-3">
+        {g.ads
+          .slice()
+          .sort((a, b) => b.spend - a.spend)
+          .map((a) => (
+            <AdCard key={`${a.platform}-${a.ad_id}`} a={a} />
+          ))}
+      </div>
+    </div>
+  );
+}
+
+function AdCard({ a }: { a: AdInfo & { platform: "google" | "meta" | "linkedin" } }) {
+  const platformMeta = PLATFORM_META[a.platform];
+  const status = unifyStatus(a.status, a.spend);
+  const isActive = status === "active";
+  const statusBg =
+    status === "active"
+      ? "bg-[#8bb347]/15 text-[#8bb347]"
+      : status === "paused"
+        ? "bg-[#e8864c]/15 text-[#e8864c]"
+        : "bg-text-muted/15 text-text-muted";
+  const statusLabel =
+    status === "active" ? "Live" : status === "paused" ? "Pausad" : "Inaktiv";
+
+  return (
+    <div
+      className={cn(
+        "group relative overflow-hidden rounded-lg border bg-surface flex flex-col text-xs",
+        isActive ? "border-border" : "border-border/50",
+      )}
+    >
+      {a.thumbnail_url ? (
+        <div
+          className="w-full flex items-center justify-center overflow-hidden bg-black/5"
+          style={{ maxHeight: 280, minHeight: 140 }}
+        >
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={a.thumbnail_url}
+            alt={a.name}
+            className={cn(
+              "max-w-full max-h-[280px] object-contain",
+              isActive ? "" : "grayscale opacity-90",
+            )}
+            loading="lazy"
+          />
+        </div>
+      ) : (
+        <div
+          className="w-full flex flex-col items-center justify-center bg-surface-elevated gap-1"
+          style={{ aspectRatio: "16 / 9" }}
+        >
+          <platformMeta.Icon className="h-7 w-7" style={{ color: platformMeta.color }} />
+          <div className="text-[9px] text-text-muted">
+            {a.platform === "google" ? "Textannons" : "Ingen förhandsbild"}
+          </div>
+        </div>
+      )}
+
+      <div className="p-2.5 flex flex-col gap-1.5 flex-1">
+        <div className="flex items-center justify-between gap-1.5">
+          <div className="flex items-center gap-1 min-w-0">
+            <span
+              className="h-1.5 w-1.5 rounded-full shrink-0"
+              style={{ backgroundColor: platformMeta.color }}
+            />
+            <span className="text-[10px] font-semibold text-text-secondary">
+              {platformMeta.label}
+            </span>
+          </div>
+          <span
+            className={cn(
+              "inline-flex items-center gap-0.5 rounded-full px-1.5 py-0.5 text-[8px] font-bold uppercase shrink-0",
+              statusBg,
+            )}
+          >
+            {statusLabel}
+          </span>
+        </div>
+
+        <div className="text-xs font-semibold text-text-primary line-clamp-2 leading-tight">
+          {a.name}
+        </div>
+        {a.headline && a.headline !== a.name && (
+          <div className="text-[11px] font-medium text-text-primary leading-snug line-clamp-2">
+            {a.headline}
+          </div>
+        )}
+        {a.body && (
+          <div className="text-[10px] text-text-secondary leading-snug line-clamp-2">
+            {a.body}
+          </div>
+        )}
+        {a.campaign_name && (
+          <div className="text-[10px] text-text-muted truncate">
+            Kampanj: {a.campaign_name}
+          </div>
+        )}
+        {a.destination_url && (
+          <Link
+            href={a.destination_url}
+            target="_blank"
+            rel="noreferrer"
+            className="inline-flex items-center gap-0.5 text-[10px] font-medium hover:underline w-fit truncate max-w-full"
+            style={{ color: platformMeta.color }}
+          >
+            <span className="truncate">{a.destination_url.replace(/^https?:\/\//, "")}</span>
+            <ExternalLink className="h-2 w-2 shrink-0" />
+          </Link>
+        )}
+
+        <div className="mt-auto pt-1.5 border-t border-border/50 space-y-1">
+          <div className="flex items-center justify-between">
+            <span className="text-[10px] uppercase tracking-wide text-text-muted">
+              Spend
+            </span>
+            <span className="text-xs font-bold tabular-nums">
+              {formatKr(a.spend, a.currency)}
+            </span>
+          </div>
+          <div className="grid grid-cols-4 gap-1">
+            <Metric label="Impr" value={formatInt(a.impressions)} />
+            <Metric label="Klick" value={formatInt(a.clicks)} />
+            <Metric label="CTR" value={a.ctr ? `${a.ctr.toFixed(1)}%` : "—"} />
+            <Metric
+              label="Konv"
+              value={formatInt(a.conversions)}
+              highlight={a.conversions > 0}
+            />
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ---- Lead-attribution ----
+
+interface AttributionGroup {
+  platform: string;
+  utm_source: string | null;
+  utm_campaign: string | null;
+  count: number;
+  leads: Array<{
+    person_id: string | null;
+    name: string | null;
+    company: string | null;
+    occurred_at: string;
+  }>;
+}
+
+interface AttributionData {
+  total_leads: number;
+  attributed_leads: number;
+  groups: AttributionGroup[];
+}
+
+const ATTRIBUTION_PLATFORM_STYLE: Record<string, { label: string; color: string }> = {
+  google: { label: "Google", color: "#EA4335" },
+  meta: { label: "Meta", color: "#1877F2" },
+  linkedin: { label: "LinkedIn", color: "#0A66C2" },
+  organic: { label: "Organiskt / okänd källa", color: "#8b8b8b" },
+};
+
+function AttributionPanel({ lookback }: { lookback: number }) {
+  const [data, setData] = useState<AttributionData | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const ctrl = { cancelled: false };
+    setLoading(true);
+    fetch(`/api/ads/attribution?lookback=${lookback}`)
+      .then((r) => r.json())
+      .then((json) => {
+        if (!ctrl.cancelled) {
+          setData(json && !json.error ? json : null);
+          setLoading(false);
+        }
+      })
+      .catch(() => {
+        if (!ctrl.cancelled) {
+          setData(null);
+          setLoading(false);
+        }
+      });
+    return () => {
+      ctrl.cancelled = true;
+    };
+  }, [lookback]);
+
+  return (
+    <div className="rounded-lg border border-border bg-surface p-4">
+      <div className="flex items-center justify-between gap-2 mb-1">
+        <h2 className="flex items-center gap-2 text-sm font-bold text-text-primary">
+          <Users className="h-4 w-4 text-accent" />
+          Leads per annonskälla
+        </h2>
+        {data && (
+          <span className="text-xs text-text-muted">
+            {data.attributed_leads} av {data.total_leads} leads attribuerade till annons
+            (senaste {lookback}d)
+          </span>
+        )}
+      </div>
+      <p className="mb-3 text-xs text-text-secondary">
+        Kopplar inkomna leads till plattform och kampanj via UTM-parametrar och
+        klick-id (gclid, fbclid, li_fat_id) från annonsklicket.
+      </p>
+
+      {loading ? (
+        <div className="py-6 text-center text-xs text-text-muted">Laddar attribution...</div>
+      ) : !data || data.total_leads === 0 ? (
+        <div className="py-6 text-center text-xs text-text-muted">
+          Inga leads i perioden.
+        </div>
+      ) : (
+        <div className="divide-y divide-border/50">
+          {data.groups.map((g, i) => {
+            const style =
+              ATTRIBUTION_PLATFORM_STYLE[g.platform] || {
+                label: g.platform,
+                color: "#8b8b8b",
+              };
+            return (
+              <div key={i} className="flex items-start justify-between gap-3 py-2">
+                <div className="min-w-0">
+                  <div className="flex items-center gap-1.5">
+                    <span
+                      className="h-2 w-2 rounded-full shrink-0"
+                      style={{ backgroundColor: style.color }}
+                    />
+                    <span className="text-xs font-semibold text-text-primary">
+                      {style.label}
+                    </span>
+                    {g.utm_campaign && (
+                      <span className="text-xs text-text-secondary truncate">
+                        · {g.utm_campaign}
+                      </span>
+                    )}
+                  </div>
+                  <div className="mt-0.5 flex flex-wrap gap-x-2 text-[11px] text-text-muted">
+                    {g.leads.slice(0, 5).map((l, j) =>
+                      l.person_id ? (
+                        <Link
+                          key={j}
+                          href={`/persons/${l.person_id}`}
+                          className="hover:underline text-text-secondary"
+                        >
+                          {l.name || l.company || "Okänd"}
+                        </Link>
+                      ) : (
+                        <span key={j}>{l.name || l.company || "Okänd"}</span>
+                      ),
+                    )}
+                    {g.leads.length > 5 && <span>+{g.leads.length - 5} till</span>}
+                  </div>
+                </div>
+                <span className="shrink-0 font-display text-lg tabular-nums">{g.count}</span>
+              </div>
+            );
+          })}
         </div>
       )}
     </div>
@@ -757,9 +1307,9 @@ function CampaignCard({ c }: { c: UnifiedCampaign }) {
             historisk kreativ utan live-bekräftelse */}
         <div className="flex items-center gap-1 pt-1 border-t border-border/30 text-[9px] text-text-muted">
           {c.source === "merged" && (
-            <span className="text-[#8bb347]">● Adspirer-bekräftad + kreativ</span>
+            <span className="text-[#8bb347]">● Live-bekräftad + kreativ</span>
           )}
-          {c.source === "live" && <span>● Adspirer live-data</span>}
+          {c.source === "live" && <span>● Live plattformsdata</span>}
           {c.source === "library" && (
             <span className="text-[#a363d9]">● Kreativ utan live-bekräftelse</span>
           )}

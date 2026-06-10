@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { useSignal } from "./SignalProvider";
 import { trackClick, trackLead } from "@/lib/meta-pixel";
+import { getVisitorId, getAttribution } from "@/lib/tracking";
 
 export function CtaFooter() {
   const { track, sessionId, segment, score, scrollDepth, dwellTime } = useSignal();
@@ -111,6 +112,8 @@ function ContactForm({ track, sessionId, segment, score }: {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           sessionId,
+          visitorId: getVisitorId(),
+          attribution: getAttribution(),
           email: form.email,
           company: form.company || null,
           interests: [

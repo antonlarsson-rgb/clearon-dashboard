@@ -29,7 +29,40 @@ interface VainuCompany {
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { sessionId, visitorId, email, company, role, interests } = body;
+    const { sessionId, visitorId, email, company, role, interests, attribution } = body;
+
+    // Annons-attribution fran klienten: { first, last } med utm_* + klick-id
+    // (gclid/fbclid/li_fat_id). Persisterad i local/sessionStorage av
+    // tracking.ts sa den overlever navigering fran landnings-URL:en.
+    interface AttributionTouch {
+      utm_source?: string;
+      utm_medium?: string;
+      utm_campaign?: string;
+      utm_content?: string;
+      utm_term?: string;
+      gclid?: string;
+      fbclid?: string;
+      li_fat_id?: string;
+      msclkid?: string;
+      referrer?: string;
+      landing_page?: string;
+      captured_at?: string;
+    }
+    const attrFirst: AttributionTouch | null = attribution?.first || null;
+    const attrLast: AttributionTouch | null = attribution?.last || null;
+    // Plattform harleds fran utm_source eller klick-id. Klick-id:n foljer
+    // alltid med annonsklick (gclid = Google auto-tagging, fbclid = Meta,
+    // li_fat_id = LinkedIn) aven om UTM-taggning saknas pa annonsen.
+    const derivePlatform = (a: AttributionTouch | null): string | null => {
+      if (!a) return null;
+      const src = (a.utm_source || "").toLowerCase();
+      if (a.gclid || src.includes("google")) return "google";
+      if (a.fbclid || src.includes("facebook") || src.includes("meta") || src.includes("instagram")) return "meta";
+      if (a.li_fat_id || src.includes("linkedin")) return "linkedin";
+      if (src) return src;
+      return null;
+    };
+    const adPlatform = derivePlatform(attrLast) || derivePlatform(attrFirst);
 
     if (!email) {
       return NextResponse.json({ error: "Email is required" }, { status: 400 });
@@ -310,6 +343,8 @@ export async function POST(request: Request) {
         account_id: accountId,
         contact_id: contactData?.id,
         source: "form",
+        first_utm_source: attrFirst?.utm_source || null,
+        first_utm_campaign: attrFirst?.utm_campaign || null,
       }
     );
 
@@ -335,11 +370,27 @@ export async function POST(request: Request) {
           industry: resolvedIndustry,
           company: resolvedCompany,
           variant: getField("variant:"),
-          source_channel: getField("utm_source:") || getField("variant:"),
+          source_channel:
+            attrLast?.utm_source || getField("utm_source:") || getField("variant:"),
           phone_provided: phoneProvided,
           boss_phone_provided: bossPhoneProvided,
           vainu_matched: !!vainuMatch,
           account_match_method: accountMatchMethod,
+          // Annons-attribution: anvands av /api/ads/attribution for att
+          // koppla leads till plattform + kampanj
+          ad_platform: adPlatform,
+          utm_source: attrLast?.utm_source || attrFirst?.utm_source || null,
+          utm_medium: attrLast?.utm_medium || attrFirst?.utm_medium || null,
+          utm_campaign: attrLast?.utm_campaign || attrFirst?.utm_campaign || null,
+          utm_content: attrLast?.utm_content || attrFirst?.utm_content || null,
+          gclid: attrLast?.gclid || attrFirst?.gclid || null,
+          fbclid: attrLast?.fbclid || attrFirst?.fbclid || null,
+          li_fat_id: attrLast?.li_fat_id || attrFirst?.li_fat_id || null,
+          attribution_first: attrFirst,
+          attribution_last: attrLast,
+          lead_email: email,
+          lead_name: contactName,
+          lead_company: resolvedCompany,
         },
       });
 

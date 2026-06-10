@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect } from "react";
 import { useTracking } from "@/hooks/use-tracking";
 import { trackClick, trackLead } from "@/lib/meta-pixel";
+import { getVisitorId, getAttribution } from "@/lib/tracking";
 import { SiteNav } from "@/components/landing-v2/SiteNav";
 import { CtaFooter } from "@/components/landing-v2/CtaFooter";
 import { SignalProvider } from "@/components/landing-v2/SignalProvider";
@@ -365,6 +366,8 @@ export default function ProductLandingClient({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           sessionId,
+          visitorId: getVisitorId(),
+          attribution: getAttribution(),
           email,
           company: company || null,
           interests: [

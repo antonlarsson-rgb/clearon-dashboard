@@ -5,24 +5,45 @@
  * byter import-path.
  *
  * Windsor levererar data fran flera ad-plattformar via en enda API-nyckel
- * (WINDSOR_API_KEY). Vi filtrerar pa account_name per plattform sa bara
- * ClearOn-data kommer med.
+ * (WINDSOR_API_KEY). Nyckeln ar kopplad till Stellars hela kontostruktur
+ * (9 Google-konton, 6 Meta-konton), sa ALL filtrering sker klient-side pa
+ * account_id. Windsors _filter-param ar verifierat trasig pa samtliga
+ * connectors (returnerar alla konton oavsett filter) - anvand den inte.
  *
- * Connectors i ClearOn-kontot:
- *  - google_ads (account_name "Clearon")
- *  - linkedin   (account_name "ClearOn", enda kontot)
- *  - facebook   (ej anslutet for ClearOn - returnerar status "unavailable")
+ * Tva kontoset stods:
+ *  - clearon: ClearOns egna konton (Google + LinkedIn + Meta)
+ *  - mobila:  Mobila Presentkort (Google + Meta, ingen LinkedIn)
+ *
+ * OBS: facebook-connectorn returnerar spend/impressions/clicks som STRANGAR.
+ * All aggregering maste ga via num() for att undvika strangkonkatenering.
  */
 
 const WINDSOR_BASE = "https://connectors.windsor.ai";
 
-// ClearOns konton hos respektive plattform. Bytas ut om kontonamn andras.
-// Google: server-side filter funkar (account_name).
-// LinkedIn: server-side filter funkar (account_name, case-sensitive).
-// Facebook: server-side _filter ar OPALITLIG, vi filtrerar klient-side pa account_id.
-const CLEARON_GOOGLE_ACCOUNT_NAME = "Clearon";
-const CLEARON_LINKEDIN_ACCOUNT_NAME = "ClearOn";
-const CLEARON_META_ACCOUNT_ID = "1771733670071985";
+export type AccountSet = "clearon" | "mobila";
+
+// Account-id per plattform och kontoset. Verifierade mot Windsor 2026-06-10.
+const ACCOUNTS: Record<
+  AccountSet,
+  { google?: string; linkedin?: string; meta?: string; label: string }
+> = {
+  clearon: {
+    google: "103-319-6174",
+    linkedin: "514197293",
+    meta: "1771733670071985",
+    label: "ClearOn",
+  },
+  mobila: {
+    google: "217-792-7318",
+    linkedin: "514407816",
+    meta: "1265886504462453",
+    label: "Mobila Presentkort",
+  },
+};
+
+export function resolveAccountSet(value: string | null | undefined): AccountSet {
+  return value === "mobila" ? "mobila" : "clearon";
+}
 
 // ---- Typer (matchar adspirer.ts exakt) ----
 
@@ -89,20 +110,52 @@ export interface ConnectionInfo {
   status: string;
 }
 
+/** En faktisk annons (ad/creative) med kreativ + period-aggregerade metrics.
+ * group = mellannivan: Meta ad set, Google annonsgrupp, LinkedIn kampanj
+ * (LinkedIns hierarki ar Campaign Group > Campaign > Creative, sa dar blir
+ * campaign_name = campaign group). */
+export interface AdInfo {
+  ad_id: string;
+  name: string;
+  headline: string | null;
+  body: string | null;
+  group_id: string | null;
+  group_name: string | null;
+  campaign_id: string | null;
+  campaign_name: string | null;
+  status: string | null;
+  thumbnail_url: string | null;
+  destination_url: string | null;
+  spend: number;
+  impressions: number;
+  clicks: number;
+  conversions: number;
+  ctr: number | null;
+  cpc: number | null;
+  currency: string;
+}
+
+export interface PlatformAds {
+  platform: "google" | "meta" | "linkedin";
+  status: "live" | "no_data" | "unavailable";
+  reason: string | null;
+  ads: AdInfo[];
+}
+
 // ---- Interna helpers ----
 
 interface WindsorRow {
   date?: string;
   account_name?: string;
-  account_id?: string;
+  account_id?: string | number;
   campaign?: string;
-  campaign_id?: string;
+  campaign_id?: string | number;
   campaign_status?: string;
   status?: string;
-  spend?: number;
-  impressions?: number;
-  clicks?: number;
-  conversions?: number;
+  spend?: number | string;
+  impressions?: number | string;
+  clicks?: number | string;
+  conversions?: number | string;
   currency?: string;
 }
 
@@ -113,6 +166,12 @@ interface WindsorResponse {
 function getApiKey(): string | null {
   const k = (process.env.WINDSOR_API_KEY || "").trim();
   return k || null;
+}
+
+function num(v: number | string | null | undefined): number {
+  if (v == null) return 0;
+  const n = typeof v === "number" ? v : Number(v);
+  return Number.isFinite(n) ? n : 0;
 }
 
 function dateRangeParams(period: PeriodArgs): { date_from?: string; date_to?: string; date_preset?: string } {
@@ -134,20 +193,21 @@ function dateRangeParams(period: PeriodArgs): { date_from?: string; date_to?: st
 
 async function fetchWindsor(
   connector: "google_ads" | "facebook" | "linkedin",
-  filter: string | null,
+  accountId: string,
   period: PeriodArgs,
   revalidateSeconds: number,
-): Promise<WindsorRow[]> {
+): Promise<{ rows: WindsorRow[]; allAccountNames: string[] }> {
   const key = getApiKey();
-  if (!key) return [];
+  if (!key) return { rows: [], allAccountNames: [] };
 
   const params = new URLSearchParams({
     api_key: key,
     fields:
       "date,account_name,account_id,campaign,campaign_id,campaign_status,spend,impressions,clicks,conversions,currency",
-    _limit: "5000",
+    // Hogt tak: nyckeln tacker hela Stellar-portfoljen sa dagsrader for alla
+    // konton kan bli manga - truncering ger tyst fel data.
+    _limit: "30000",
   });
-  if (filter) params.set("_filter", filter);
 
   const dates = dateRangeParams(period);
   for (const [k, v] of Object.entries(dates)) if (v) params.set(k, v);
@@ -161,26 +221,29 @@ async function fetchWindsor(
     });
     if (!res.ok) {
       console.warn(`Windsor ${connector} HTTP ${res.status}`);
-      return [];
+      return { rows: [], allAccountNames: [] };
     }
     const json = (await res.json()) as WindsorResponse;
-    return json.data || [];
+    const all = json.data || [];
+    const rows = all.filter((r) => String(r.account_id || "") === accountId);
+    const allAccountNames = [...new Set(all.map((r) => r.account_name).filter(Boolean))] as string[];
+    return { rows, allAccountNames };
   } catch (e) {
     console.warn(`Windsor ${connector} fetch error:`, e instanceof Error ? e.message : e);
-    return [];
+    return { rows: [], allAccountNames: [] };
   }
 }
 
 function aggregateByCampaign(rows: WindsorRow[]): CampaignRow[] {
   const map = new Map<string, CampaignRow>();
   for (const r of rows) {
-    const id = r.campaign_id || r.campaign || "unknown";
-    const name = r.campaign || r.campaign_id || "Okand kampanj";
+    const id = String(r.campaign_id || r.campaign || "unknown");
+    const name = r.campaign || String(r.campaign_id || "") || "Okand kampanj";
     const existing = map.get(id);
-    const spend = (r.spend || 0) + (existing?.spend || 0);
-    const impressions = (r.impressions || 0) + (existing?.impressions || 0);
-    const clicks = (r.clicks || 0) + (existing?.clicks || 0);
-    const conversions = (r.conversions || 0) + (existing?.conversions || 0);
+    const spend = num(r.spend) + (existing?.spend || 0);
+    const impressions = num(r.impressions) + (existing?.impressions || 0);
+    const clicks = num(r.clicks) + (existing?.clicks || 0);
+    const conversions = num(r.conversions) + (existing?.conversions || 0);
     map.set(id, {
       campaign_id: id,
       name,
@@ -274,6 +337,265 @@ function emptyPlatform(
   };
 }
 
+function livePlatform(
+  platform: PlatformPerformance["platform"],
+  connector: string,
+  accountId: string,
+  rows: WindsorRow[],
+): PlatformPerformance {
+  const campaigns = aggregateByCampaign(rows);
+  return {
+    platform,
+    available: true,
+    status: "live",
+    reason: null,
+    currency: detectCurrency(rows, "SEK"),
+    currencyNote: null,
+    dateRange: dateExtent(rows),
+    totals: totalsOf(campaigns),
+    campaigns,
+    rawJson: { source: "windsor", connector, account_id: accountId, rowCount: rows.length },
+    quota: null,
+  };
+}
+
+// ---- Annonsniva (faktiska annonser med kreativ) ----
+
+// Falt per connector for annonsniva. Utan "date" aggregerar Windsor hela
+// perioden till en rad per annons - mycket farre rader och ratt granularitet
+// for en annonslista.
+const AD_FIELDS = {
+  google_ads:
+    "account_id,campaign,campaign_id,campaign_status,ad_group_id,ad_group_name,ad_id,ad_name,ad_status,ad_group_status,ad_final_urls,ad_type,spend,impressions,clicks,conversions,currency",
+  facebook:
+    "account_id,campaign,campaign_id,campaign_status,adset_id,adset_name,ad_id,ad_name,title,body,thumbnail_url,link_url,effective_status,adset_status,spend,impressions,clicks,conversions,currency",
+  linkedin:
+    "account_id,campaign,campaign_id,campaign_status,campaign_group_id,campaign_group_name,creative_id,sponsored_creative_content_title,sponsored_creative_content_description,creative_thumbnail,creative_status,landing_page,spend,impressions,clicks,conversions,currency",
+} as const;
+
+interface WindsorAdRow extends WindsorRow {
+  ad_id?: string | number;
+  ad_name?: string;
+  ad_status?: string | null;
+  ad_group_status?: string | null;
+  ad_final_urls?: string;
+  ad_type?: string;
+  title?: string;
+  body?: string;
+  thumbnail_url?: string;
+  link_url?: string;
+  effective_status?: string;
+  adset_status?: string | null;
+  adset_id?: string | number;
+  adset_name?: string;
+  ad_group_id?: string | number;
+  ad_group_name?: string;
+  campaign_group_id?: string | number;
+  campaign_group_name?: string;
+  creative_id?: string | number;
+  sponsored_creative_content_title?: string;
+  sponsored_creative_content_description?: string;
+  creative_thumbnail?: string;
+  creative_status?: string;
+  landing_page?: string;
+}
+
+async function fetchWindsorAds(
+  connector: keyof typeof AD_FIELDS,
+  accountId: string,
+  period: PeriodArgs,
+  revalidateSeconds: number,
+): Promise<WindsorAdRow[]> {
+  const key = getApiKey();
+  if (!key) return [];
+
+  const params = new URLSearchParams({
+    api_key: key,
+    fields: AD_FIELDS[connector],
+    _limit: "30000",
+  });
+  const dates = dateRangeParams(period);
+  for (const [k, v] of Object.entries(dates)) if (v) params.set(k, v);
+
+  try {
+    const res = await fetch(`${WINDSOR_BASE}/${connector}?${params}`, {
+      next: { revalidate: revalidateSeconds },
+      headers: { Accept: "application/json" },
+    });
+    if (!res.ok) {
+      console.warn(`Windsor ads ${connector} HTTP ${res.status}`);
+      return [];
+    }
+    const json = (await res.json()) as { data?: WindsorAdRow[] };
+    return (json.data || []).filter((r) => String(r.account_id || "") === accountId);
+  } catch (e) {
+    console.warn(`Windsor ads ${connector} fetch error:`, e instanceof Error ? e.message : e);
+    return [];
+  }
+}
+
+/**
+ * Live pa riktigt = annonsen OCH dess adset/annonsgrupp OCH kampanjen ar
+ * aktiva. Plattformarna rapporterar gamla annonser som "ACTIVE" trots att
+ * kampanjen ovanfor ar pausad - de ska inte visas som live.
+ * null/undefined raknas som live (Google rapporterar t.ex. alltid
+ * ad_status=null) - bara ett explicit icke-aktivt varde diskvalificerar.
+ */
+function isLiveStatus(s: string | null | undefined): boolean {
+  if (!s) return true;
+  const t = s.toUpperCase();
+  return t === "ACTIVE" || t === "ENABLED";
+}
+
+function isFullyLive(platform: PlatformAds["platform"], r: WindsorAdRow): boolean {
+  if (platform === "google") {
+    return (
+      isLiveStatus(r.ad_status) &&
+      isLiveStatus(r.ad_group_status) &&
+      isLiveStatus(r.campaign_status)
+    );
+  }
+  if (platform === "meta") {
+    // effective_status fangar redan ADSET_PAUSED/CAMPAIGN_PAUSED, men vi
+    // kraver alla tre for sakerhets skull
+    return (
+      isLiveStatus(r.effective_status) &&
+      isLiveStatus(r.adset_status) &&
+      isLiveStatus(r.campaign_status)
+    );
+  }
+  return isLiveStatus(r.creative_status) && isLiveStatus(r.campaign_status);
+}
+
+function parseGoogleFinalUrl(raw: string | undefined): string | null {
+  if (!raw) return null;
+  try {
+    const arr = JSON.parse(raw) as string[];
+    return arr[0] || null;
+  } catch {
+    return raw || null;
+  }
+}
+
+function normalizeAd(
+  platform: PlatformAds["platform"],
+  r: WindsorAdRow,
+): AdInfo | null {
+  const spend = num(r.spend);
+  const impressions = num(r.impressions);
+  const clicks = num(r.clicks);
+  const conversions = num(r.conversions);
+  // Skippa annonser utan aktivitet i perioden (gamla utkast/avstangda
+  // annonser ligger kvar som nollrader hos plattformarna)
+  if (impressions === 0 && spend === 0) return null;
+
+  let base: Pick<
+    AdInfo,
+    | "ad_id"
+    | "name"
+    | "headline"
+    | "body"
+    | "status"
+    | "thumbnail_url"
+    | "destination_url"
+    | "group_id"
+    | "group_name"
+    | "campaign_id"
+    | "campaign_name"
+  >;
+  if (platform === "google") {
+    // Google RSA: ad_name = alla headlines separerade med " | "
+    const headlines = (r.ad_name || "").split(" | ");
+    base = {
+      ad_id: String(r.ad_id || ""),
+      name: headlines[0] || String(r.ad_id || "Okand annons"),
+      headline: headlines.slice(0, 3).join(" | ") || null,
+      body: r.ad_type || null,
+      status: r.ad_status || null,
+      thumbnail_url: null,
+      destination_url: parseGoogleFinalUrl(r.ad_final_urls),
+      group_id: r.ad_group_id ? String(r.ad_group_id) : null,
+      group_name: r.ad_group_name || null,
+      campaign_id: r.campaign_id ? String(r.campaign_id) : null,
+      campaign_name: r.campaign || null,
+    };
+  } else if (platform === "meta") {
+    base = {
+      ad_id: String(r.ad_id || ""),
+      name: r.ad_name || String(r.ad_id || "Okand annons"),
+      headline: r.title || null,
+      body: r.body || null,
+      status: r.effective_status || null,
+      thumbnail_url: r.thumbnail_url || null,
+      destination_url: r.link_url || null,
+      group_id: r.adset_id ? String(r.adset_id) : null,
+      group_name: r.adset_name || null,
+      campaign_id: r.campaign_id ? String(r.campaign_id) : null,
+      campaign_name: r.campaign || null,
+    };
+  } else {
+    // LinkedIn: Campaign Group > Campaign > Creative. Kampanjen ar
+    // adset-nivan, campaign group ar kampanj-nivan.
+    base = {
+      ad_id: String(r.creative_id || ""),
+      name:
+        (r.sponsored_creative_content_title || "").trim() ||
+        String(r.creative_id || "Okand annons"),
+      headline: (r.sponsored_creative_content_title || "").trim() || null,
+      body: (r.sponsored_creative_content_description || "").trim() || null,
+      status: r.creative_status || null,
+      thumbnail_url: r.creative_thumbnail || null,
+      destination_url: r.landing_page || null,
+      group_id: r.campaign_id ? String(r.campaign_id) : null,
+      group_name: r.campaign || null,
+      campaign_id: r.campaign_group_id ? String(r.campaign_group_id) : null,
+      campaign_name: r.campaign_group_name || null,
+    };
+  }
+
+  return {
+    ...base,
+    spend,
+    impressions,
+    clicks,
+    conversions,
+    ctr: impressions > 0 ? (clicks / impressions) * 100 : null,
+    cpc: clicks > 0 ? spend / clicks : null,
+    currency: r.currency || "SEK",
+  };
+}
+
+export async function getPlatformAds(
+  platform: PlatformAds["platform"],
+  period: PeriodArgs,
+  revalidateSeconds = 1800,
+  account: AccountSet = "clearon",
+): Promise<PlatformAds> {
+  const connectorMap = { google: "google_ads", meta: "facebook", linkedin: "linkedin" } as const;
+  const accountId = ACCOUNTS[account][platform];
+  if (!getApiKey()) {
+    return { platform, status: "unavailable", reason: "WINDSOR_API_KEY saknas", ads: [] };
+  }
+  if (!accountId) {
+    return {
+      platform,
+      status: "unavailable",
+      reason: `${ACCOUNTS[account].label} har inget ${platform}-konto i Windsor.`,
+      ads: [],
+    };
+  }
+  const rows = await fetchWindsorAds(connectorMap[platform], accountId, period, revalidateSeconds);
+  const ads = rows
+    .filter((r) => isFullyLive(platform, r))
+    .map((r) => normalizeAd(platform, r))
+    .filter((a): a is AdInfo => a !== null)
+    .sort((a, b) => b.spend - a.spend);
+  if (ads.length === 0) {
+    return { platform, status: "no_data", reason: "Inga live-annonser i aktiva kampanjer just nu.", ads: [] };
+  }
+  return { platform, status: "live", reason: null, ads };
+}
+
 // ---- Publika funktioner ----
 
 export async function getConnections(_revalidateSeconds = 3600): Promise<{
@@ -291,24 +613,24 @@ export async function getConnections(_revalidateSeconds = 3600): Promise<{
     connections: [
       {
         platform: "google_ads",
-        account_id: "Clearon",
+        account_id: ACCOUNTS.clearon.google!,
         account_name: "Clearon",
         account_tier: "primary",
         status: "connected",
       },
       {
         platform: "linkedin_ads",
-        account_id: "ClearOn",
+        account_id: ACCOUNTS.clearon.linkedin!,
         account_name: "ClearOn",
         account_tier: "primary",
         status: "connected",
       },
       {
         platform: "meta_ads",
-        account_id: "",
+        account_id: ACCOUNTS.clearon.meta!,
         account_name: "ClearOn",
         account_tier: "primary",
-        status: "needs_reauth",
+        status: "connected",
       },
     ],
     error: null,
@@ -318,109 +640,60 @@ export async function getConnections(_revalidateSeconds = 3600): Promise<{
 export async function getGooglePerformance(
   period: PeriodArgs,
   revalidateSeconds = 1800,
+  account: AccountSet = "clearon",
 ): Promise<PlatformPerformance> {
   if (!getApiKey()) {
     return emptyPlatform("google", "unavailable", "WINDSOR_API_KEY saknas");
   }
-  const rows = await fetchWindsor(
-    "google_ads",
-    `account_name::EQUAL::${CLEARON_GOOGLE_ACCOUNT_NAME}`,
-    period,
-    revalidateSeconds,
-  );
-  if (rows.length === 0) {
-    return emptyPlatform("google", "no_data", "Ingen Google-data fran Windsor for valt intervall.");
+  const accountId = ACCOUNTS[account].google;
+  if (!accountId) {
+    return emptyPlatform("google", "unavailable", `${ACCOUNTS[account].label} har inget Google Ads-konto i Windsor.`);
   }
-  const campaigns = aggregateByCampaign(rows);
-  return {
-    platform: "google",
-    available: true,
-    status: "live",
-    reason: null,
-    currency: detectCurrency(rows, "SEK"),
-    currencyNote: null,
-    dateRange: dateExtent(rows),
-    totals: totalsOf(campaigns),
-    campaigns,
-    rawJson: { source: "windsor", connector: "google_ads", account: "Clearon", rowCount: rows.length },
-    quota: null,
-  };
+  const { rows } = await fetchWindsor("google_ads", accountId, period, revalidateSeconds);
+  if (rows.length === 0) {
+    return emptyPlatform("google", "no_data", `Ingen Google-data for ${ACCOUNTS[account].label} (${accountId}) i valt intervall.`);
+  }
+  return livePlatform("google", "google_ads", accountId, rows);
 }
 
 export async function getLinkedInPerformance(
   period: PeriodArgs,
   revalidateSeconds = 1800,
+  account: AccountSet = "clearon",
 ): Promise<PlatformPerformance> {
   if (!getApiKey()) {
     return emptyPlatform("linkedin", "unavailable", "WINDSOR_API_KEY saknas");
   }
-  const rows = await fetchWindsor(
-    "linkedin",
-    `account_name::EQUAL::${CLEARON_LINKEDIN_ACCOUNT_NAME}`,
-    period,
-    revalidateSeconds,
-  );
-  if (rows.length === 0) {
-    return emptyPlatform("linkedin", "no_data", "Ingen LinkedIn-data fran Windsor for valt intervall.");
+  const accountId = ACCOUNTS[account].linkedin;
+  if (!accountId) {
+    return emptyPlatform("linkedin", "unavailable", `${ACCOUNTS[account].label} har inget LinkedIn-konto i Windsor.`);
   }
-  const campaigns = aggregateByCampaign(rows);
-  return {
-    platform: "linkedin",
-    available: true,
-    status: "live",
-    reason: null,
-    currency: detectCurrency(rows, "SEK"),
-    currencyNote: null,
-    dateRange: dateExtent(rows),
-    totals: totalsOf(campaigns),
-    campaigns,
-    rawJson: { source: "windsor", connector: "linkedin", account: "ClearOn", rowCount: rows.length },
-    quota: null,
-  };
+  const { rows } = await fetchWindsor("linkedin", accountId, period, revalidateSeconds);
+  if (rows.length === 0) {
+    return emptyPlatform("linkedin", "no_data", `Ingen LinkedIn-data for ${ACCOUNTS[account].label} (${accountId}) i valt intervall.`);
+  }
+  return livePlatform("linkedin", "linkedin", accountId, rows);
 }
 
 export async function getMetaPerformance(
   period: PeriodArgs,
   revalidateSeconds = 1800,
+  account: AccountSet = "clearon",
 ): Promise<PlatformPerformance> {
   if (!getApiKey()) {
     return emptyPlatform("meta", "unavailable", "WINDSOR_API_KEY saknas");
   }
-  // Windsors _filter ar opalitlig pa facebook-connectorn (returnerar alla
-  // konton oavsett filter), sa vi hamtar utan filter och filtrerar
-  // klient-side pa account_id = ClearOns Meta-konto.
-  const allRows = await fetchWindsor("facebook", null, period, revalidateSeconds);
-  const rows = allRows.filter(
-    (r) => String(r.account_id || "") === CLEARON_META_ACCOUNT_ID,
-  );
-
+  const accountId = ACCOUNTS[account].meta;
+  if (!accountId) {
+    return emptyPlatform("meta", "unavailable", `${ACCOUNTS[account].label} har inget Meta-konto i Windsor.`);
+  }
+  const { rows, allAccountNames } = await fetchWindsor("facebook", accountId, period, revalidateSeconds);
   if (rows.length === 0) {
     return emptyPlatform(
       "meta",
-      "unavailable",
-      `ClearOns Meta-konto (${CLEARON_META_ACCOUNT_ID}) ar inte anslutet till Windsor an. Anslut det via app.windsor.ai > Connectors > Facebook for att fa live-data. Foljande konton ar idag uppkopplade: ${[
-        ...new Set(allRows.map((r) => r.account_name).filter(Boolean)),
-      ].join(", ") || "inga"}.`,
+      "no_data",
+      `Ingen Meta-data for ${ACCOUNTS[account].label} (${accountId}) i valt intervall. Anslutna konton: ${allAccountNames.join(", ") || "inga"}.`,
     );
   }
-
-  const campaigns = aggregateByCampaign(rows);
-  return {
-    platform: "meta",
-    available: true,
-    status: "live",
-    reason: null,
-    currency: detectCurrency(rows, "SEK"),
-    currencyNote: null,
-    dateRange: dateExtent(rows),
-    totals: totalsOf(campaigns),
-    campaigns,
-    rawJson: {
-      source: "windsor",
-      connector: "facebook",
-      account_id: CLEARON_META_ACCOUNT_ID,
-      rowCount: rows.length,
-    },
-    quota: null,
-  };
+  return livePlatform("meta", "facebook", accountId, rows);
 }
