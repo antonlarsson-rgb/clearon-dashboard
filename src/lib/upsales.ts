@@ -327,17 +327,26 @@ export async function getOpportunities(options?: {
   sinceDate?: string;
   limit?: number;
   offset?: number;
+  /** Filtrera bort en stage server-side, t.ex. 14 = "Faktura" (lopande fakturering, inte salj) */
+  excludeStageId?: number;
 }): Promise<{ data: UpsalesOpportunity[]; total: number }> {
-  const { sinceDate, limit = 200, offset = 0 } = options || {};
+  const { sinceDate, limit = 200, offset = 0, excludeStageId } = options || {};
   const params: Record<string, string> = {
     limit: String(limit),
     offset: String(offset),
     sort: "-modDate",
   };
+  let qi = 0;
   if (sinceDate) {
-    params["q[0][a]"] = "modDate";
-    params["q[0][c]"] = "gte";
-    params["q[0][v]"] = sinceDate;
+    params[`q[${qi}][a]`] = "modDate";
+    params[`q[${qi}][c]`] = "gte";
+    params[`q[${qi}][v]`] = sinceDate;
+    qi++;
+  }
+  if (excludeStageId != null) {
+    params[`q[${qi}][a]`] = "stage.id";
+    params[`q[${qi}][c]`] = "ne";
+    params[`q[${qi}][v]`] = String(excludeStageId);
   }
 
   try {

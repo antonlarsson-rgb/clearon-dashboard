@@ -95,6 +95,7 @@ export interface PlatformPerformance {
     cpm: number | null;
     conversion_rate: number | null;
     cost_per_conversion: number | null;
+    conversion_value: number;
     roas: number | null;
   };
   campaigns: CampaignRow[];
@@ -166,6 +167,10 @@ interface WindsorRow {
   actions_purchase?: number | string;
   externalwebsiteconversions?: number | string;
   oneclickleads?: number | string;
+  // Konverteringsvarde (intakt) per plattform
+  conversions_value?: number | string;
+  action_values_omni_purchase?: number | string;
+  conversionvalueinlocalcurrency?: number | string;
 }
 
 interface WindsorResponse {
@@ -205,11 +210,11 @@ function dateRangeParams(period: PeriodArgs): { date_from?: string; date_to?: st
 // linkedin = externalwebsiteconversions + oneclickleads.
 const CAMPAIGN_FIELDS = {
   google_ads:
-    "date,account_name,account_id,campaign,campaign_id,campaign_status,spend,impressions,clicks,conversions,currency",
+    "date,account_name,account_id,campaign,campaign_id,campaign_status,spend,impressions,clicks,conversions,conversions_value,currency",
   facebook:
-    "date,account_name,account_id,campaign,campaign_id,campaign_status,spend,impressions,clicks,actions_lead,actions_purchase,currency",
+    "date,account_name,account_id,campaign,campaign_id,campaign_status,spend,impressions,clicks,actions_lead,actions_purchase,action_values_omni_purchase,currency",
   linkedin:
-    "date,account_name,account_id,campaign,campaign_id,campaign_status,spend,impressions,clicks,externalwebsiteconversions,oneclickleads,currency",
+    "date,account_name,account_id,campaign,campaign_id,campaign_status,spend,impressions,clicks,externalwebsiteconversions,oneclickleads,conversionvalueinlocalcurrency,currency",
 } as const;
 
 function rowConversions(
@@ -220,6 +225,16 @@ function rowConversions(
   if (connector === "linkedin")
     return num(r.externalwebsiteconversions) + num(r.oneclickleads);
   return num(r.conversions);
+}
+
+/** Konverteringsvarde (intakt) som plattformen sjalv rapporterar. */
+function rowConversionValue(
+  connector: "google_ads" | "facebook" | "linkedin",
+  r: WindsorRow,
+): number {
+  if (connector === "facebook") return num(r.action_values_omni_purchase);
+  if (connector === "linkedin") return num(r.conversionvalueinlocalcurrency);
+  return num(r.conversions_value);
 }
 
 async function fetchWindsor(
@@ -277,6 +292,8 @@ function aggregateByCampaign(
     const impressions = num(r.impressions) + (existing?.impressions || 0);
     const clicks = num(r.clicks) + (existing?.clicks || 0);
     const conversions = rowConversions(connector, r) + (existing?.conversions || 0);
+    const conversionValue =
+      rowConversionValue(connector, r) + (existing?.conversion_value || 0);
     map.set(id, {
       campaign_id: id,
       name,
@@ -290,7 +307,8 @@ function aggregateByCampaign(
       cpm: impressions > 0 ? (spend / impressions) * 1000 : null,
       conversion_rate: clicks > 0 ? (conversions / clicks) * 100 : null,
       cost_per_conversion: conversions > 0 ? spend / conversions : null,
-      roas: null,
+      conversion_value: conversionValue,
+      roas: conversionValue > 0 && spend > 0 ? conversionValue / spend : null,
       leads: null,
     });
   }
@@ -305,11 +323,13 @@ function totalsOf(campaigns: CampaignRow[]): PlatformPerformance["totals"] {
     conversions: 0,
     campaigns: campaigns.length,
   };
+  let conversionValue = 0;
   for (const c of campaigns) {
     t.spend += c.spend;
     t.impressions += c.impressions;
     t.clicks += c.clicks;
     t.conversions += c.conversions;
+    conversionValue += c.conversion_value || 0;
   }
   return {
     ...t,
@@ -318,7 +338,8 @@ function totalsOf(campaigns: CampaignRow[]): PlatformPerformance["totals"] {
     cpm: t.impressions > 0 ? (t.spend / t.impressions) * 1000 : null,
     conversion_rate: t.clicks > 0 ? (t.conversions / t.clicks) * 100 : null,
     cost_per_conversion: t.conversions > 0 ? t.spend / t.conversions : null,
-    roas: null,
+    conversion_value: conversionValue,
+    roas: conversionValue > 0 && t.spend > 0 ? conversionValue / t.spend : null,
   };
 }
 
@@ -362,6 +383,7 @@ function emptyPlatform(
       cpm: null,
       conversion_rate: null,
       cost_per_conversion: null,
+      conversion_value: 0,
       roas: null,
     },
     campaigns: [],

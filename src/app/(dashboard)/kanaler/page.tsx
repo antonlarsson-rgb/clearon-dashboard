@@ -16,6 +16,7 @@ import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { formatNumber } from "@/lib/utils";
 import { AdsOverview } from "@/components/dashboard/ads-overview";
 import { ChannelHealth } from "@/components/dashboard/channel-health";
+import { ChannelRoi } from "@/components/dashboard/channel-roi";
 import { ArrowRight, Megaphone, BarChart3 } from "lucide-react";
 
 export const dynamic = "force-dynamic";
@@ -43,6 +44,9 @@ export default async function KanalerPage() {
 
       {/* Hero: kanal-hälsa över alla källor */}
       <ChannelHealth defaultLookback={30} />
+
+      {/* ROI: annons-spend mot pipeline och vunna affärer */}
+      <ChannelRoi defaultLookback={90} />
 
       {/* Webb-funnel: visitors per webbkälla */}
       <Card>

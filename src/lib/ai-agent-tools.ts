@@ -22,6 +22,7 @@ import {
   getClearonSeWebTraffic,
   buildWebChannelFlows,
 } from "@/lib/web-analytics";
+import { getChannelRoi } from "@/lib/roi";
 
 const DAY = 24 * 60 * 60 * 1000;
 
@@ -45,6 +46,8 @@ function compactPlatform(p: PlatformPerformance) {
       cost_per_conversion: p.totals.cost_per_conversion
         ? Math.round(p.totals.cost_per_conversion)
         : null,
+      conversion_value: Math.round(p.totals.conversion_value),
+      roas: p.totals.roas ? Math.round(p.totals.roas * 10) / 10 : null,
       ctr: p.totals.ctr ? Math.round(p.totals.ctr * 100) / 100 : null,
     },
     campaigns: p.campaigns.map((c) => ({
@@ -55,6 +58,8 @@ function compactPlatform(p: PlatformPerformance) {
       clicks: c.clicks,
       conversions: Math.round(c.conversions * 10) / 10,
       cost_per_conversion: c.cost_per_conversion ? Math.round(c.cost_per_conversion) : null,
+      conversion_value: c.conversion_value ? Math.round(c.conversion_value) : null,
+      roas: c.roas ? Math.round(c.roas * 10) / 10 : null,
     })),
   };
 }
@@ -199,6 +204,18 @@ export const AGENT_TOOLS: Anthropic.Tool[] = [
     description:
       "Dashboardens KPI:er: aktiva leads, heta/varma leads, pipeline-varde fran opportunities, konverteringsgrad besokare->formular. Anvand for oversiktsfragor.",
     input_schema: { type: "object", properties: {}, required: [] },
+  },
+  {
+    name: "get_channel_roi",
+    description:
+      "Verklig ROI per kanal: annons-spend (Google/Meta/LinkedIn) mot leads, oppna opportunities (pipeline-varde), vunna affarer (kronor) och forlorade, dar varje opportunity attribuerats till personens kalla. Anvand for fragor om vad annonserna ger i affarer/intakter och budgetbeslut.",
+    input_schema: {
+      type: "object",
+      properties: {
+        lookback_days: { type: "number", description: "Default 90." },
+      },
+      required: [],
+    },
   },
 ];
 
@@ -435,6 +452,11 @@ export async function executeAgentTool(
 
     case "get_kpis": {
       return getKpis();
+    }
+
+    case "get_channel_roi": {
+      const supabase = getServiceClient();
+      return getChannelRoi(supabase, clampLookback(input.lookback_days, 90));
     }
 
     default:

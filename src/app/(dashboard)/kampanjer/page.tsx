@@ -72,6 +72,8 @@ interface AdsOverview {
       clicks: number;
       conversions: number;
       campaigns: number;
+      conversion_value?: number;
+      roas?: number | null;
     };
     campaigns: AdspirerCampaign[];
   }>;
@@ -362,13 +364,14 @@ export default function KampanjerPage() {
         library: number;
         spend: number;
         conv: number;
+        roas: number | null;
         status: string;
       }
     > = {
-      meta: { live: 0, paused: 0, library: 0, spend: 0, conv: 0, status: "—" },
-      linkedin: { live: 0, paused: 0, library: 0, spend: 0, conv: 0, status: "—" },
-      google: { live: 0, paused: 0, library: 0, spend: 0, conv: 0, status: "—" },
-      email: { live: 0, paused: 0, library: 0, spend: 0, conv: 0, status: "—" },
+      meta: { live: 0, paused: 0, library: 0, spend: 0, conv: 0, roas: null, status: "—" },
+      linkedin: { live: 0, paused: 0, library: 0, spend: 0, conv: 0, roas: null, status: "—" },
+      google: { live: 0, paused: 0, library: 0, spend: 0, conv: 0, roas: null, status: "—" },
+      email: { live: 0, paused: 0, library: 0, spend: 0, conv: 0, roas: null, status: "—" },
     };
     for (const c of unified) {
       const p = c.platform;
@@ -392,6 +395,7 @@ export default function KampanjerPage() {
           result[ap.platform].status = ap.status;
           result[ap.platform].spend = ap.totals.spend;
           result[ap.platform].conv = ap.totals.conversions;
+          result[ap.platform].roas = ap.totals.roas ?? null;
         }
       }
     }
@@ -533,7 +537,12 @@ export default function KampanjerPage() {
                 {s.library > 0 && (
                   <span className="text-[#a363d9]">{s.library} sparad</span>
                 )}
-                {s.conv > 0 && <span>· {s.conv} konv.</span>}
+                {s.conv > 0 && <span>· {Math.round(s.conv)} konv.</span>}
+                {s.roas != null && s.roas > 0 && (
+                  <span className="font-medium text-[#8bb347]">
+                    · ROAS {s.roas.toFixed(1)}x
+                  </span>
+                )}
               </div>
             </button>
           );
