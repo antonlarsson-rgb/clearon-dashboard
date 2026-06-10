@@ -104,10 +104,60 @@ export interface BuyingIntentResult {
   next_action_hint: "ring_nu" | "boka_mote" | "skicka_relevant_case" | "varma_upp" | "bevaka";
   behavior_pattern: BehaviorPattern;
   event_tags: EventTag[]; // 2-5 konkreta event-observationer senaste 30d
+  source_platform: SourcePlatform | null; // first touch: google | meta | linkedin | email | direkt | upsales
 }
 
 const HOUR = 60 * 60 * 1000;
 const DAY = 24 * HOUR;
+
+/**
+ * Annonsplattform fran event-metadata. Lead-submits och page_views bar
+ * utm_source + klick-id (gclid/fbclid/li_fat_id) sedan attributions-bygget -
+ * det ar en mycket bredare signal an de speciella *_ad_click-eventen.
+ */
+function deriveAdPlatform(md: Record<string, unknown> | null): string | null {
+  if (!md) return null;
+  const explicit = (md.ad_platform as string) || null;
+  if (explicit === "google" || explicit === "meta" || explicit === "linkedin") return explicit;
+  const src = String(md.utm_source || "").toLowerCase();
+  if (md.gclid || src.includes("google")) return "google";
+  if (md.fbclid || src.includes("facebook") || src.includes("meta") || src.includes("instagram"))
+    return "meta";
+  if (md.li_fat_id || src.includes("linkedin")) return "linkedin";
+  return null;
+}
+
+export type SourcePlatform =
+  | "google"
+  | "meta"
+  | "linkedin"
+  | "email"
+  | "direkt"
+  | "upsales";
+
+/**
+ * Var kom personen ifran? First touch: aldsta eventet med annons-attribution
+ * vinner; annars kanal fran aldsta eventets source.
+ */
+export function deriveSourcePlatform(events: EventRow[]): SourcePlatform | null {
+  if (events.length === 0) return null;
+  const asc = [...events].sort(
+    (a, b) => new Date(a.occurred_at).getTime() - new Date(b.occurred_at).getTime(),
+  );
+  for (const ev of asc) {
+    if (ev.event_type === "meta_ad_click") return "meta";
+    if (ev.event_type === "google_ad_click") return "google";
+    if (ev.event_type === "linkedin_ad_click") return "linkedin";
+    const p = deriveAdPlatform(ev.metadata);
+    if (p) return p as SourcePlatform;
+  }
+  for (const ev of asc) {
+    if (ev.source.startsWith("upsales_mail")) return "email";
+    if (ev.source === "web" || ev.source === "form") return "direkt";
+    if (ev.source.startsWith("upsales")) return "upsales";
+  }
+  return null;
+}
 
 // Kort vänlig beskrivning av en URL-path
 function shortPath(url: string | undefined | null): string {
@@ -199,13 +249,16 @@ export function classifyBehaviorPattern(
     return "mail_engaged";
   }
 
-  // 6. AD_RESPONDER — klickat annons
+  // 6. AD_RESPONDER — klickat annons. Antingen explicit *_ad_click-event
+  // eller vanligt besok med annons-attribution i metadatan (utm/klick-id) -
+  // det senare ar den vanliga formen sedan attributions-trackingen.
   if (
     events.some(
       (e) =>
         e.event_type === "meta_ad_click" ||
         e.event_type === "google_ad_click" ||
-        e.event_type === "linkedin_ad_click",
+        e.event_type === "linkedin_ad_click" ||
+        deriveAdPlatform(e.metadata) !== null,
     )
   ) {
     return "ad_responder";
@@ -432,6 +485,7 @@ export function computeBuyingIntent(
       next_action_hint: "bevaka",
       behavior_pattern: "new_visitor",
       event_tags: [],
+      source_platform: null,
     };
   }
 
@@ -620,6 +674,7 @@ export function computeBuyingIntent(
     next_action_hint,
     behavior_pattern,
     event_tags,
+    source_platform: deriveSourcePlatform(events),
   };
 }
 
@@ -727,6 +782,7 @@ export async function getTopBuyingIntent(
     person_id: string;
     name: string | null;
     email: string | null;
+    phone: string | null;
     title: string | null;
     company: string | null;
     account_id: string | null;
@@ -746,7 +802,7 @@ export async function getTopBuyingIntent(
   const { data: recent } = await supabase
     .from("persons")
     .select(
-      "id, name, primary_email, title, score, account_id, is_customer, ai_segment, ai_buy_probability, ai_urgency, behavior_pattern, account:accounts!persons_account_id_fkey(name, is_customer, has_purchased)",
+      "id, name, primary_email, primary_phone, title, score, account_id, is_customer, ai_segment, ai_buy_probability, ai_urgency, behavior_pattern, first_utm_source, account:accounts!persons_account_id_fkey(name, is_customer, has_purchased)",
     )
     .gte("last_event_at", since)
     .order("score", { ascending: false, nullsFirst: false })
@@ -806,10 +862,26 @@ export async function getTopBuyingIntent(
       if (p.behavior_pattern) {
         intent.behavior_pattern = p.behavior_pattern as typeof intent.behavior_pattern;
       }
+      // Fallback: persons.first_utm_source nar eventen i batchen saknar
+      // attribution (events-queryn kan vara trunkerad for aldre personer)
+      if (!intent.source_platform && p.first_utm_source) {
+        const src = String(p.first_utm_source).toLowerCase();
+        if (src.includes("google")) intent.source_platform = "google";
+        else if (src.includes("facebook") || src.includes("meta") || src.includes("instagram"))
+          intent.source_platform = "meta";
+        else if (src.includes("linkedin")) intent.source_platform = "linkedin";
+        else if (src.includes("mail") || src.includes("email")) intent.source_platform = "email";
+      }
+      // Sista fallback: DB-monstret sager mail-engagerad -> kallan ar email
+      // aven om eventbatchen i denna query rakade truncas
+      if (!intent.source_platform && p.behavior_pattern === "mail_engaged") {
+        intent.source_platform = "email";
+      }
       return {
         person_id: p.id,
         name: p.name as string | null,
         email: p.primary_email as string | null,
+        phone: (p.primary_phone as string | null) || null,
         title: p.title as string | null,
         company: (account?.name as string | null) || null,
         account_id: p.account_id as string | null,

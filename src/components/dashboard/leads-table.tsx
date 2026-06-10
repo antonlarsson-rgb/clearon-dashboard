@@ -15,7 +15,33 @@ import {
   Mail,
   ArrowUpDown,
   Zap,
+  Phone,
+  MessageSquare,
 } from "lucide-react";
+
+function csvEscape(v: string | number | null): string {
+  const s = String(v ?? "");
+  return /[";\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+}
+
+function exportLeadsCsv(leads: DashboardContact[]) {
+  const rows = leads.map((l) =>
+    [l.name, l.company, l.title, l.email, l.phone, l.score, l.categoryLabel, l.sourceChannel, l.status]
+      .map(csvEscape)
+      .join(";"),
+  );
+  const content = [
+    "Namn;Företag;Titel;Email;Telefon;Score;Kategori;Källa;Status",
+    ...rows,
+  ].join("\n");
+  const blob = new Blob(["﻿" + content], { type: "text/csv;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `leads-export-${new Date().toISOString().slice(0, 10)}.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
 
 interface LeadsTableProps {
   contacts: DashboardContact[];
@@ -151,11 +177,32 @@ export function LeadsTable({ contacts }: LeadsTableProps) {
         </Button>
         {selectedIds.size > 0 && (
           <>
-            <Button variant="outline" size="sm">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                const emails = [
+                  ...new Set(
+                    contacts
+                      .filter((c) => selectedIds.has(c.id) && c.email)
+                      .map((c) => c.email),
+                  ),
+                ];
+                if (emails.length > 0) {
+                  window.location.href = `mailto:?bcc=${encodeURIComponent(emails.join(","))}`;
+                }
+              }}
+            >
               <Mail className="h-3.5 w-3.5" />
               Skicka mail ({selectedIds.size})
             </Button>
-            <Button variant="outline" size="sm">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() =>
+                exportLeadsCsv(contacts.filter((c) => selectedIds.has(c.id)))
+              }
+            >
               <Download className="h-3.5 w-3.5" />
               Exportera
             </Button>
@@ -315,14 +362,46 @@ export function LeadsTable({ contacts }: LeadsTableProps) {
                       </Badge>
                     </td>
                     <td className="py-3 px-4 text-center">
-                      {lead.contactNow ? (
-                        <span className="inline-flex items-center gap-1 text-[10px] font-medium text-amber-700 bg-amber-50 border border-amber-200 rounded-full px-2 py-0.5">
-                          <Zap className="h-2.5 w-2.5" />
-                          Kontakta nu
-                        </span>
-                      ) : (
-                        <span className="text-text-muted text-xs">-</span>
-                      )}
+                      <div className="flex flex-col items-center gap-1">
+                        {lead.contactNow && (
+                          <span className="inline-flex items-center gap-1 text-[10px] font-medium text-amber-700 bg-amber-50 border border-amber-200 rounded-full px-2 py-0.5">
+                            <Zap className="h-2.5 w-2.5" />
+                            Kontakta nu
+                          </span>
+                        )}
+                        <div className="flex items-center gap-1">
+                          {lead.phone && (
+                            <a
+                              href={`tel:${lead.phone}`}
+                              title={`Ring ${lead.phone}`}
+                              className="rounded-full border border-border p-1 text-text-muted hover:text-text-primary hover:border-text-muted transition-colors"
+                            >
+                              <Phone className="h-3 w-3" />
+                            </a>
+                          )}
+                          {lead.phone && (
+                            <a
+                              href={`sms:${lead.phone}`}
+                              title={`SMS:a ${lead.phone}`}
+                              className="rounded-full border border-border p-1 text-text-muted hover:text-text-primary hover:border-text-muted transition-colors"
+                            >
+                              <MessageSquare className="h-3 w-3" />
+                            </a>
+                          )}
+                          {lead.email && (
+                            <a
+                              href={`mailto:${lead.email}`}
+                              title={`Maila ${lead.email}`}
+                              className="rounded-full border border-border p-1 text-text-muted hover:text-text-primary hover:border-text-muted transition-colors"
+                            >
+                              <Mail className="h-3 w-3" />
+                            </a>
+                          )}
+                          {!lead.phone && !lead.email && (
+                            <span className="text-text-muted text-xs">-</span>
+                          )}
+                        </div>
+                      </div>
                     </td>
                   </tr>
                 );
